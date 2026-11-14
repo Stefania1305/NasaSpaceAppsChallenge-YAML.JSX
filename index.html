@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIRMS Fire Data</title>
+<style>
+  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --line:#e7e5e4; --accent:#c2410c; --card:#fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --line:#44403c; --accent:#fb923c; --card:#292524; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:1200px; margin:0 auto; padding:24px 16px; }
+  h1 { margin:0 0 16px; font-size:22px; }
+  form { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; background:var(--card);
+         border:1px solid var(--line); border-radius:8px; padding:16px; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); }
+  select, input { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px;
+                  background:var(--bg); color:var(--fg); }
+  button { font:inherit; padding:7px 16px; border:0; border-radius:6px; background:var(--accent);
+           color:#fff; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  button.secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  #sources { margin:0 0 12px; }
+  #sources table { width:auto; }
+  #sources td, #sources th { text-align:left; }
+  .ok { color:#16a34a; } .skipped, .note { color:var(--muted); }
+  .group { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; padding-left:12px; border-left:1px solid var(--line); }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 16px; margin:0 0 12px; }
+  .panel h3 { margin:0 0 8px; font-size:14px; }
+  .panel table { width:auto; }
+  .panel td, .panel th { text-align:left; position:static; }
+  .panel td.num { text-align:right; }
+  .panel ul { margin:0; padding-left:18px; }
+  .panel li { margin:2px 0; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; }
+  .chip { font:inherit; font-size:12px; padding:3px 10px; border-radius:999px; background:var(--card);
+          color:var(--fg); border:1px solid var(--line); }
+  .chip.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #hint, .hintline { font-size:12px; color:var(--muted); margin:8px 0 0; }
+  .stat small { display:block; font-size:11px; color:var(--muted); }
+  #status { margin:16px 0 8px; }
+  .error { color:#dc2626; }
+  .stats { display:flex; flex-wrap:wrap; gap:16px; margin:8px 0 12px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 14px; }
+  .stat b { display:block; font-size:18px; }
+  .wrap { overflow:auto; max-height:70vh; border:1px solid var(--line); border-radius:8px; }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  th, td { padding:4px 10px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th { position:sticky; top:0; background:var(--card); text-align:right; }
+</style>
+</head>
+<body>
+<main>
+  <h1>NASA FIRMS fire data</h1>
+  <form id="f">
+    <label>Sensor
+      <select id="sensor"></select>
+    </label>
+    <label>Date
+      <input type="date" id="date" required>
+    </label>
+    <label>Day range
+      <select id="days">
+        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+      </select>
+    </label>
+    <label>Area (world or W,S,E,N)
+      <input id="area" value="world" size="22">
+    </label>
+    <button id="go">Fetch</button>
+    <button type="button" id="harm" class="secondary" title="Fetch every sensor for this date and day range and merge them into one table">Harmonise all sensors</button>
+    <span class="group">
+      <label>VIIRS satellite
+        <select id="viirs"><option value="NOAA20">NOAA-20</option><option value="NOAA21">NOAA-21</option><option value="SNPP">Suomi NPP</option></select>
+      </label>
+      <label>Grid
+        <select id="cell"><option value="0.01">0.01° (~1 km)</option><option value="0.05" selected>0.05° (~5 km)</option><option value="0.1">0.1° (~11 km)</option><option value="0.25">0.25° (~28 km)</option></select>
+      </label>
+      <label>Max pass gap (min, optional)
+        <input id="maxgap" type="number" min="0" step="5" placeholder="no limit" style="width:110px">
+      </label>
+      <button type="button" id="cmp" class="secondary" title="Aqua MODIS vs one VIIRS satellite on a common grid, with all sensor differences resolved">Compare MODIS vs VIIRS</button>
+    </span>
+  </form>
+  <p id="hint"></p>
+  <p id="typeref" class="hintline"></p>
+  <div id="status"></div>
+  <div id="stats" class="stats"></div>
+  <div id="sources"></div>
+  <div id="chips" class="chips"></div>
+  <div id="out"></div>
+</main>
+<script>
+const MAX_ROWS = 5000;
+const $ = id => document.getElementById(id);
+let availability = {};
+
+$('date').value = new Date().toISOString().slice(0, 10);
+
+fetch('/api/sensors').then(r => r.json()).then(d => {
+  availability = d.availability || {};
+  $('sensor').innerHTML = d.sensors.map(s => `<option>${s}</option>`).join('');
+  showHint();
+  const t = d.type_reference;
+  $('typeref').textContent = t && t.labelled_detections
+    ? `Type reference: ${t.labelled_detections.toLocaleString()} labelled SP detections from ${t.sensor_days} sensor-days (${t.cell_deg}° grid). Rows without a type get one inferred from it.`
+    : 'No type reference yet: run "python build_type_reference.py" and restart the server. Until then, missing types default to 0.';
+});
+$('sensor').addEventListener('change', showHint);
+
+function showHint() {
+  const a = availability[$('sensor').value];
+  $('hint').textContent = a ? `Data available from ${a.min} to ${a.max}.` +
+    ($('sensor').value === 'LANDSAT_NRT' ? ' Landsat covers the US and Canada only.' : '') : '';
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function load(endpoint, params, msg, onData) {
+  if (!$('date').value) { $('date').reportValidity(); return; }
+  $('go').disabled = $('harm').disabled = $('cmp').disabled = true;
+  $('status').textContent = msg;
+  ['stats', 'sources', 'chips', 'out'].forEach(id => $(id).innerHTML = '');
+  try {
+    const res = await fetch(endpoint + '?' + new URLSearchParams(params));
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || res.statusText);
+    onData(d);
+  } catch (err) {
+    $('status').innerHTML = `<span class="error">${esc(err.message)}</span>`;
+  } finally {
+    $('go').disabled = $('harm').disabled = $('cmp').disabled = false;
+  }
+}
+
+const baseParams = () => ({ date: $('date').value, days: $('days').value, area: $('area').value.trim() || 'world' });
+
+$('f').addEventListener('submit', e => {
+  e.preventDefault();
+  load('/api/fires', { ...baseParams(), sensor: $('sensor').value }, 'Fetching…', render);
+});
+
+$('harm').addEventListener('click', () => {
+  load('/api/harmonise', baseParams(), 'Fetching every sensor… this can take a little while.', renderHarmonised);
+});
+
+$('cmp').addEventListener('click', () => {
+  load('/api/compare', { ...baseParams(), viirs: $('viirs').value, cell: $('cell').value, maxgap: $('maxgap').value },
+       'Fetching MODIS and VIIRS and putting them on a common grid…', renderCompare);
+});
+
+function renderCompare(d) {
+  const n = v => typeof v === 'number' ? v.toLocaleString() : esc(v);
+  const s = d.settings;
+  const sourcesOk = d.sources.filter(x => x.status === 'ok').map(x => `${x.sensor} (${x.count.toLocaleString()})`).join(', ');
+  $('sources').innerHTML =
+    `<div class="panel"><h3>Aqua MODIS vs ${esc(s.viirs)} VIIRS, ${esc(d.range[0])} to ${esc(d.range[1])}</h3>
+      <table><thead><tr><th>Metric</th><th>MODIS</th><th>VIIRS</th><th>VIIRS ÷ MODIS</th></tr></thead><tbody>` +
+      d.summary.map(r => `<tr><td>${esc(r.metric)}</td><td class="num">${n(r.modis)}</td><td class="num">${n(r.viirs)}</td><td class="num">${esc(r.ratio)}</td></tr>`).join('') +
+      `</tbody></table>
+      <p class="hintline">Comparable cells detected by both: ${n(d.agreement.both)} · MODIS only: ${n(d.agreement['MODIS only'])} · VIIRS only: ${n(d.agreement['VIIRS only'])}. Sources: ${esc(sourcesOk || 'none')}.</p>
+    </div>
+    <div class="panel"><h3>How the sensor differences were resolved</h3><ul>
+      <li><b>Pixel size (1 km vs 375 m):</b> both aggregated onto a common ${s.cell_deg}° grid and compared cell by cell.</li>
+      <li><b>FRP split across VIIRS sub-pixels:</b> FRP summed per cell, so each fire's total energy counts once.</li>
+      <li><b>VIIRS 4–6× more detections:</b> fires counted as grid cells, not pixels.</li>
+      <li><b>Detection limit:</b> common minimum fire size of <b>${s.min_frp_mw} MW</b> applied to both sensors: ${esc(s.min_frp_basis)}.</li>
+      <li><b>Confidence scales:</b> both mapped to low / nominal / high (MODIS &lt;30 / 30–79 / ≥80).</li>
+      <li><b>Saturation (500 K vs 367 K):</b> brightness capped at ${s.bt_ceiling_k} K for both; "(sat)" marks capped cells.</li>
+      <li><b>Overpass times:</b> Terra (morning/evening) excluded; ${esc(s.modis_satellite)} compared with one VIIRS satellite, day with day and night with night.
+        Median time between the two passes: <b>${s.median_overpass_gap_min ?? '?'} min</b>${s.max_gap_min != null ? `; cells over ${s.max_gap_min} min excluded` : ''}.</li>
+      <li><b>MODIS swath gaps:</b> each satellite's ground tracks reconstructed from its own detections; fires seen by one sensor where the other did not look are excluded.</li>
+    </ul>
+    <p class="hintline"><b>Remaining difference that processing can't remove:</b> Aqua has drifted to a later afternoon orbit, so it passes about ${s.median_overpass_gap_min ?? '?'} min after VIIRS and sees fires at a different stage. Treat per-cell disagreements as partly real change, not sensor error.</p>
+    <p class="hintline">Removed or adjusted: ${Object.entries(d.removed).map(([k, v]) => `${esc(k)}: ${n(v)}`).join(' · ')}</p></div>`;
+
+  const ci = d.columns.indexOf('comparable'), di = d.columns.indexOf('detected_by');
+  const filters = {
+    'Comparable': r => r[ci] === 'yes', 'Both': r => r[ci] === 'yes' && r[di] === 'both',
+    'MODIS only': r => r[ci] === 'yes' && r[di] === 'MODIS only', 'VIIRS only': r => r[ci] === 'yes' && r[di] === 'VIIRS only',
+    'Excluded': r => r[ci] === 'no', 'All cells': () => true,
+  };
+  let active = 'Comparable';
+  const draw = () => {
+    $('chips').innerHTML = Object.keys(filters).map(k =>
+      `<button type="button" class="chip${k === active ? ' on' : ''}" data-s="${esc(k)}">${esc(k)}</button>`).join('');
+    $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => { active = b.dataset.s; draw(); });
+    render({ columns: d.columns, rows: d.rows.filter(filters[active]) }, `${active}: `);
+  };
+  draw();
+}
+
+function renderHarmonised(d) {
+  $('sources').innerHTML = `<div class="wrap" style="max-height:none"><table><thead><tr><th>Source</th><th>Status</th><th>Rows</th><th>Note</th></tr></thead><tbody>` +
+    d.sources.map(s => `<tr><td>${esc(s.sensor)}</td><td class="${s.status}">${s.status}</td><td>${s.status === 'ok' ? s.count.toLocaleString() : ''}</td><td>${esc(s.note)}</td></tr>`).join('') +
+    '</tbody></table></div>';
+
+  const srcIdx = d.columns.indexOf('source');
+  const present = d.sources.filter(s => s.status === 'ok' && s.count > 0).map(s => s.sensor);
+  let active = 'All';
+  const draw = () => {
+    const rows = active === 'All' ? d.rows : d.rows.filter(r => r[srcIdx] === active);
+    $('chips').innerHTML = ['All', ...present].map(s =>
+      `<button type="button" class="chip${s === active ? ' on' : ''}" data-s="${esc(s)}">${esc(s)}</button>`).join('');
+    $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => { active = b.dataset.s; draw(); });
+    render({ columns: d.columns, rows }, `Harmonised ${d.range[0]} to ${d.range[1]}. `);
+  };
+  draw();
+}
+
+const TYPE_NAMES = ['vegetation fire', 'active volcano', 'static land source', 'offshore'];
+
+function typeStats(columns, rows, stat) {
+  const ti = columns.indexOf('type'), ei = columns.indexOf('type_existed');
+  if (ti < 0 || ei < 0) return '';
+  let existed = 0;
+  const byType = [0, 0, 0, 0], inferredByType = [0, 0, 0, 0];
+  for (const r of rows) {
+    const t = +r[ti];
+    byType[t]++;
+    if (r[ei] === 'yes') existed++; else inferredByType[t]++;
+  }
+  const n = v => v.toLocaleString();
+  return stat('Type from file / inferred', `${n(existed)} / ${n(rows.length - existed)}`) +
+    byType.map((c, t) => c ? `<div class="stat">Type ${t}: ${TYPE_NAMES[t]}<b>${n(c)}</b><small>${n(inferredByType[t])} inferred</small></div>` : '').join('');
+}
+
+function render({ columns, rows }, prefix = '') {
+  if (!rows.length) { $('status').textContent = prefix + 'No detections for this selection.'; $('stats').innerHTML = ''; $('out').innerHTML = ''; return; }
+  const frpIdx = columns.indexOf('frp') >= 0 ? columns.indexOf('frp') : columns.indexOf('frp_mw');
+  const dnIdx = columns.indexOf('daynight');
+  let total = 0, max = 0, day = 0;
+  for (const r of rows) {
+    const f = parseFloat(r[frpIdx]) || 0;
+    total += f; if (f > max) max = f;
+    if (r[dnIdx] === 'D') day++;
+  }
+  const stat = (label, val) => `<div class="stat">${label}<b>${val}</b></div>`;
+  $('stats').innerHTML = stat('Detections', rows.length.toLocaleString()) +
+    (frpIdx >= 0 ? stat('Total FRP (MW)', Math.round(total).toLocaleString()) + stat('Max FRP (MW)', max.toFixed(1)) : '') +
+    (dnIdx >= 0 ? stat('Day / night', `${day.toLocaleString()} / ${(rows.length - day).toLocaleString()}`) : '') +
+    typeStats(columns, rows, stat);
+
+  drawTable(columns, rows, prefix);
+}
+
+// Table with click-to-sort headers and a "copy rows" button (tab-separated, header included).
+function drawTable(columns, rows, prefix, sortCol = -1, asc = true) {
+  const shown = rows.slice(0, MAX_ROWS);
+  $('status').innerHTML = esc(prefix + (rows.length > MAX_ROWS
+    ? `Showing the first ${MAX_ROWS.toLocaleString()} of ${rows.length.toLocaleString()} rows. ` : `${rows.length.toLocaleString()} rows. `)) +
+    `<button type="button" id="copyRows" class="chip">Copy all ${rows.length.toLocaleString()} rows</button> <span id="copyMsg" class="hintline"></span>`;
+  $('copyRows').onclick = async () => {
+    const tsv = [columns, ...rows].map(r => r.join('\t')).join('\n');
+    try { await navigator.clipboard.writeText(tsv); $('copyMsg').textContent = 'Copied.'; }
+    catch { $('copyMsg').textContent = 'Copy failed: your browser blocked clipboard access.'; }
+  };
+  $('out').innerHTML = `<div class="wrap"><table><thead><tr>${columns.map((c, k) =>
+      `<th data-k="${k}" style="cursor:pointer" title="Sort">${esc(c)}${k === sortCol ? (asc ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>` +
+    shown.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>';
+  $('out').querySelectorAll('th').forEach(th => th.onclick = () => {
+    const k = +th.dataset.k, dir = k === sortCol ? !asc : true;
+    const num = v => v === '' ? NaN : Number(String(v).replace(/ \(sat\)$/, ''));
+    const sorted = [...rows].sort((a, b) => {
+      const ea = a[k] === '', eb = b[k] === '';
+      if (ea || eb) return ea - eb;  // blank cells always go last, whichever direction
+      const x = num(a[k]), y = num(b[k]);
+      const cmp = !isNaN(x) && !isNaN(y) ? x - y : isNaN(x) && isNaN(y) ? String(a[k]).localeCompare(String(b[k])) : isNaN(x) ? 1 : -1;
+      return dir ? cmp : -cmp;
+    });
+    drawTable(columns, sorted, prefix, k, dir);
+  });
+}
+</script>
+</body>
+</html>

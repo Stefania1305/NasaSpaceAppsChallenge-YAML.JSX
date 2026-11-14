@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harmonisation Test Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a QA notebook. Sticky run bar on top, three views (plan, pixel calculator, cell aggregator) switched by tabs. */
+:root {
+  --bg: #eef2f3; --surface: #ffffff; --sunk: #e3e9eb; --ink: #16212a; --muted: #5a6b76; --line: #cfd9dd;
+  --accent: #0d6b75; --accent-ink: #ffffff; --ember: #b4520f;
+  --pass: #1d7a45; --pass-bg: #dcf1e4; --fail: #b3261e; --fail-bg: #f9e0dd; --skip: #8a6400; --skip-bg: #f6ecd0;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10171c; --surface: #172028; --sunk: #0c1216; --ink: #e2e9ed; --muted: #93a4ae; --line: #2a3843;
+  --accent: #4fb6c0; --accent-ink: #062a2e; --ember: #f0954f;
+  --pass: #6fd39a; --pass-bg: #163526; --fail: #ff8f86; --fail-bg: #3d1a18; --skip: #e9c463; --skip-bg: #392f12;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #10171c; --surface: #172028; --sunk: #0c1216; --ink: #e2e9ed; --muted: #93a4ae; --line: #2a3843;
+  --accent: #4fb6c0; --accent-ink: #062a2e; --ember: #f0954f;
+  --pass: #6fd39a; --pass-bg: #163526; --fail: #ff8f86; --fail-bg: #3d1a18; --skip: #e9c463; --skip-bg: #392f12;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+h1 { font-size: 28px; font-weight: 600; letter-spacing: .2px; }
+h2 { font-size: 20px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+code, .mono { font-family: var(--f-mono); font-size: .9em; }
+code { background: var(--sunk); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.eyebrow { font: 500 12px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ember); }
+
+header.top { padding-block: 28px 18px; display: grid; gap: 10px; }
+header.top p { margin: 0; max-width: 72ch; color: var(--muted); }
+.setup { display: grid; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.setup ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-block: 1px solid var(--line); }
+.bar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-block: 10px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tab { font: 600 14px var(--f-display); padding: 7px 14px; border-radius: 7px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+.tab:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.progress { display: flex; align-items: center; gap: 10px; margin-left: auto; font: 13px var(--f-mono); font-variant-numeric: tabular-nums; }
+.meter { display: flex; width: 160px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--sunk); }
+.meter span { display: block; height: 100%; }
+
+main { padding-block: 22px 60px; }
+.view[hidden] { display: none !important; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+.btn { font: 500 13px var(--f-body); padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--fail); border-color: var(--fail); }
+.btn[aria-pressed="true"] { background: var(--sunk); border-color: var(--accent); }
+.msg { font-size: 13px; color: var(--muted); }
+
+.group { display: grid; gap: 10px; margin-bottom: 26px; }
+.group > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.group > header p { margin: 0; color: var(--muted); font-size: 14px; flex-basis: 100%; }
+.test { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; display: grid; grid-template-columns: 64px minmax(0, 1fr); overflow: hidden; }
+.test .id { font: 500 13px var(--f-mono); padding: 14px 0 0 14px; color: var(--muted); }
+.test[data-s="pass"] { border-color: var(--pass); } .test[data-s="pass"] .id { color: var(--pass); }
+.test[data-s="fail"] { border-color: var(--fail); } .test[data-s="fail"] .id { color: var(--fail); }
+.test[data-s="skip"] .id { color: var(--skip); }
+.test .body { padding: 12px 16px 14px 0; display: grid; gap: 8px; min-width: 0; }
+.test h3 { font-size: 16px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.cols > div { min-width: 0; }
+.cols .lbl { font: 500 11px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.cols ol, .cols ul { margin: 0; padding-left: 18px; }
+.cols li { margin: 2px 0; }
+.expect { background: var(--sunk); border-radius: 7px; padding: 8px 10px; }
+.verdict { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.verdict button { font: 500 13px var(--f-body); padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.verdict button[data-v="pass"][aria-pressed="true"] { background: var(--pass-bg); border-color: var(--pass); color: var(--pass); }
+.verdict button[data-v="fail"][aria-pressed="true"] { background: var(--fail-bg); border-color: var(--fail); color: var(--fail); }
+.verdict button[data-v="skip"][aria-pressed="true"] { background: var(--skip-bg); border-color: var(--skip); color: var(--skip); }
+.verdict input { flex: 1 1 220px; min-width: 0; font: 13px var(--f-body); padding: 5px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; margin-bottom: 18px; }
+.panel > p { margin: 0; color: var(--muted); max-width: 80ch; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.fields label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+.fields input, .fields select, textarea { font: 14px var(--f-mono); padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 0; width: 100%; }
+textarea { min-height: 160px; font-size: 12px; resize: vertical; white-space: pre; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.scroll.tall { max-height: 60vh; overflow-y: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: top; }
+th { background: var(--sunk); font: 500 12px var(--f-mono); color: var(--muted); position: sticky; top: 0; }
+td.num, th.num { text-align: right; }
+td.rule { white-space: normal; color: var(--muted); min-width: 260px; }
+td.val { font-family: var(--f-mono); font-weight: 500; }
+.pill { display: inline-block; font: 500 12px var(--f-mono); padding: 1px 8px; border-radius: 999px; background: var(--sunk); }
+.pill.yes { background: var(--pass-bg); color: var(--pass); } .pill.no { background: var(--fail-bg); color: var(--fail); }
+.sample-note { font-size: 13px; color: var(--ember); }
+.err { color: var(--fail); font-size: 14px; }
+.kv { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; }
+.kv b { font-family: var(--f-mono); }
+
+@media (max-width: 720px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .test { grid-template-columns: minmax(0, 1fr); }
+  .test .id { padding: 12px 14px 0; }
+  .test .body { padding: 6px 14px 14px; }
+  .progress { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="top wrap">
+  <div class="eyebrow">NASA FIRMS · MODIS ↔ VIIRS</div>
+  <h1>Harmonisation Test Bench</h1>
+  <p>A manual test plan for the harmonisation in your local FIRMS app, plus two calculators that recompute the expected results on their own, so you can check the app's output against an independent calculation.</p>
+  <div class="setup">
+    <h3>Before you start</h3>
+    <ol>
+      <li>Run <code>python server.py</code> in <code>C:\cesti\nasabbl</code> and open <a href="/" target="_blank" rel="noopener">the app</a> (<code>http://localhost:8000</code>) next to this page. This page is also served at <code>http://localhost:8000/test</code>.</li>
+      <li>Most tests use <b>test area A</b>: date <code>2026-10-13</code>, day range <code>1</code>, area <code>-44.6,-8.7,-43.9,-8.1</code> (a fire cluster in Maranhão/Piauí, Brazil).</li>
+      <li>Click any column header in the app to sort it. <b>Copy all rows</b> under a table copies it with its header, ready to paste into the cell aggregator here.</li>
+      <li>Known answers below were recorded from FIRMS on 14 Nov 2026. NASA occasionally reprocesses NRT data, so a small count difference means re-check, not automatically fail.</li>
+    </ol>
+  </div>
+</header>
+
+<nav class="bar" aria-label="Views">
+  <div class="wrap">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-plan" data-view="plan" aria-selected="true">Test plan</button>
+      <button class="tab" role="tab" id="tab-pixel" data-view="pixel" aria-selected="false">Pixel calculator</button>
+      <button class="tab" role="tab" id="tab-cells" data-view="cells" aria-selected="false">Cell aggregator</button>
+    </div>
+    <div class="progress" aria-live="polite">
+      <div class="meter" id="meter"><span style="background:var(--pass)"></span><span style="background:var(--fail)"></span><span style="background:var(--skip)"></span></div>
+      <span id="progressText">0 / 0 tested</span>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <!-- TEST PLAN -->
+  <section class="view" id="view-plan" role="tabpanel" aria-labelledby="tab-plan">
+    <div class="toolbar">
+      <button class="btn" data-filter="all" aria-pressed="true">All tests</button>
+      <button class="btn" data-filter="todo" aria-pressed="false">Not tested yet</button>
+      <button class="btn" data-filter="fail" aria-pressed="false">Failed</button>
+      <span style="flex:1"></span>
+      <button class="btn primary" id="copyResults">Copy results</button>
+      <button class="btn danger" id="resetBtn">Reset results</button>
+      <span class="msg" id="planMsg" role="status"></span>
+    </div>
+    <div id="plan"></div>
+  </section>
+
+  <!-- PIXEL CALCULATOR -->
+  <section class="view" id="view-pixel" role="tabpanel" aria-labelledby="tab-pixel" hidden>
+    <div class="panel">
+      <div>
+        <h2>Pixel calculator</h2>
+      </div>
+      <p>Enter the raw values of one detection (from the FIRMS CSV or the single-sensor table) and compare the expected harmonised values with the same row in the app's <b>Harmonise all sensors</b> table. Used by tests A2, A3, A4, A5, A7, A8 and A9.</p>
+      <div class="toolbar" style="margin:0">
+        <span class="muted" style="font-size:13px">Load an example (first three are real FIRMS rows):</span>
+        <button class="btn" data-preset="modis">MODIS Terra</button>
+        <button class="btn" data-preset="viirs">VIIRS NOAA-20</button>
+        <button class="btn" data-preset="landsat">Landsat 8</button>
+        <button class="btn" data-preset="sat">Saturated MODIS</button>
+        <button class="btn" data-preset="b29">MODIS conf 29</button>
+        <button class="btn" data-preset="b80">MODIS conf 80</button>
+      </div>
+      <div class="fields">
+        <label>Instrument<select id="p_inst"><option>MODIS</option><option>VIIRS</option><option value="LANDSAT">Landsat</option></select></label>
+        <label>Satellite code<input id="p_sat" value="Terra"></label>
+        <label>Brightness (brightness / bright_ti4)<input id="p_bt" inputmode="decimal" value="325.3"></label>
+        <label>Secondary (bright_t31 / bright_ti5)<input id="p_bt2" inputmode="decimal" value="283.14"></label>
+        <label>Confidence (raw)<input id="p_conf" value="84"></label>
+        <label>scan<input id="p_scan" inputmode="decimal" value="1.26"></label>
+        <label>track<input id="p_track" inputmode="decimal" value="1.11"></label>
+        <label>acq_time (UTC, as in file)<input id="p_time" value="33"></label>
+        <label>Longitude<input id="p_lon" inputmode="decimal" value="134.64709"></label>
+        <label>frp<input id="p_frp" inputmode="decimal" value="35.78"></label>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Harmonised column</th><th>Expected value</th><th>Rule</th></tr></thead>
+          <tbody id="pixelOut"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- CELL AGGREGATOR -->
+  <section class="view" id="view-cells" role="tabpanel" aria-labelledby="tab-cells" hidden>
+    <div class="panel">
+      <div><h2>Cell aggregator</h2></div>
+      <p>Paste rows copied from the app's <b>Harmonise all sensors</b> table (header row included). This recomputes the grid comparison independently: Aqua only, one VIIRS satellite, cells keyed by grid square + date + day/night, FRP summed, and a common minimum fire size. Compare its cells and totals with the app's <b>Compare MODIS vs VIIRS</b> result for the same area and settings. Used by tests C1 and C2.</p>
+      <p class="sample-note" id="sampleNote">Loaded: sample rows for test area A (13 Oct 2026, all sensors, 468 rows), recorded from the app. Paste your own copy to replace them.</p>
+      <div class="fields">
+        <label>VIIRS satellite<select id="a_viirs"><option>NOAA-20</option><option>NOAA-21</option><option>Suomi NPP</option></select></label>
+        <label>Grid<select id="a_cell"><option value="0.01">0.01°</option><option value="0.05" selected>0.05°</option><option value="0.1">0.1°</option><option value="0.25">0.25°</option></select></label>
+        <label>Minimum fire size (MW)<input id="a_min" inputmode="decimal" value="10"></label>
+      </div>
+      <p class="muted" style="font-size:13px;margin:0">Use the minimum fire size shown in the app's comparison panel. Swath-coverage and pass-gap exclusions depend on the orbit model and are not recomputed here; on small areas the app cannot fit the model and excludes nothing for coverage, so the numbers should match exactly.</p>
+      <label class="muted" for="a_rows" style="font-size:12px">Harmonised rows (tab-separated)</label>
+      <textarea id="a_rows" spellcheck="false"></textarea>
+      <div class="toolbar" style="margin:0">
+        <button class="btn primary" id="a_run">Recompute</button>
+        <button class="btn" id="a_sample">Reload sample</button>
+        <span class="err" id="a_err" role="alert"></span>
+      </div>
+      <div id="a_out"></div>
+    </div>
+  </section>
+</main>
+
+<script type="text/plain" id="sampleTsv">source	instrument	satellite	latitude	longitude	acq_date	acq_time	overpass_slot	daynight	confidence	confidence_raw	bright_main_k	bright_saturated	bright_secondary_k	frp_mw	pixel_area_km2	type	type_label	type_existed	type_confidence	type_basis
+MODIS_NRT	MODIS	Aqua	-8.44074	-44.17558	2026-10-13	0614	night	N	nominal	37	302.81	no	292.14	9.85	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.43782	-44.19287	2026-10-13	0614	night	N	nominal	78	309.85	no	292.56	22.79	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.43387	-44.18504	2026-10-13	0614	night	N	nominal	66	311.97	no	292.35	25.33	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.41556	-44.1465	2026-10-13	0614	night	N	nominal	47	302.91	no	292.83	12.13	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40361	-44.14461	2026-10-13	0614	night	N	high	100	324.49	no	292.37	57.09	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40077	-44.16186	2026-10-13	0614	night	N	high	100	356.75	no	296.3	208.02	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.38255	-44.12366	2026-10-13	0614	night	N	nominal	51	302.72	no	290.62	14.45	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37684	-44.15799	2026-10-13	0614	night	N	high	100	344.95	no	294.32	140.45	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37397	-44.17521	2026-10-13	0614	night	N	high	90	314.79	no	293.71	35.27	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37348	-44.10465	2026-10-13	0614	night	N	high	88	315.01	no	289.38	34.55	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37062	-44.12172	2026-10-13	0614	night	N	high	96	317.97	no	291.66	41.87	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36775	-44.13885	2026-10-13	0614	night	N	high	96	317.81	no	291.9	40.62	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36487	-44.15602	2026-10-13	0614	night	N	high	100	351.62	no	295.83	177.68	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36444	-44.08564	2026-10-13	0614	night	N	nominal	57	314.94	no	289.74	33.27	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36157	-44.10268	2026-10-13	0614	night	N	nominal	42	314.37	no	291.15	31.05	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3587	-44.11975	2026-10-13	0614	night	N	high	100	331.35	no	292.97	79.82	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35773	-44.07919	2026-10-13	0614	night	N	high	94	316.87	no	290.8	38.52	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35581	-44.13687	2026-10-13	0614	night	N	nominal	65	311.55	no	291.97	27	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35498	-44.09621	2026-10-13	0614	night	N	nominal	34	310.91	no	291.55	24.64	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35254	-44.08374	2026-10-13	0614	night	N	low	20	310.63	no	291.7	24.16	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35223	-44.11331	2026-10-13	0614	night	N	high	100	335.03	no	293.52	95.59	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34966	-44.10072	2026-10-13	0614	night	N	nominal	59	317.74	no	291.7	37.8	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34946	-44.13044	2026-10-13	0614	night	N	high	100	326.54	no	293.2	67.97	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34677	-44.11778	2026-10-13	0614	night	N	nominal	38	313.7	no	291.63	30.06	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34582	-44.0773	2026-10-13	0614	night	N	nominal	72	307.66	no	291.46	21.71	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34307	-44.0943	2026-10-13	0614	night	N	high	91	315.23	no	291.43	36.18	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.48078	-44.20834	2026-10-13	1548	afternoon	D	high	h	367.00	yes	304.52	9.45	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4466	-44.20654	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.84	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44612	-44.20277	2026-10-13	1548	afternoon	D	nominal	n	350.2	no	308.57	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44468	-44.1916	2026-10-13	1548	afternoon	D	nominal	n	352.39	no	310.33	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4442	-44.18788	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.01	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44175	-44.20872	2026-10-13	1548	afternoon	D	nominal	n	350.76	no	307.89	13.72	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44151	-44.2109	2026-10-13	1548	afternoon	D	nominal	n	344.85	no	306.91	14.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44123	-44.20494	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.11	13.72	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44102	-44.2071	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.9	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44054	-44.20332	2026-10-13	1548	afternoon	D	nominal	n	342.68	no	307.99	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43922	-44.19015	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.4	27.69	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43872	-44.18646	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.91	23.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43864	-44.18852	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.28	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43822	-44.18276	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.98	23.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43816	-44.18482	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.42	21.47	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43769	-44.18112	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.44	21.47	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43669	-44.21312	2026-10-13	1548	afternoon	D	nominal	n	350.67	no	306.95	18.35	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43642	-44.21533	2026-10-13	1548	afternoon	D	nominal	n	349.19	no	307.18	14.98	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42837	-44.15243	2026-10-13	1548	afternoon	D	nominal	n	337.29	no	308.68	15.55	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42791	-44.14882	2026-10-13	1548	afternoon	D	nominal	n	334.31	no	308.02	9.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42264	-44.15108	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.07	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42235	-44.14942	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.32	9.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41846	-44.2038	2026-10-13	1548	afternoon	D	nominal	n	353.16	no	320.76	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41827	-44.20598	2026-10-13	1548	afternoon	D	low	l	207.38	no	314.46	101.36	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41797	-44.20012	2026-10-13	1548	afternoon	D	nominal	n	345.1	no	306.52	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4178	-44.20227	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.61	97.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4171	-44.15175	2026-10-13	1548	afternoon	D	nominal	n	351.01	no	308.46	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41681	-44.15011	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.1	15.26	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41661	-44.14811	2026-10-13	1548	afternoon	D	high	h	367.00	yes	306.21	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41489	-44.21937	2026-10-13	1548	afternoon	D	nominal	n	345.85	no	299.6	11.73	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41439	-44.21563	2026-10-13	1548	afternoon	D	high	h	367.00	yes	302.33	11.73	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41313	-44.16551	2026-10-13	1548	afternoon	D	nominal	n	340.82	no	309.1	6.78	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4129	-44.2045	2026-10-13	1548	afternoon	D	nominal	n	343.63	no	299.97	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41267	-44.16184	2026-10-13	1548	afternoon	D	nominal	n	343.87	no	310.43	6.78	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41241	-44.20083	2026-10-13	1548	afternoon	D	nominal	n	354.52	no	304.16	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41221	-44.15818	2026-10-13	1548	afternoon	D	nominal	n	341.8	no	309.02	14.86	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41192	-44.19716	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.33	36.14	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41143	-44.1935	2026-10-13	1548	afternoon	D	nominal	n	354.5	no	301.96	36.14	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41081	-44.14718	2026-10-13	1548	afternoon	D	nominal	n	339.06	no	307.63	15.26	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41035	-44.14353	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.96	16.38	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41009	-44.14153	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.91	37.43	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40988	-44.13989	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.92	16.38	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4096	-44.13789	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.31	22.19	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40942	-44.13625	2026-10-13	1548	afternoon	D	nominal	n	353.88	no	305.5	15.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4075	-44.16421	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.11	30.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40701	-44.16055	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.11	37.92	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40637	-44.19792	2026-10-13	1548	afternoon	D	nominal	n	346.21	no	301.4	11.5	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40359	-44.13503	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.2	22.19	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4031	-44.1314	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.53	15.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40262	-44.12777	2026-10-13	1548	afternoon	D	nominal	n	349.59	no	309.23	15.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40213	-44.12415	2026-10-13	1548	afternoon	D	nominal	n	351.18	no	307.68	10.35	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40197	-44.16496	2026-10-13	1548	afternoon	D	low	l	367.00	yes	359.9	1386.28	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40148	-44.1613	2026-10-13	1548	afternoon	D	low	l	367.00	yes	349.44	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40099	-44.15764	2026-10-13	1548	afternoon	D	low	l	367.00	yes	351.9	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4005	-44.15398	2026-10-13	1548	afternoon	D	high	h	367.00	yes	315.87	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40001	-44.15034	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.23	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3974	-44.17301	2026-10-13	1548	afternoon	D	nominal	n	349.48	no	298.99	22.47	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39661	-44.12492	2026-10-13	1548	afternoon	D	nominal	n	352.48	no	313.34	11.94	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39613	-44.1213	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.38	11.94	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39545	-44.15838	2026-10-13	1548	afternoon	D	low	l	367.00	yes	371.7	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39497	-44.15474	2026-10-13	1548	afternoon	D	high	h	367.00	yes	327.77	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39467	-44.11044	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.54	19.04	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.394	-44.14745	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.28	26.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38868	-44.10758	2026-10-13	1548	afternoon	D	nominal	n	350.43	no	315.71	19.04	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3882	-44.10398	2026-10-13	1548	afternoon	D	high	h	367.00	yes	316.36	29.44	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38772	-44.10038	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.94	29.44	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38557	-44.1264	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.82	30.53	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38534	-44.16713	2026-10-13	1548	afternoon	D	low	l	207.38	no	310.4	114.74	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38486	-44.16348	2026-10-13	1548	afternoon	D	low	l	367.00	yes	326.41	233.8	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38438	-44.15983	2026-10-13	1548	afternoon	D	low	l	367.00	yes	332.52	233.8	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38389	-44.15618	2026-10-13	1548	afternoon	D	high	h	367.00	yes	306.42	120.9	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38172	-44.09749	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.88	23.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38124	-44.09388	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.33	23.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38076	-44.09026	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.74	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38028	-44.08664	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.26	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37932	-44.16419	2026-10-13	1548	afternoon	D	high	h	367.00	yes	304.8	96.24	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37836	-44.1569	2026-10-13	1548	afternoon	D	low	l	367.00	yes	333.5	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37788	-44.15326	2026-10-13	1548	afternoon	D	low	l	367.00	yes	339.87	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37739	-44.14962	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.18	170.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37476	-44.08734	2026-10-13	1548	afternoon	D	nominal	n	353.87	no	314.15	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37428	-44.08372	2026-10-13	1548	afternoon	D	nominal	n	352.43	no	317.28	47.01	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3738	-44.0801	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.59	47.01	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37282	-44.15759	2026-10-13	1548	afternoon	D	nominal	n	351.64	no	308.07	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37234	-44.15395	2026-10-13	1548	afternoon	D	nominal	n	352.59	no	311.65	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37186	-44.15032	2026-10-13	1548	afternoon	D	low	l	367.00	yes	327.97	170.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37034	-44.22468	2026-10-13	1548	afternoon	D	high	h	367.00	yes	299.8	58.88	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36829	-44.0808	2026-10-13	1548	afternoon	D	nominal	n	355.39	no	313.67	32.63	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36781	-44.07719	2026-10-13	1548	afternoon	D	nominal	n	352.21	no	317.8	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36734	-44.0736	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.59	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36727	-44.15827	2026-10-13	1548	afternoon	D	nominal	n	347.51	no	307.64	14.3	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36525	-44.22903	2026-10-13	1548	afternoon	D	nominal	n	339.91	no	298.61	6.32	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36477	-44.22535	2026-10-13	1548	afternoon	D	nominal	n	332.26	no	298.46	6.28	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36183	-44.07432	2026-10-13	1548	afternoon	D	nominal	n	343.24	no	312.47	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36136	-44.07073	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.05	38.67	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35792	-44.12989	2026-10-13	1548	afternoon	D	nominal	n	348.75	no	309.96	12.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35745	-44.12625	2026-10-13	1548	afternoon	D	nominal	n	351.31	no	309.96	12.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35697	-44.12262	2026-10-13	1548	afternoon	D	nominal	n	351.97	no	310.3	13.14	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35649	-44.11899	2026-10-13	1548	afternoon	D	nominal	n	349.99	no	310.48	13.14	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35602	-44.11536	2026-10-13	1548	afternoon	D	nominal	n	347.71	no	310.34	20.83	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35412	-44.10091	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.82	19.58	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35286	-44.13419	2026-10-13	1548	afternoon	D	high	h	367.00	yes	302.78	43.38	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35239	-44.13056	2026-10-13	1548	afternoon	D	low	l	207.38	no	317.85	594.62	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35192	-44.12693	2026-10-13	1548	afternoon	D	low	l	367.00	yes	364.37	594.62	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35144	-44.12331	2026-10-13	1548	afternoon	D	low	l	367.00	yes	369.66	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35097	-44.11968	2026-10-13	1548	afternoon	D	low	l	367.00	yes	360.59	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3505	-44.11606	2026-10-13	1548	afternoon	D	low	l	367.00	yes	369.66	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35002	-44.11244	2026-10-13	1548	afternoon	D	low	l	367.00	yes	356.19	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34955	-44.10884	2026-10-13	1548	afternoon	D	high	h	367.00	yes	333.34	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34908	-44.10523	2026-10-13	1548	afternoon	D	high	h	367.00	yes	318.61	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34591	-44.12398	2026-10-13	1548	afternoon	D	nominal	n	349.47	no	300.6	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34544	-44.12036	2026-10-13	1548	afternoon	D	nominal	n	349.98	no	302.05	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34533	-44.07656	2026-10-13	1548	afternoon	D	nominal	n	353.91	no	312.7	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34497	-44.11674	2026-10-13	1548	afternoon	D	high	h	367.00	yes	303.12	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34486	-44.07299	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.12	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34439	-44.0694	2026-10-13	1548	afternoon	D	nominal	n	350.76	no	309.74	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34403	-44.10954	2026-10-13	1548	afternoon	D	low	l	367.00	yes	326.42	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34356	-44.10594	2026-10-13	1548	afternoon	D	high	h	367.00	yes	317.81	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34309	-44.10235	2026-10-13	1548	afternoon	D	high	h	367.00	yes	306.91	53.39	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34263	-44.09876	2026-10-13	1548	afternoon	D	nominal	n	353.96	no	309.3	53.39	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34216	-44.09518	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.72	23.02	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34169	-44.09159	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.33	23.02	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34123	-44.08802	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.67	24.52	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34076	-44.08445	2026-10-13	1548	afternoon	D	nominal	n	351.09	no	309.23	24.52	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34029	-44.08088	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.18	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33983	-44.0773	2026-10-13	1548	afternoon	D	nominal	n	348.15	no	310.13	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33936	-44.07372	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.24	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33889	-44.07014	2026-10-13	1548	afternoon	D	high	h	367.00	yes	305.44	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.47928	-44.20847	2026-10-13	1626	afternoon	D	nominal	n	348.09	no	311.83	18.01	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44497	-44.21146	2026-10-13	1626	afternoon	D	low	l	346.88	no	314.65	12.51	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4443	-44.20691	2026-10-13	1626	afternoon	D	low	l	350.44	no	315.76	20.63	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44166	-44.18884	2026-10-13	1626	afternoon	D	high	h	367.00	yes	321.33	26.45	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44055	-44.20743	2026-10-13	1626	afternoon	D	low	l	355.87	no	315.08	20.63	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.43725	-44.18487	2026-10-13	1626	afternoon	D	high	h	367.00	yes	320.02	26.45	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4366	-44.18036	2026-10-13	1626	afternoon	D	nominal	n	352.14	no	317.32	17.67	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4174	-44.20612	2026-10-13	1626	afternoon	D	low	l	367.00	yes	332.65	115.23	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41675	-44.20161	2026-10-13	1626	afternoon	D	nominal	n	354.76	no	316.78	43.26	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41301	-44.20216	2026-10-13	1626	afternoon	D	high	h	367.00	yes	309.19	133.14	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41187	-44.22076	2026-10-13	1626	afternoon	D	low	l	346.82	no	306.62	84.66	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40765	-44.13878	2026-10-13	1626	afternoon	D	nominal	n	355.91	no	318.44	45.62	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40716	-44.16172	2026-10-13	1626	afternoon	D	low	l	355.28	no	319.04	65.85	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40701	-44.13432	2026-10-13	1626	afternoon	D	high	h	367.00	yes	318.29	45.62	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40422	-44.19428	2026-10-13	1626	afternoon	D	high	h	367.00	yes	310.55	40.93	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40343	-44.16228	2026-10-13	1626	afternoon	D	low	l	367.00	yes	341.23	65.85	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40278	-44.1578	2026-10-13	1626	afternoon	D	low	l	352.15	no	332.07	82.71	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40263	-44.13042	2026-10-13	1626	afternoon	D	nominal	n	350.69	no	315.99	25.76	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39969	-44.16284	2026-10-13	1626	afternoon	D	high	h	367.00	yes	361	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39904	-44.15836	2026-10-13	1626	afternoon	D	low	l	367.00	yes	364.65	324.88	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3984	-44.15388	2026-10-13	1626	afternoon	D	low	l	367.00	yes	335.77	324.88	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39775	-44.1494	2026-10-13	1626	afternoon	D	low	l	355.1	no	310.83	23.74	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39762	-44.12207	2026-10-13	1626	afternoon	D	low	l	355.09	no	314.1	73.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39697	-44.11761	2026-10-13	1626	afternoon	D	low	l	367.00	yes	330.51	73.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3966	-44.16788	2026-10-13	1626	afternoon	D	high	h	367.00	yes	336.3	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39596	-44.16339	2026-10-13	1626	afternoon	D	low	l	367.00	yes	379.67	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39531	-44.15892	2026-10-13	1626	afternoon	D	low	l	367.00	yes	380.02	324.88	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39467	-44.15444	2026-10-13	1626	afternoon	D	low	l	367.00	yes	330.85	324.88	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39325	-44.11817	2026-10-13	1626	afternoon	D	low	l	356.89	no	320.62	48.61	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39261	-44.11372	2026-10-13	1626	afternoon	D	low	l	353.98	no	320.91	64.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39222	-44.16394	2026-10-13	1626	afternoon	D	low	l	314.58	no	321.01	354.24	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39196	-44.10927	2026-10-13	1626	afternoon	D	low	l	367.00	yes	328.72	64.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39158	-44.15947	2026-10-13	1626	afternoon	D	low	l	354.67	no	305.57	48.46	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39132	-44.10483	2026-10-13	1626	afternoon	D	nominal	n	354.57	no	320.57	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3876	-44.10538	2026-10-13	1626	afternoon	D	low	l	351.65	no	318.71	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38743	-44.21049	2026-10-13	1626	afternoon	D	low	l	348.05	no	302.7	3.86	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38696	-44.10094	2026-10-13	1626	afternoon	D	low	l	350.77	no	324.25	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38411	-44.16057	2026-10-13	1626	afternoon	D	low	l	367.00	yes	356.71	205.3	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38369	-44.21104	2026-10-13	1626	afternoon	D	low	l	343.28	no	302.05	4.69	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3826	-44.09705	2026-10-13	1626	afternoon	D	low	l	355.51	no	319.56	46.25	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38196	-44.09261	2026-10-13	1626	afternoon	D	low	l	354.98	no	324.02	46.25	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38058	-44.21608	2026-10-13	1626	afternoon	D	low	l	338.96	no	302.2	4.69	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38037	-44.16112	2026-10-13	1626	afternoon	D	low	l	353.74	no	311.06	205.3	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37973	-44.15664	2026-10-13	1626	afternoon	D	low	l	367.00	yes	344.63	205.3	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37909	-44.15217	2026-10-13	1626	afternoon	D	high	h	367.00	yes	345.75	232.99	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3776	-44.0887	2026-10-13	1626	afternoon	D	low	l	355.27	no	324.07	47.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37696	-44.08426	2026-10-13	1626	afternoon	D	low	l	353.49	no	322.87	47.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37536	-44.15272	2026-10-13	1626	afternoon	D	high	h	367.00	yes	339.24	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37472	-44.14824	2026-10-13	1626	afternoon	D	high	h	367.00	yes	340.99	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3726	-44.08036	2026-10-13	1626	afternoon	D	low	l	367.00	yes	331.45	205.3	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37189	-44.23573	2026-10-13	1626	afternoon	D	low	l	334.93	no	302.14	4.02	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37162	-44.15326	2026-10-13	1626	afternoon	D	nominal	n	355.57	no	315.63	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37062	-44.2267	2026-10-13	1626	afternoon	D	high	h	367.00	yes	306.55	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36998	-44.22219	2026-10-13	1626	afternoon	D	nominal	n	348.66	no	303.33	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3675	-44.23175	2026-10-13	1626	afternoon	D	nominal	n	335.65	no	301.96	4.02	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36687	-44.22724	2026-10-13	1626	afternoon	D	nominal	n	351.42	no	305.5	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36375	-44.2323	2026-10-13	1626	afternoon	D	low	l	330.09	no	302.63	2.89	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36312	-44.22778	2026-10-13	1626	afternoon	D	nominal	n	356.02	no	305.9	9.74	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36269	-44.23084	2026-10-13	1626	afternoon	D	nominal	n	340.78	no	303.76	4.73	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36248	-44.22327	2026-10-13	1626	afternoon	D	low	l	340	no	303.58	9.74	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36203	-44.22634	2026-10-13	1626	afternoon	D	nominal	n	355.93	no	305.94	14.36	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35654	-44.10085	2026-10-13	1626	afternoon	D	low	l	356.51	no	314.7	22.52	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35535	-44.11918	2026-10-13	1626	afternoon	D	low	l	353.21	no	319.74	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35289	-44.12864	2026-10-13	1626	afternoon	D	low	l	367.00	yes	354.44	171.42	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35226	-44.12418	2026-10-13	1626	afternoon	D	low	l	367.00	yes	366.79	171.42	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35219	-44.09695	2026-10-13	1626	afternoon	D	low	l	356.52	no	314.29	29.54	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35162	-44.11972	2026-10-13	1626	afternoon	D	low	l	367.00	yes	367.51	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35099	-44.11528	2026-10-13	1626	afternoon	D	low	l	350.69	no	339.4	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35036	-44.11083	2026-10-13	1626	afternoon	D	high	h	367.00	yes	326.05	24.18	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34973	-44.10638	2026-10-13	1626	afternoon	D	high	h	367.00	yes	324.71	24.18	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34916	-44.12918	2026-10-13	1626	afternoon	D	high	h	367.00	yes	342.18	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34853	-44.12472	2026-10-13	1626	afternoon	D	low	l	367.00	yes	378.56	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3479	-44.12027	2026-10-13	1626	afternoon	D	low	l	367.00	yes	378.24	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34748	-44.12793	2026-10-13	1626	afternoon	D	high	h	367.00	yes	352.09	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34727	-44.11582	2026-10-13	1626	afternoon	D	high	h	367.00	yes	361.71	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34683	-44.12348	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.51	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34664	-44.11137	2026-10-13	1626	afternoon	D	high	h	367.00	yes	357.87	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34617	-44.11904	2026-10-13	1626	afternoon	D	low	l	367.00	yes	375.9	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34601	-44.10693	2026-10-13	1626	afternoon	D	high	h	367.00	yes	357.41	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34551	-44.1146	2026-10-13	1626	afternoon	D	high	h	367.00	yes	354.55	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34486	-44.11016	2026-10-13	1626	afternoon	D	low	l	367.00	yes	366.78	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3448	-44.12526	2026-10-13	1626	afternoon	D	low	l	367.00	yes	368.12	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3442	-44.10573	2026-10-13	1626	afternoon	D	high	h	367.00	yes	360.24	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34417	-44.12081	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.24	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34355	-44.1013	2026-10-13	1626	afternoon	D	high	h	367.00	yes	322.42	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34354	-44.11636	2026-10-13	1626	afternoon	D	low	l	367.00	yes	372.27	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3431	-44.12402	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.36	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34291	-44.11192	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.24	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34289	-44.09687	2026-10-13	1626	afternoon	D	low	l	355.13	no	320.5	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34245	-44.11958	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.02	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34228	-44.10747	2026-10-13	1626	afternoon	D	low	l	367.00	yes	372.93	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34179	-44.11514	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.36	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3417	-44.13026	2026-10-13	1626	afternoon	D	nominal	n	355.42	no	303.62	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34166	-44.10304	2026-10-13	1626	afternoon	D	low	l	350.48	no	339.03	86.63	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34161	-44.07593	2026-10-13	1626	afternoon	D	low	l	367.00	yes	341.16	212.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34158	-44.08804	2026-10-13	1626	afternoon	D	nominal	n	354.91	no	316.97	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34114	-44.1107	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.78	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34107	-44.1258	2026-10-13	1626	afternoon	D	low	l	308.38	no	317.73	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34103	-44.0986	2026-10-13	1626	afternoon	D	low	l	352.31	no	335.38	86.63	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34093	-44.08362	2026-10-13	1626	afternoon	D	low	l	367.00	yes	331.78	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34048	-44.10627	2026-10-13	1626	afternoon	D	low	l	367.00	yes	380.03	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34045	-44.12136	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.89	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3404	-44.09417	2026-10-13	1626	afternoon	D	high	h	367.00	yes	324.56	58.97	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34028	-44.07921	2026-10-13	1626	afternoon	D	high	h	367.00	yes	346.84	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34003	-44.12901	2026-10-13	1626	afternoon	D	low	l	356.49	no	303.28	45.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33983	-44.10184	2026-10-13	1626	afternoon	D	high	h	367.00	yes	353.38	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33982	-44.11691	2026-10-13	1626	afternoon	D	low	l	367.00	yes	366.39	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33978	-44.08975	2026-10-13	1626	afternoon	D	low	l	367.00	yes	329.64	58.97	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33963	-44.07479	2026-10-13	1626	afternoon	D	low	l	367.00	yes	331.9	69.85	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33917	-44.09742	2026-10-13	1626	afternoon	D	high	h	367.00	yes	354.6	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33915	-44.08532	2026-10-13	1626	afternoon	D	low	l	367.00	yes	359.13	176.98	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33897	-44.07038	2026-10-13	1626	afternoon	D	nominal	n	350.67	no	315.56	69.85	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33852	-44.093	2026-10-13	1626	afternoon	D	high	h	367.00	yes	352.33	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33852	-44.0809	2026-10-13	1626	afternoon	D	high	h	367.00	yes	337.77	176.98	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33807	-44.11568	2026-10-13	1626	afternoon	D	low	l	367.00	yes	382.51	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33787	-44.08859	2026-10-13	1626	afternoon	D	low	l	367.00	yes	352.72	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33741	-44.11125	2026-10-13	1626	afternoon	D	low	l	367.00	yes	385.06	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33735	-44.12635	2026-10-13	1626	afternoon	D	high	h	367.00	yes	303.33	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33731	-44.09916	2026-10-13	1626	afternoon	D	low	l	367.00	yes	369.91	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33722	-44.08417	2026-10-13	1626	afternoon	D	high	h	367.00	yes	336.45	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33676	-44.10682	2026-10-13	1626	afternoon	D	low	l	367.00	yes	385.43	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33672	-44.12191	2026-10-13	1626	afternoon	D	high	h	367.00	yes	305.6	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33668	-44.09473	2026-10-13	1626	afternoon	D	high	h	367.00	yes	340.5	210.55	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33656	-44.07976	2026-10-13	1626	afternoon	D	nominal	n	347.09	no	309.17	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33611	-44.1024	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.95	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33606	-44.09031	2026-10-13	1626	afternoon	D	high	h	367.00	yes	338.47	210.55	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33565	-44.12511	2026-10-13	1626	afternoon	D	high	h	367.00	yes	302.47	45.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33547	-44.11302	2026-10-13	1626	afternoon	D	low	l	367.00	yes	360.58	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33545	-44.09797	2026-10-13	1626	afternoon	D	low	l	367.00	yes	326.85	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.335	-44.12068	2026-10-13	1626	afternoon	D	high	h	367.00	yes	302.98	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33484	-44.10858	2026-10-13	1626	afternoon	D	low	l	367.00	yes	373.09	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3348	-44.09355	2026-10-13	1626	afternoon	D	nominal	n	356.36	no	305.45	40	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33435	-44.11625	2026-10-13	1626	afternoon	D	nominal	n	356.95	no	304.34	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33422	-44.10415	2026-10-13	1626	afternoon	D	low	l	367.00	yes	357.63	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33359	-44.09972	2026-10-13	1626	afternoon	D	low	l	356.21	no	306.51	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33239	-44.10295	2026-10-13	1626	afternoon	D	low	l	355.69	no	303.73	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.48193	-44.20683	2026-10-13	1643	afternoon	D	low	l	339.68	no	312.61	24.76	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.47838	-44.20745	2026-10-13	1643	afternoon	D	low	l	340.55	no	314.24	24.76	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44523	-44.20506	2026-10-13	1643	afternoon	D	nominal	n	350.69	no	317.84	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44262	-44.18889	2026-10-13	1643	afternoon	D	nominal	n	351.69	no	321.36	26.54	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44169	-44.20565	2026-10-13	1643	afternoon	D	nominal	n	352.29	no	315.6	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43879	-44.21025	2026-10-13	1643	afternoon	D	nominal	n	354.62	no	318.27	35.11	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43842	-44.18542	2026-10-13	1643	afternoon	D	nominal	n	355.37	no	321.64	26.54	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43776	-44.18137	2026-10-13	1643	afternoon	D	low	l	352.1	no	324.02	45.39	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41974	-44.20507	2026-10-13	1643	afternoon	D	nominal	n	355.09	no	319.33	23.11	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41684	-44.20967	2026-10-13	1643	afternoon	D	high	h	367.00	yes	336.43	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41619	-44.20563	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.59	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41553	-44.20158	2026-10-13	1643	afternoon	D	low	l	367.00	yes	326.69	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41487	-44.19753	2026-10-13	1643	afternoon	D	low	l	356.05	no	316.45	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41405	-44.14767	2026-10-13	1643	afternoon	D	nominal	n	356.55	no	317.74	27.79	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41329	-44.21024	2026-10-13	1643	afternoon	D	high	h	367.00	yes	355.7	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41272	-44.13952	2026-10-13	1643	afternoon	D	high	h	367.00	yes	316.87	36.04	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41166	-44.21849	2026-10-13	1643	afternoon	D	nominal	n	348.99	no	303.47	20.64	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41131	-44.19809	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.36	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41102	-44.21445	2026-10-13	1643	afternoon	D	nominal	n	354.31	no	307.62	20.64	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.4104	-44.21485	2026-10-13	1643	afternoon	D	high	h	367.00	yes	306.22	29.35	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40849	-44.136	2026-10-13	1643	afternoon	D	nominal	n	354.37	no	321.13	24.21	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40783	-44.13192	2026-10-13	1643	afternoon	D	nominal	n	356.24	no	316.66	24.21	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.4071	-44.19459	2026-10-13	1643	afternoon	D	low	l	355.39	no	311.29	167.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40535	-44.16155	2026-10-13	1643	afternoon	D	low	l	367.00	yes	329.69	38.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40469	-44.15748	2026-10-13	1643	afternoon	D	nominal	n	354.63	no	325.71	38.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40332	-44.1657	2026-10-13	1643	afternoon	D	high	h	367.00	yes	334.02	104	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40268	-44.16163	2026-10-13	1643	afternoon	D	high	h	367.00	yes	340.82	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40245	-44.16618	2026-10-13	1643	afternoon	D	low	l	367.00	yes	327.86	88.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40204	-44.15756	2026-10-13	1643	afternoon	D	high	h	367.00	yes	342.27	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40179	-44.16211	2026-10-13	1643	afternoon	D	high	h	367.00	yes	341.84	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40112	-44.15805	2026-10-13	1643	afternoon	D	high	h	367.00	yes	346.97	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40046	-44.15397	2026-10-13	1643	afternoon	D	low	l	352.76	no	325.71	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39976	-44.16626	2026-10-13	1643	afternoon	D	high	h	367.00	yes	351.78	104	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39936	-44.12487	2026-10-13	1643	afternoon	D	low	l	351.28	no	321.51	36.56	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39912	-44.16219	2026-10-13	1643	afternoon	D	low	l	367.00	yes	370.88	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39889	-44.16674	2026-10-13	1643	afternoon	D	high	h	367.00	yes	339.1	88.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39869	-44.12078	2026-10-13	1643	afternoon	D	nominal	n	354.46	no	318.41	18.66	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39847	-44.15812	2026-10-13	1643	afternoon	D	low	l	367.00	yes	378	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39823	-44.16267	2026-10-13	1643	afternoon	D	low	l	367.00	yes	367.78	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39802	-44.11669	2026-10-13	1643	afternoon	D	nominal	n	353.53	no	319.25	18.66	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39783	-44.15405	2026-10-13	1643	afternoon	D	high	h	367.00	yes	349.27	163.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39756	-44.1586	2026-10-13	1643	afternoon	D	low	l	367.00	yes	371.14	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39735	-44.1126	2026-10-13	1643	afternoon	D	nominal	n	353.29	no	316.33	16.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39719	-44.14996	2026-10-13	1643	afternoon	D	nominal	n	355.89	no	318.07	163.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3969	-44.15454	2026-10-13	1643	afternoon	D	high	h	367.00	yes	357.19	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39623	-44.15046	2026-10-13	1643	afternoon	D	high	h	367.00	yes	317.06	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3962	-44.16683	2026-10-13	1643	afternoon	D	high	h	367.00	yes	355.64	414	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39558	-44.1167	2026-10-13	1643	afternoon	D	nominal	n	353.14	no	321.81	25.85	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39556	-44.16276	2026-10-13	1643	afternoon	D	low	l	367.00	yes	379.68	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39491	-44.15868	2026-10-13	1643	afternoon	D	low	l	367.00	yes	380.02	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39445	-44.11725	2026-10-13	1643	afternoon	D	nominal	n	350.48	no	319.18	21.29	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39429	-44.1085	2026-10-13	1643	afternoon	D	low	l	352.03	no	322.22	107.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39427	-44.15461	2026-10-13	1643	afternoon	D	low	l	367.00	yes	330.29	332.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39312	-44.10907	2026-10-13	1643	afternoon	D	nominal	n	354.02	no	322.46	88.86	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39244	-44.10497	2026-10-13	1643	afternoon	D	nominal	n	351.41	no	318.39	81.01	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39201	-44.11726	2026-10-13	1643	afternoon	D	nominal	n	351.7	no	320.93	25.85	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39135	-44.15925	2026-10-13	1643	afternoon	D	nominal	n	354.54	no	305.46	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39007	-44.10496	2026-10-13	1643	afternoon	D	low	l	352.16	no	323.7	73.91	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38844	-44.16389	2026-10-13	1643	afternoon	D	low	l	323.28	no	323.79	252.43	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38843	-44.20976	2026-10-13	1643	afternoon	D	nominal	n	345.99	no	304.08	6.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38778	-44.2057	2026-10-13	1643	afternoon	D	nominal	n	344.04	no	303.99	10.09	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38714	-44.20163	2026-10-13	1643	afternoon	D	nominal	n	350.88	no	307.65	10.09	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3852	-44.09732	2026-10-13	1643	afternoon	D	low	l	351.2	no	322.72	102.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38488	-44.21033	2026-10-13	1643	afternoon	D	nominal	n	340.62	no	303.73	6.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38423	-44.16038	2026-10-13	1643	afternoon	D	low	l	367.00	yes	362.68	252.43	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38358	-44.15631	2026-10-13	1643	afternoon	D	high	h	367.00	yes	336.66	195.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38262	-44.21902	2026-10-13	1643	afternoon	D	nominal	n	333.44	no	301.93	3.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38197	-44.21496	2026-10-13	1643	afternoon	D	nominal	n	346.84	no	303.63	7.5	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38132	-44.16502	2026-10-13	1643	afternoon	D	nominal	n	355.53	no	305.08	16.51	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38067	-44.16095	2026-10-13	1643	afternoon	D	high	h	367.00	yes	311.65	16.51	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38002	-44.15687	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.44	218.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37937	-44.15279	2026-10-13	1643	afternoon	D	low	l	367.00	yes	357.07	218.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37907	-44.21959	2026-10-13	1643	afternoon	D	nominal	n	343.29	no	303.09	3.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37516	-44.14928	2026-10-13	1643	afternoon	D	high	h	367.00	yes	348.25	261.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37326	-44.22885	2026-10-13	1643	afternoon	D	nominal	n	336.22	no	302.98	6.63	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37262	-44.2248	2026-10-13	1643	afternoon	D	nominal	n	355.2	no	306.53	9.71	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37197	-44.22074	2026-10-13	1643	afternoon	D	nominal	n	342.88	no	303.48	9.71	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36972	-44.22943	2026-10-13	1643	afternoon	D	nominal	n	348.83	no	305.87	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36907	-44.22538	2026-10-13	1643	afternoon	D	nominal	n	348.07	no	305.52	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36842	-44.22131	2026-10-13	1643	afternoon	D	nominal	n	344.52	no	304.12	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36617	-44.23	2026-10-13	1643	afternoon	D	nominal	n	347.22	no	304.45	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36552	-44.22594	2026-10-13	1643	afternoon	D	nominal	n	352.46	no	306.33	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36262	-44.23057	2026-10-13	1643	afternoon	D	nominal	n	341.67	no	305.08	4.31	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36197	-44.22652	2026-10-13	1643	afternoon	D	nominal	n	344.81	no	305.73	7.38	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35342	-44.12763	2026-10-13	1643	afternoon	D	high	h	367.00	yes	345.84	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35277	-44.12354	2026-10-13	1643	afternoon	D	high	h	367.00	yes	347.09	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35211	-44.11945	2026-10-13	1643	afternoon	D	high	h	367.00	yes	349.17	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35145	-44.11535	2026-10-13	1643	afternoon	D	low	l	354.09	no	334.2	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3508	-44.11126	2026-10-13	1643	afternoon	D	high	h	367.00	yes	327.04	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35014	-44.10716	2026-10-13	1643	afternoon	D	high	h	367.00	yes	323.51	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34986	-44.1282	2026-10-13	1643	afternoon	D	high	h	367.00	yes	334.98	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3492	-44.12412	2026-10-13	1643	afternoon	D	low	l	367.00	yes	351.96	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34854	-44.12002	2026-10-13	1643	afternoon	D	high	h	367.00	yes	352.18	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34789	-44.11593	2026-10-13	1643	afternoon	D	low	l	367.00	yes	339.82	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34723	-44.11183	2026-10-13	1643	afternoon	D	low	l	367.00	yes	339.84	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34657	-44.10773	2026-10-13	1643	afternoon	D	high	h	367.00	yes	342.84	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34629	-44.12878	2026-10-13	1643	afternoon	D	nominal	n	351.36	no	309.2	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34563	-44.12469	2026-10-13	1643	afternoon	D	high	h	367.00	yes	341.96	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34553	-44.07837	2026-10-13	1643	afternoon	D	high	h	367.00	yes	321.24	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34497	-44.1206	2026-10-13	1643	afternoon	D	high	h	367.00	yes	341.2	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34487	-44.07425	2026-10-13	1643	afternoon	D	low	l	356.03	no	322.7	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34432	-44.1165	2026-10-13	1643	afternoon	D	low	l	367.00	yes	335.62	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34366	-44.1124	2026-10-13	1643	afternoon	D	low	l	367.00	yes	337.37	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.343	-44.1083	2026-10-13	1643	afternoon	D	high	h	367.00	yes	345.98	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34272	-44.12936	2026-10-13	1643	afternoon	D	nominal	n	352.13	no	305.51	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34261	-44.08306	2026-10-13	1643	afternoon	D	high	h	367.00	yes	324.09	28.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34234	-44.10419	2026-10-13	1643	afternoon	D	low	l	355.09	no	331.19	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34206	-44.12527	2026-10-13	1643	afternoon	D	low	l	367.00	yes	330.46	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34195	-44.07894	2026-10-13	1643	afternoon	D	low	l	354.55	no	331.97	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34168	-44.10009	2026-10-13	1643	afternoon	D	low	l	355.79	no	328.82	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34141	-44.12117	2026-10-13	1643	afternoon	D	low	l	367.00	yes	364.48	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34129	-44.07482	2026-10-13	1643	afternoon	D	low	l	367.00	yes	339.49	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34102	-44.09598	2026-10-13	1643	afternoon	D	low	l	356.26	no	325.49	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34075	-44.11707	2026-10-13	1643	afternoon	D	high	h	367.00	yes	361.26	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34063	-44.0707	2026-10-13	1643	afternoon	D	high	h	367.00	yes	361.79	175.53	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34036	-44.09186	2026-10-13	1643	afternoon	D	high	h	367.00	yes	318.97	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34009	-44.11297	2026-10-13	1643	afternoon	D	high	h	367.00	yes	351.35	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33943	-44.10887	2026-10-13	1643	afternoon	D	high	h	367.00	yes	350.37	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33916	-44.12994	2026-10-13	1643	afternoon	D	nominal	n	354.02	no	304.36	77.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33904	-44.08362	2026-10-13	1643	afternoon	D	low	l	367.00	yes	336.19	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33877	-44.10476	2026-10-13	1643	afternoon	D	low	l	367.00	yes	340.34	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33837	-44.0795	2026-10-13	1643	afternoon	D	high	h	367.00	yes	358.64	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33811	-44.10065	2026-10-13	1643	afternoon	D	high	h	367.00	yes	342.19	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33784	-44.12174	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33771	-44.07539	2026-10-13	1643	afternoon	D	low	l	367.00	yes	376.05	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33745	-44.09654	2026-10-13	1643	afternoon	D	high	h	367.00	yes	346.46	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33718	-44.11764	2026-10-13	1643	afternoon	D	low	l	367.00	yes	369.98	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33705	-44.07126	2026-10-13	1643	afternoon	D	high	h	367.00	yes	359.36	421.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33678	-44.09243	2026-10-13	1643	afternoon	D	high	h	367.00	yes	345.42	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33652	-44.11354	2026-10-13	1643	afternoon	D	high	h	367.00	yes	356.55	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33612	-44.08831	2026-10-13	1643	afternoon	D	high	h	367.00	yes	361.88	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33586	-44.10943	2026-10-13	1643	afternoon	D	low	l	367.00	yes	365.55	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33546	-44.08419	2026-10-13	1643	afternoon	D	low	l	367.00	yes	373.68	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33519	-44.10532	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33493	-44.1264	2026-10-13	1643	afternoon	D	nominal	n	354.43	no	303.6	77.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33479	-44.08007	2026-10-13	1643	afternoon	D	low	l	367.00	yes	373.93	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33453	-44.10121	2026-10-13	1643	afternoon	D	low	l	367.00	yes	374.13	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33427	-44.1223	2026-10-13	1643	afternoon	D	high	h	367.00	yes	340.98	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33413	-44.07595	2026-10-13	1643	afternoon	D	low	l	367.00	yes	371.52	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33387	-44.0971	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3336	-44.1182	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.06	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33321	-44.09299	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.76	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33294	-44.11409	2026-10-13	1643	afternoon	D	high	h	367.00	yes	353.64	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33254	-44.08887	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.35	329.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33228	-44.10999	2026-10-13	1643	afternoon	D	low	l	367.00	yes	369.7	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33162	-44.10588	2026-10-13	1643	afternoon	D	high	h	367.00	yes	354.31	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33055	-44.07651	2026-10-13	1643	afternoon	D	nominal	n	355.96	no	303.28	74.84	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33029	-44.09766	2026-10-13	1643	afternoon	D	low	l	367.00	yes	369.95	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33003	-44.11874	2026-10-13	1643	afternoon	D	high	h	367.00	yes	297.68	33.1	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32963	-44.09355	2026-10-13	1643	afternoon	D	low	l	317.52	no	322.38	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32937	-44.11464	2026-10-13	1643	afternoon	D	low	l	356.02	no	304.29	83.84	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32897	-44.08943	2026-10-13	1643	afternoon	D	high	h	367.00	yes	300.69	329.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32804	-44.10641	2026-10-13	1643	afternoon	D	high	h	367.00	yes	304.34	41.05	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32671	-44.09818	2026-10-13	1643	afternoon	D	low	l	355.08	no	300.78	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32605	-44.09407	2026-10-13	1643	afternoon	D	high	h	367.00	yes	293.4	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32246	-44.09457	2026-10-13	1643	afternoon	D	low	l	356.01	no	284.49	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.41663	-44.20275	2026-10-13	1826	afternoon	D	nominal	79	340.69	no	306.4	59.5	2.0664	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40875	-44.14553	2026-10-13	1826	afternoon	D	nominal	63	330.75	no	300.28	24.11	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40561	-44.20433	2026-10-13	1826	afternoon	D	nominal	67	337.67	no	304.2	52.6	2.0664	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40169	-44.17569	2026-10-13	1826	afternoon	D	high	84	341.65	no	306.91	58.83	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39974	-44.1614	2026-10-13	1826	afternoon	D	high	100	367.00	yes	321.63	621.06	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39779	-44.14716	2026-10-13	1826	afternoon	D	high	92	356.7	no	298.3	118.59	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39198	-44.10468	2026-10-13	1826	afternoon	D	high	99	358.1	no	310.65	129.12	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3907	-44.17728	2026-10-13	1826	afternoon	D	high	100	367.00	yes	308.5	278.64	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39005	-44.09059	2026-10-13	1826	afternoon	D	high	97	355.28	no	308.08	116.9	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.38876	-44.16299	2026-10-13	1826	afternoon	D	high	100	367.00	yes	326.93	1798.05	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.38682	-44.14875	2026-10-13	1826	afternoon	D	high	94	367.00	yes	307.06	238.88	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37913	-44.09216	2026-10-13	1826	afternoon	D	high	88	341.34	no	296.01	58.28	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37778	-44.16455	2026-10-13	1826	afternoon	D	high	94	367.00	yes	302.64	184.56	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37721	-44.07806	2026-10-13	1826	afternoon	D	nominal	56	329.37	no	299.82	25.94	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37585	-44.15031	2026-10-13	1826	afternoon	D	high	94	367.00	yes	311.01	446.81	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3663	-44.07961	2026-10-13	1826	afternoon	D	nominal	74	338.33	no	307.63	49.94	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34084	-44.07447	2026-10-13	1826	afternoon	D	nominal	53	335.34	no	309.19	44.52	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.33582	-44.11807	2026-10-13	1826	afternoon	D	high	83	339.39	no	302.74	55.68	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.33386	-44.10402	2026-10-13	1826	afternoon	D	high	95	352.24	no	301.92	104.93	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3319	-44.09002	2026-10-13	1826	afternoon	D	high	100	367.00	yes	312.62	268.26	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.32995	-44.07605	2026-10-13	1826	afternoon	D	high	92	346.95	no	306.53	85.14	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.32491	-44.11979	2026-10-13	1826	afternoon	D	nominal	54	329.63	no	304.59	31.47	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.32298	-44.10584	2026-10-13	1826	afternoon	D	high	88	341.23	no	304.1	66.01	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const APP = 'http://localhost:8000';
+
+// ---------------------------------------------------------------- test plan
+const GROUPS = [
+  { id: 'A', title: 'Pixel-level harmonisation', note: 'The Harmonise all sensors table: every sensor mapped onto one set of columns.' },
+  { id: 'B', title: 'Fire type inference', note: 'SP files carry type; NRT and Landsat get it inferred from the location grid.' },
+  { id: 'C', title: 'MODIS vs VIIRS comparison', note: 'The Compare MODIS vs VIIRS button: common grid, FRP sums, detection limit, swaths, timing.' },
+  { id: 'D', title: 'Input checks and edge cases', note: 'Bad input gives a clear message and nothing crashes.' },
+];
+const T = [
+  // A
+  { id: 'A1', g: 'A', title: 'Raw scan and track are gone, pixel area is present',
+    steps: ['Harmonise all sensors for test area A.', 'Then Fetch a single sensor: MODIS_NRT, same date and area.'],
+    expect: 'Neither table has <code>scan</code>, <code>track</code>, <code>scan_km</code> or <code>track_km</code>. Both have <code>pixel_area_km2</code>.' },
+  { id: 'A2', g: 'A', title: 'Pixel area = scan × track',
+    steps: ['Open the raw CSV in a browser tab: <code>https://firms.modaps.eosdis.nasa.gov/api/area/csv/&lt;MAP_KEY&gt;/MODIS_NRT/-44.6,-8.7,-43.9,-8.1/1/2026-10-13</code> (key from your <code>.env</code>).', 'Pick 3 rows. Enter scan and track in the Pixel calculator.', 'Find the same rows in the app (sort by latitude).'],
+    expect: '<code>pixel_area_km2</code> equals scan × track to 4 decimals, e.g. 1.26 × 1.11 = <b>1.3986</b>.' },
+  { id: 'A3', g: 'A', title: 'MODIS confidence boundaries',
+    steps: ['Harmonise all sensors, world, 2026-10-13, 1 day.', 'Sort by <code>confidence_raw</code> and look at MODIS rows with values 29, 30, 79 and 80.'],
+    expect: '29 → <b>low</b>, 30 → <b>nominal</b>, 79 → <b>nominal</b>, 80 → <b>high</b>.' },
+  { id: 'A4', g: 'A', title: 'VIIRS and Landsat confidence letters',
+    steps: ['Same table as A3. Check VIIRS rows with l, n, h and Landsat rows with L, M, H.'],
+    expect: 'l / L → low, n / M → nominal, h / H → high. No VIIRS or Landsat row has an empty <code>confidence</code>.' },
+  { id: 'A5', g: 'A', title: 'Brightness capped at 367 K',
+    steps: ['Same table. Sort <code>bright_main_k</code> descending.', 'Load the Saturated MODIS preset in the Pixel calculator.'],
+    expect: 'The highest value is <b>367.00</b>. Every 367.00 row has <code>bright_saturated</code> = yes; every lower MODIS/VIIRS row has no.' },
+  { id: 'A6', g: 'A', title: 'Landsat rows have no brightness, FRP or area',
+    steps: ['Same table. Sort by <code>source</code> and look at LANDSAT_NRT rows.'],
+    expect: '<code>instrument</code> = OLI; <code>bright_main_k</code>, <code>bright_secondary_k</code>, <code>frp_mw</code> and <code>pixel_area_km2</code> are empty.' },
+  { id: 'A7', g: 'A', title: 'Satellite names',
+    steps: ['Same table. Check one row from each source.'],
+    expect: 'N → Suomi NPP, N20 → NOAA-20, N21 → NOAA-21, L8 → Landsat 8, L9 → Landsat 9; Terra and Aqua unchanged.' },
+  { id: 'A8', g: 'A', title: 'Acquisition time always has 4 digits',
+    steps: ['Same table. Sort <code>acq_time</code> ascending.'],
+    expect: 'Early times show as <code>0003</code>, <code>0033</code>, never <code>3</code> or <code>33</code>.' },
+  { id: 'A9', g: 'A', title: 'Overpass slot from local solar time',
+    steps: ['Pick 3 rows from different sensors. Enter acq_time and longitude in the Pixel calculator.'],
+    expect: '<code>overpass_slot</code> matches: morning 06–12, afternoon 12–18, evening 18–24, night 00–06 local solar time.' },
+  { id: 'A10', g: 'A', title: 'NRT rows that overlap SP data are dropped',
+    steps: ['Harmonise all sensors: date 2026-07-30, 3 days, area <code>20,40,30,50</code>.', 'Read the sources table, then sort by source and check VIIRS_NOAA21_NRT dates.'],
+    expect: 'A note says VIIRS_NOAA21_NRT <b>dropped rows overlapping VIIRS_NOAA21_SP</b>. No VIIRS_NOAA21_NRT row has <code>acq_date</code> ≤ 2026-07-31.' },
+  // B
+  { id: 'B1', g: 'B', title: 'SP files keep their own type',
+    steps: ['Fetch single sensor MODIS_SP, world, 2026-08-30, 1 day.'],
+    expect: 'All rows <code>type_existed</code> = yes. Type counts: <b>0: 14,178 · 1: 68 · 2: 666 · 3: 129</b> (15,041 rows), the same as in the raw file.' },
+  { id: 'B2', g: 'B', title: 'NRT rows get an inferred type',
+    steps: ['Fetch MODIS_NRT, world, 2026-10-13, 1 day.'],
+    expect: '"Type from file / inferred" shows <b>0 / 11,168</b>. Every row has <code>type_existed</code> = no, a <code>type_confidence</code> between 0 and 1, and a <code>type_basis</code>.' },
+  { id: 'B3', g: 'B', title: 'A known volcano is recognised',
+    steps: ['In the B2 table sort by <code>type</code> descending and find latitude −8.11577, longitude 112.93331 (Semeru, Java).'],
+    expect: '<code>type</code> = 1, <code>type_label</code> = active volcano.' },
+  { id: 'B4', g: 'B', title: 'Repeating a query does not double-count the reference',
+    steps: ['Note the number of labelled detections in the app\'s "Type reference" line.', 'Run B1 again, then reload the app page.'],
+    expect: 'The number is unchanged (the same sensor-day is never learned twice).' },
+  { id: 'B5', g: 'B', title: 'Mixed files: kept and inferred side by side',
+    steps: ['Harmonise all sensors: 2026-07-30, 3 days, area <code>20,40,30,50</code>.'],
+    expect: 'Both yes and no appear in <code>type_existed</code>. Every *_SP row is yes; every *_NRT and Landsat row is no.' },
+  // C
+  { id: 'C1', g: 'C', title: 'Known answer for test area A',
+    steps: ['Compare MODIS vs VIIRS for test area A: NOAA-20, grid 0.05°, no max pass gap.'],
+    expect: 'Raw pixels <b>49 / 156</b>; raw FRP <b>6,286 / 12,258</b> MW; fire cells <b>15 / 10</b>; agreement both <b>8</b>, MODIS only <b>7</b>, VIIRS only <b>2</b>; minimum fire size 10 MW (fixed fallback); 7 Aqua pixels capped. Top day cell −8.3750, −44.1750: MODIS 5 px / 3329.12 MW, VIIRS 21 px / 3486.85 MW, pass gap 103 min.' },
+  { id: 'C2', g: 'C', title: 'Cell sums match an independent recomputation',
+    steps: ['Harmonise all sensors for test area A and click Copy all rows.', 'Paste into the Cell aggregator (NOAA-20, 0.05°, 10 MW) and click Recompute.', 'Compare with the C1 table.'],
+    expect: 'Every cell has the same pixel counts, FRP sums and <code>detected_by</code>; totals and ratios match the app summary.' },
+  { id: 'C3', g: 'C', title: 'Terra is excluded',
+    steps: ['Compare, world, 2026-10-13, 1 day, NOAA-20.'],
+    expect: 'Removed list shows <b>4,161</b> Terra pixels; raw MODIS pixels = <b>7,007</b> (the Aqua count). 4,161 + 7,007 = 11,168 MODIS rows.' },
+  { id: 'C4', g: 'C', title: 'Day and night are never mixed in one cell',
+    steps: ['In any Compare table, sort by <code>cell_lat</code>.'],
+    expect: 'A grid square can appear twice (once D, once N), but no row combines day and night detections.' },
+  { id: 'C5', g: 'C', title: 'Detection limit is applied to both sensors',
+    steps: ['Compare, world, 2026-10-13, 1 day. Note the minimum fire size.', 'Excluded filter, sort by <code>reason</code>; then Comparable filter, sort by FRP columns.'],
+    expect: 'Every "below common detection limit" row has both FRP values below the limit. Every comparable row has at least one FRP ≥ the limit.' },
+  { id: 'C6', g: 'C', title: 'Swath exclusions are plausible',
+    steps: ['Same result. Excluded filter, sort by <code>reason</code> and look at "outside Aqua MODIS swath" rows.'],
+    expect: 'They all have <code>modis_pixels</code> = 0 and <code>viirs_pixels</code> > 0, and sit mostly within ±35° latitude (where MODIS gaps occur).' },
+  { id: 'C7', g: 'C', title: 'Max pass gap filter',
+    steps: ['Compare, world, 2026-10-13, 1 day, max pass gap 120.', 'Comparable filter, sort <code>overpass_gap_min</code> descending.'],
+    expect: 'No comparable row is above 120. Removed list shows cells with passes too far apart (about 1,326).' },
+  { id: 'C8', g: 'C', title: 'No brightness above the common ceiling',
+    steps: ['Any Compare table: sort <code>modis_bt_max_k</code> and <code>viirs_bt_max_k</code> descending.'],
+    expect: 'Nothing above 367.00; capped cells show "(sat)".' },
+  { id: 'C9', g: 'C', title: 'Summary adds up',
+    steps: ['Any Compare result: read the agreement line under the summary.'],
+    expect: 'Comparable MODIS cells = both + MODIS only. Comparable VIIRS cells = both + VIIRS only. (World, 13 Oct: 1,401 + 724 = 2,125 and 1,401 + 2,577 = 3,978.)' },
+  { id: 'C10', g: 'C', title: 'Harmonising narrows the gap',
+    steps: ['Compare, world, 2026-10-13, 1 day, NOAA-20.'],
+    expect: 'Raw pixel ratio about <b>8.4×</b>; comparable cell and FRP ratios about <b>1.9×</b>. The comparable ratio must be far below the raw ratio.' },
+  { id: 'C11', g: 'C', title: 'Raw counts match the single-sensor data',
+    steps: ['Fetch single sensor VIIRS_NOAA20_NRT, world, 2026-10-13.'],
+    expect: 'Its row count (<b>58,943</b>) equals the VIIRS raw pixels in C10.' },
+  // D
+  { id: 'D1', g: 'D', title: 'Day range is limited to 1–5',
+    steps: [`Open <code>${APP}/api/fires?sensor=MODIS_NRT&amp;date=2026-10-13&amp;days=9</code>`],
+    expect: '<code>{"error": "Day range must be 1-5."}</code>' },
+  { id: 'D2', g: 'D', title: 'Invalid grid size is refused',
+    steps: [`Open <code>${APP}/api/compare?date=2026-10-13&amp;days=1&amp;cell=0.3</code>`],
+    expect: 'An error listing the allowed grids 0.01, 0.05, 0.1, 0.25.' },
+  { id: 'D3', g: 'D', title: 'Non-numeric max pass gap is refused',
+    steps: ['In the app type <code>abc</code>… (the field only takes numbers) or open <code>' + APP + '/api/compare?date=2026-10-13&amp;days=1&amp;maxgap=abc</code>'],
+    expect: '"Max overpass gap must be a number of minutes."' },
+  { id: 'D4', g: 'D', title: 'Malformed area is refused',
+    steps: ['Enter area <code>abc</code> and click Fetch.'],
+    expect: 'A red message: area must be world or west,south,east,north.' },
+  { id: 'D5', g: 'D', title: 'Dates outside a sensor\'s range',
+    steps: ['Fetch MODIS_SP for 2026-10-13.', 'Harmonise all sensors for 2026-10-13.'],
+    expect: 'The single fetch shows "No detections". Harmonise lists the SP sources as skipped with their available dates.' },
+  { id: 'D6', g: 'D', title: 'An area with no fires',
+    steps: ['Fetch, Harmonise and Compare with area <code>-150,-40,-149,-39</code> (open ocean).'],
+    expect: '"No detections for this selection" each time; no error.' },
+];
+
+const KEY = 'harmonisation-bench-v1';
+let results = {};
+try { results = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { results = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(results)); } catch {} };
+let filter = 'all';
+
+function renderPlan() {
+  $('plan').innerHTML = GROUPS.map(g => {
+    const tests = T.filter(t => t.g === g.id).filter(t => {
+      const s = results[t.id]?.s;
+      return filter === 'all' || (filter === 'todo' && !s) || (filter === 'fail' && s === 'fail');
+    });
+    if (!tests.length) return '';
+    return `<section class="group"><header><span class="eyebrow">Group ${g.id}</span><h2>${esc(g.title)}</h2><p>${esc(g.note)}</p></header>` +
+      tests.map(t => {
+        const r = results[t.id] || {};
+        return `<article class="test" data-s="${r.s || ''}" id="t-${t.id}">
+          <div class="id">${t.id}</div>
+          <div class="body">
+            <h3>${esc(t.title)}</h3>
+            <div class="cols">
+              <div><div class="lbl">Steps</div><ol>${t.steps.map(s => `<li>${s}</li>`).join('')}</ol></div>
+              <div><div class="lbl">Expected</div><div class="expect">${t.expect}</div></div>
+            </div>
+            <div class="verdict" data-id="${t.id}">
+              ${['pass', 'fail', 'skip'].map(v => `<button type="button" data-v="${v}" aria-pressed="${r.s === v}">${v === 'pass' ? 'Pass' : v === 'fail' ? 'Fail' : 'Skip'}</button>`).join('')}
+              <input id="note-${t.id}" placeholder="Notes: what you saw" value="${esc(r.note || '')}" aria-label="Notes for ${t.id}">
+            </div>
+          </div></article>`;
+      }).join('') + '</section>';
+  }).join('') || '<p class="muted">No tests match this filter.</p>';
+  updateProgress();
+}
+
+$('plan').addEventListener('click', e => {
+  const b = e.target.closest('.verdict button'); if (!b) return;
+  const id = b.parentElement.dataset.id, v = b.dataset.v;
+  results[id] = { ...(results[id] || {}), s: results[id]?.s === v ? '' : v };
+  save();
+  const art = $('t-' + id);
+  art.dataset.s = results[id].s;
+  art.querySelectorAll('.verdict button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === results[id].s)));
+  updateProgress();
+});
+$('plan').addEventListener('input', e => {
+  if (!e.target.id.startsWith('note-')) return;
+  const id = e.target.id.slice(5);
+  results[id] = { ...(results[id] || {}), note: e.target.value };
+  save();
+});
+document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => {
+  filter = b.dataset.filter;
+  document.querySelectorAll('[data-filter]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  renderPlan();
+});
+
+function updateProgress() {
+  const c = { pass: 0, fail: 0, skip: 0 };
+  T.forEach(t => { const s = results[t.id]?.s; if (s) c[s]++; });
+  const done = c.pass + c.fail + c.skip;
+  $('progressText').textContent = `${done} / ${T.length} tested · ${c.pass} pass · ${c.fail} fail`;
+  const spans = $('meter').children;
+  [c.pass, c.fail, c.skip].forEach((n, i) => spans[i].style.width = (100 * n / T.length) + '%');
+}
+
+$('copyResults').onclick = async () => {
+  const lines = T.map(t => { const r = results[t.id] || {}; return `${t.id}\t${(r.s || 'not tested').toUpperCase()}\t${t.title}${r.note ? '\t' + r.note : ''}`; });
+  const text = `Harmonisation test results (${new Date().toISOString().slice(0, 10)})\n` + lines.join('\n');
+  try { await navigator.clipboard.writeText(text); $('planMsg').textContent = 'Results copied.'; }
+  catch { $('planMsg').textContent = 'Your browser blocked the clipboard. Select the results by hand instead.'; }
+};
+let resetArmed = false;
+$('resetBtn').onclick = () => {
+  if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = 'Click again to clear all results'; setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Reset results'; }, 4000); return; }
+  results = {}; save(); resetArmed = false; $('resetBtn').textContent = 'Reset results'; $('planMsg').textContent = 'All results cleared.'; renderPlan();
+};
+
+// ---------------------------------------------------------------- pixel calculator
+const SAT = { N: 'Suomi NPP', N20: 'NOAA-20', N21: 'NOAA-21', L8: 'Landsat 8', L9: 'Landsat 9' };
+const PRESETS = {
+  modis:   { inst: 'MODIS', sat: 'Terra', bt: '325.3', bt2: '283.14', conf: '84', scan: '1.26', track: '1.11', time: '33', lon: '134.64709', frp: '35.78' },
+  viirs:   { inst: 'VIIRS', sat: 'N20', bt: '338.77', bt2: '295.53', conf: 'n', scan: '0.43', track: '0.46', time: '128', lon: '177.59949', frp: '2.9' },
+  landsat: { inst: 'LANDSAT', sat: 'L8', bt: '', bt2: '', conf: 'M', scan: '5980', track: '5552', time: '329', lon: '-86.173986', frp: '' },
+  sat:     { inst: 'MODIS', sat: 'Aqua', bt: '412.6', bt2: '305.2', conf: '100', scan: '2.5', track: '1.45', time: '1647', lon: '-44.17', frp: '1798.05' },
+  b29:     { inst: 'MODIS', sat: 'Aqua', bt: '309.1', bt2: '296.0', conf: '29', scan: '1.0', track: '1.0', time: '1640', lon: '-44.2', frp: '6.1' },
+  b80:     { inst: 'MODIS', sat: 'Aqua', bt: '331.7', bt2: '299.4', conf: '80', scan: '1.0', track: '1.0', time: '1640', lon: '-44.2', frp: '22.4' },
+};
+const PF = ['inst', 'sat', 'bt', 'bt2', 'conf', 'scan', 'track', 'time', 'lon', 'frp'];
+
+function confidence(inst, raw) {
+  raw = String(raw).trim();
+  if (inst === 'MODIS') {
+    const v = parseFloat(raw);
+    if (isNaN(v)) return '';
+    return v < 30 ? 'low' : v >= 80 ? 'high' : 'nominal';
+  }
+  return ({ l: 'low', n: 'nominal', m: 'nominal', h: 'high' })[raw.toLowerCase()] || '';
+}
+function slot(time, lon) {
+  const t = String(time).trim().padStart(4, '0');
+  const h = parseInt(t.slice(0, 2), 10) + parseInt(t.slice(2), 10) / 60, L = parseFloat(lon);
+  if (isNaN(h) || isNaN(L)) return { v: '', local: NaN };
+  const local = (((h + L / 15) % 24) + 24) % 24;
+  return { v: local < 6 ? 'night' : local < 12 ? 'morning' : local < 18 ? 'afternoon' : 'evening', local };
+}
+const hhmm = x => isNaN(x) ? '' : `${String(Math.floor(x)).padStart(2, '0')}:${String(Math.floor((x % 1) * 60)).padStart(2, '0')}`;
+
+function renderPixel() {
+  const p = Object.fromEntries(PF.map(k => [k, $('p_' + k).value]));
+  const landsat = p.inst === 'LANDSAT';
+  const instName = landsat ? 'OLI' : p.inst;
+  let bt = '', satd = '';
+  if (!landsat && p.bt.trim() !== '') {
+    const v = parseFloat(p.bt);
+    if (!isNaN(v)) { if (v >= 367) { bt = '367.00'; satd = 'yes'; } else { bt = p.bt.trim(); satd = 'no'; } }
+  }
+  const area = landsat ? '' : (() => { const s = parseFloat(p.scan), t = parseFloat(p.track); return isNaN(s) || isNaN(t) ? '' : (s * t).toFixed(4); })();
+  const sl = slot(p.time, p.lon);
+  const rows = [
+    ['instrument', instName, 'MODIS / VIIRS kept; Landsat becomes OLI.'],
+    ['satellite', SAT[p.sat.trim()] || p.sat.trim(), 'N → Suomi NPP, N20 → NOAA-20, N21 → NOAA-21, L8/L9 → Landsat 8/9; Terra and Aqua unchanged.'],
+    ['acq_time', String(p.time).trim().padStart(4, '0'), 'Zero-padded to 4 digits (HHMM, UTC).'],
+    ['overpass_slot', sl.v, `UTC time + longitude ÷ 15 = local solar ${hhmm(sl.local)}. 06–12 morning, 12–18 afternoon, 18–24 evening, 00–06 night.`],
+    ['confidence', confidence(p.inst, p.conf), p.inst === 'MODIS' ? 'MODIS: below 30 low, 30–79 nominal, 80 and up high.' : 'Letters: l/L low, n/M nominal, h/H high.'],
+    ['confidence_raw', String(p.conf).trim(), 'Original value, unchanged.'],
+    ['bright_main_k', bt, landsat ? 'Landsat has no brightness.' : 'MODIS brightness or VIIRS bright_ti4, capped at 367.00 K (the VIIRS I4 saturation level).'],
+    ['bright_saturated', satd, 'yes when the original value was 367 K or more.'],
+    ['bright_secondary_k', landsat ? '' : p.bt2.trim(), 'MODIS bright_t31 or VIIRS bright_ti5, unchanged.'],
+    ['frp_mw', landsat ? '' : p.frp.trim(), 'Unchanged per pixel (summed per cell only in the comparison).'],
+    ['pixel_area_km2', area, landsat ? 'Empty: Landsat scan/track are not pixel sizes in km.' : `scan × track = ${p.scan} × ${p.track}, 4 decimals.`],
+  ];
+  $('pixelOut').innerHTML = rows.map(([c, v, r]) => `<tr><td class="mono">${c}</td><td class="val">${v === '' ? '<span class="muted">(empty)</span>' : esc(v)}</td><td class="rule">${esc(r)}</td></tr>`).join('');
+}
+PF.forEach(k => $('p_' + k).addEventListener('input', renderPixel));
+document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => {
+  const p = PRESETS[b.dataset.preset];
+  PF.forEach(k => $('p_' + k).value = p[k]);
+  renderPixel();
+});
+
+// ---------------------------------------------------------------- cell aggregator
+const NEED = ['instrument', 'satellite', 'latitude', 'longitude', 'acq_date', 'daynight', 'frp_mw'];
+const CONF_RANK = { '': 0, low: 1, nominal: 2, high: 3 };
+
+function aggregate() {
+  $('a_err').textContent = '';
+  const text = $('a_rows').value.replace(/\r/g, '').trim();
+  if (!text) { $('a_err').textContent = 'Paste rows from the app first.'; $('a_out').innerHTML = ''; return; }
+  const lines = text.split('\n').map(l => l.split('\t'));
+  const head = lines[0].map(h => h.trim());
+  const missing = NEED.filter(n => !head.includes(n));
+  if (missing.length) { $('a_err').textContent = `The first line must be the table header. Missing columns: ${missing.join(', ')}. Use Copy all rows under the Harmonise all sensors table.`; $('a_out').innerHTML = ''; return; }
+  const c = Object.fromEntries(head.map((h, i) => [h, i]));
+  const viirsSat = $('a_viirs').value, cell = parseFloat($('a_cell').value), minFrp = parseFloat($('a_min').value);
+  if (isNaN(minFrp)) { $('a_err').textContent = 'Minimum fire size must be a number of MW.'; return; }
+
+  const raw = { MODIS: { px: 0, frp: 0 }, VIIRS: { px: 0, frp: 0 } };
+  let terra = 0, otherViirs = 0;
+  const grid = new Map(), order = [];
+  const blank = () => ({ px: 0, frp: 0, max: 0, conf: '' });
+  for (const r of lines.slice(1)) {
+    if (r.length < head.length - 1) continue;
+    const inst = r[c.instrument];
+    if (inst !== 'MODIS' && inst !== 'VIIRS') continue;
+    if (inst === 'MODIS' && r[c.satellite] !== 'Aqua') { terra++; continue; }
+    if (inst === 'VIIRS' && r[c.satellite] !== viirsSat) { otherViirs++; continue; }
+    const lat = parseFloat(r[c.latitude]), lon = parseFloat(r[c.longitude]), frp = parseFloat(r[c.frp_mw] || '0') || 0;
+    if (isNaN(lat) || isNaN(lon)) continue;
+    raw[inst].px++; raw[inst].frp += frp;
+    const i = Math.floor(lat / cell), j = Math.floor(lon / cell);
+    const key = `${i}|${j}|${r[c.acq_date]}|${r[c.daynight]}`;
+    if (!grid.has(key)) { grid.set(key, { i, j, day: r[c.acq_date], dn: r[c.daynight], MODIS: blank(), VIIRS: blank() }); order.push(key); }
+    const g = grid.get(key)[inst];
+    g.px++; g.frp += frp; g.max = Math.max(g.max, frp);
+    const cf = c.confidence !== undefined ? r[c.confidence] : '';
+    if ((CONF_RANK[cf] || 0) > CONF_RANK[g.conf]) g.conf = cf;
+  }
+
+  const cellsAll = { MODIS: 0, VIIRS: 0 }, comp = { MODIS: { n: 0, frp: 0 }, VIIRS: { n: 0, frp: 0 } };
+  const agree = { both: 0, 'MODIS only': 0, 'VIIRS only': 0 };
+  const out = [];
+  for (const key of order) {
+    const x = grid.get(key), m = x.MODIS, v = x.VIIRS;
+    const hm = m.px > 0, hv = v.px > 0;
+    cellsAll.MODIS += hm; cellsAll.VIIRS += hv;
+    const det = hm && hv ? 'both' : hm ? 'MODIS only' : 'VIIRS only';
+    const ok = Math.max(m.frp, v.frp) >= minFrp;
+    if (ok) {
+      agree[det]++;
+      if (hm) { comp.MODIS.n++; comp.MODIS.frp += m.frp; }
+      if (hv) { comp.VIIRS.n++; comp.VIIRS.frp += v.frp; }
+    }
+    out.push({ lat: ((x.i + 0.5) * cell).toFixed(4), lon: ((x.j + 0.5) * cell).toFixed(4), day: x.day, dn: x.dn, det, ok,
+      mpx: m.px, vpx: v.px, mfrp: hm ? m.frp.toFixed(2) : '', vfrp: hv ? v.frp.toFixed(2) : '', mconf: m.conf, vconf: v.conf });
+  }
+  out.sort((a, b) => a.day.localeCompare(b.day) || a.dn.localeCompare(b.dn) || ((+b.mfrp || 0) + (+b.vfrp || 0)) - ((+a.mfrp || 0) + (+a.vfrp || 0)));
+
+  const ratio = (a, b) => a ? (b / a).toFixed(2) : '';
+  const fmt = n => Math.round(n).toLocaleString();
+  const sum = [
+    ['Raw pixels (detections)', raw.MODIS.px.toLocaleString(), raw.VIIRS.px.toLocaleString(), ratio(raw.MODIS.px, raw.VIIRS.px)],
+    ['Raw total FRP (MW)', fmt(raw.MODIS.frp), fmt(raw.VIIRS.frp), ratio(raw.MODIS.frp, raw.VIIRS.frp)],
+    [`Fire cells (${cell}° grid)`, cellsAll.MODIS.toLocaleString(), cellsAll.VIIRS.toLocaleString(), ratio(cellsAll.MODIS, cellsAll.VIIRS)],
+    ['Comparable fire cells', comp.MODIS.n.toLocaleString(), comp.VIIRS.n.toLocaleString(), ratio(comp.MODIS.n, comp.VIIRS.n)],
+    ['Comparable total FRP (MW)', fmt(comp.MODIS.frp), fmt(comp.VIIRS.frp), ratio(comp.MODIS.frp, comp.VIIRS.frp)],
+  ];
+  $('a_out').innerHTML = `
+    <h3 style="margin-bottom:8px">Expected summary</h3>
+    <div class="scroll"><table><thead><tr><th>Metric</th><th class="num">MODIS (Aqua)</th><th class="num">VIIRS (${esc(viirsSat)})</th><th class="num">VIIRS ÷ MODIS</th></tr></thead><tbody>
+      ${sum.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${r[1]}</td><td class="num">${r[2]}</td><td class="num">${r[3]}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="kv" style="margin-top:10px">
+      <span>Both <b>${agree.both}</b></span><span>MODIS only <b>${agree['MODIS only']}</b></span><span>VIIRS only <b>${agree['VIIRS only']}</b></span>
+      <span>Terra pixels excluded <b>${terra.toLocaleString()}</b></span><span>Other VIIRS satellites ignored <b>${otherViirs.toLocaleString()}</b></span>
+      <span>Below ${minFrp} MW <b>${out.filter(o => !o.ok).length}</b></span>
+    </div>
+    <h3 style="margin:16px 0 8px">Expected cells (${out.length})</h3>
+    <div class="scroll tall"><table><thead><tr>
+      <th>cell_lat</th><th>cell_lon</th><th>acq_date</th><th>daynight</th><th>detected_by</th><th>comparable</th>
+      <th class="num">modis_pixels</th><th class="num">viirs_pixels</th><th class="num">modis_frp_mw</th><th class="num">viirs_frp_mw</th><th>modis_confidence</th><th>viirs_confidence</th>
+    </tr></thead><tbody>
+      ${out.map(o => `<tr><td>${o.lat}</td><td>${o.lon}</td><td>${esc(o.day)}</td><td>${esc(o.dn)}</td><td>${o.det}</td>
+        <td><span class="pill ${o.ok ? 'yes' : 'no'}">${o.ok ? 'yes' : 'no'}</span></td>
+        <td class="num">${o.mpx}</td><td class="num">${o.vpx}</td><td class="num">${o.mfrp}</td><td class="num">${o.vfrp}</td><td>${esc(o.mconf)}</td><td>${esc(o.vconf)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+$('a_run').onclick = aggregate;
+['a_viirs', 'a_cell'].forEach(id => $(id).addEventListener('change', aggregate));
+$('a_rows').addEventListener('input', () => { $('sampleNote').textContent = 'Using your pasted rows.'; });
+const loadSample = () => {
+  $('a_rows').value = $('sampleTsv').textContent.trim();
+  $('sampleNote').textContent = 'Loaded: sample rows for test area A (13 Oct 2026, all sensors, 468 rows), recorded from the app. Paste your own copy to replace them.';
+  aggregate();
+};
+$('a_sample').onclick = loadSample;
+
+// ---------------------------------------------------------------- tabs (hash routing)
+const VIEWS = ['plan', 'pixel', 'cells'];
+function show(view) {
+  if (!VIEWS.includes(view)) view = 'plan';
+  VIEWS.forEach(v => { $('view-' + v).hidden = v !== view; $('tab-' + v).setAttribute('aria-selected', String(v === view)); });
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { location.hash = t.dataset.view; show(t.dataset.view); });
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+
+renderPlan();
+renderPixel();
+loadSample();
+show(location.hash.slice(1));
+})();
+</script>
+</body>
+</html>

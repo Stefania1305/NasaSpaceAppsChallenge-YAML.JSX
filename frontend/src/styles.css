@@ -1,0 +1,396 @@
+/* Styles carried over unchanged from the original single-file app (app.html), so the look is identical. */
+  /* Palette unchanged (warm stone neutrals + fire orange); --field and --faint support the minimal style. */
+  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --faint:#a8a29e; --line:#e7e5e4; --field:#f1efed;
+          --accent:#c2410c; --card:#fff; --zone:#ea580c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --faint:#78716c; --line:#332e2b; --field:#26211f;
+            --accent:#fb923c; --card:#211d1b; --zone:#fb923c; }
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; font:13.5px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--fg);
+         display:grid; grid-template-columns:360px 1fr; -webkit-font-smoothing:antialiased; }
+
+  /* ---------- Side panel: flat, airy, separated by hairlines instead of boxes ---------- */
+  aside { overflow-y:auto; border-right:1px solid var(--line); padding:28px 24px 24px; display:flex; flex-direction:column; }
+  .apphead { align-self:flex-start; max-width:calc(100% + 32px); margin:-14px -16px 12px; padding:16px 20px; border-radius:16px;
+             border:1px solid transparent; outline:none; transition:border-color .4s, background-color .4s; }
+  .apphead .chev { width:18px; height:18px; color:var(--faint); margin-left:6px; transform:rotate(90deg);   /* ‹ : slides left */
+                   transition:transform .5s var(--ease-out, ease), color .2s; }
+  @media (min-width:801px) {
+    .apphead { cursor:pointer; }
+    .apphead:hover { background-color:var(--field); }
+    .apphead:hover .chev { color:var(--accent); }
+    .apphead:focus-visible { border-color:var(--accent); }
+  }
+  @media (max-width:800px) { .apphead .chev { display:none; } }
+  aside h1 { margin:0; font-size:20px; font-weight:650; letter-spacing:-.015em; display:flex; align-items:center; gap:11px;
+             white-space:nowrap; }
+  aside h1::before { content:""; flex:none; width:11px; height:11px; border-radius:50%; background:var(--accent);
+                     box-shadow:0 0 14px var(--accent); }
+  aside h1 + p { margin:5px 0 0 22px; color:var(--faint); font-size:13px; }
+  section { padding:22px 0; border-top:1px solid var(--line); }
+  section h2 { margin:0 0 16px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  label { display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--muted); }
+  input, select { font:inherit; padding:8px 10px; border:1px solid transparent; border-radius:6px; background:var(--field);
+                  color:var(--fg); width:100%; transition:border-color .15s, background .15s; }
+  input:focus, select:focus { outline:none; border-color:var(--accent); background:var(--bg); }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  button { font:inherit; font-weight:500; padding:8px 14px; border:1px solid transparent; border-radius:6px; background:var(--accent);
+           color:#fff; cursor:pointer; transition:background .15s, color .15s, border-color .15s, opacity .15s; }
+  button:hover:not(:disabled) { filter:brightness(1.06); }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button.secondary { background:transparent; color:var(--fg); border-color:var(--line); }
+  button.secondary:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); filter:none; }
+  button.on, button.secondary.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  #run { width:100%; padding:11px; font-weight:600; font-size:14px; margin-top:4px; }
+  #run[hidden] { display:none; }
+
+  /* ---------- Black scrollbars (side panel + Analyse window) ---------- */
+  aside, .dialog { scrollbar-width:thin; scrollbar-color:#3a3431 #000; }
+  aside::-webkit-scrollbar, .dialog::-webkit-scrollbar { width:10px; }
+  aside::-webkit-scrollbar-track, .dialog::-webkit-scrollbar-track { background:#000; }
+  aside::-webkit-scrollbar-thumb, .dialog::-webkit-scrollbar-thumb { background:#3a3431; border-radius:5px; border:2px solid #000; }
+  aside::-webkit-scrollbar-thumb:hover, .dialog::-webkit-scrollbar-thumb:hover { background:#57504c; }
+
+  /* ---------- Black map controls: + / − zoom buttons and the credits label ---------- */
+  .maplibregl-ctrl-group { background:#000 !important; box-shadow:0 0 0 1px #2a2523 !important; border-radius:6px; }
+  .maplibregl-ctrl-group button + button { border-top:1px solid #2a2523 !important; }
+  .maplibregl-ctrl-group button:hover:not(:disabled) { background:#1c1917 !important; filter:none; }
+  .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter:invert(1); }      /* dark icons → white */
+  .maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact { background:#000 !important; color:#a8a29e; }
+  .maplibregl-ctrl-attrib a { color:#d6d3d1 !important; }
+  .maplibregl-ctrl-attrib a:hover { color:var(--accent) !important; }
+  .maplibregl-ctrl-attrib-button { filter:invert(1); background-color:transparent !important; }
+
+  /* ---------- Analyse window ---------- */
+  #modal { position:fixed; inset:0; z-index:1500; display:flex; align-items:center; justify-content:center;
+           padding:16px; background:rgba(12,10,9,.5); backdrop-filter:blur(4px); }
+  #modal[hidden] { display:none; }
+  .dialog { width:100%; max-width:460px; max-height:calc(100vh - 32px); overflow-y:auto; background:var(--bg);
+            color:var(--fg); border:1px solid var(--line); border-radius:12px; padding:26px 26px 22px; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .dialog header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:2px; }
+  .dialog h2 { margin:0; font-size:16px; font-weight:600; }
+  .dialog .x { background:transparent; color:var(--faint); font-size:20px; line-height:1; padding:0 4px; border:0; }
+  .dialog .x:hover { color:var(--fg); filter:none; }
+  .dialog .sub { font-size:12px; color:var(--faint); margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .step { border-top:1px solid var(--line); padding-top:18px; margin-top:18px; }
+  .step h3 { margin:0 0 12px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  .step.locked h3, .step.locked p { opacity:.5; }
+  .choice { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line); border-radius:8px;
+            margin-bottom:8px; cursor:pointer; flex-direction:row; color:var(--fg); font-size:13.5px; transition:border-color .15s, background .15s; }
+  .choice:hover { border-color:var(--faint); }
+  .choice:has(input:checked) { border-color:var(--accent); background:rgba(234, 88, 12, .05); }
+  .choice b { font-weight:600; }
+  .choice input { width:auto; margin:3px 0 0; accent-color:var(--accent); }
+  .choice small { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+  .choice select { margin-top:10px; }
+  .dialog .go { width:100%; padding:10px; font-weight:600; margin-top:6px; }
+  .dialog .msg { font-size:12px; color:var(--muted); margin:10px 0 0; min-height:1em; }
+  .dialog .msg.ok { color:#16a34a; }
+
+  /* ---------- Forecast panel ---------- */
+  button.small { padding:2px 0; font-size:12px; background:none; border:0; color:var(--muted); }
+  button.small:hover:not(:disabled) { color:var(--accent); filter:none; }
+  .fhead { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+  /* "Change zone": a clearly visible outlined pill with a back arrow; turns orange on hover. */
+  #changeZone { display:inline-flex; align-items:center; gap:7px; flex:none; padding:7px 14px; border-radius:999px;
+                border:1px solid rgba(255, 255, 255, .35); background:rgba(255, 255, 255, .08); color:var(--fg);
+                font-size:13px; font-weight:600; }
+  #changeZone:hover:not(:disabled) { border-color:var(--accent); color:#fff; background:var(--accent); filter:none; }
+  @media (prefers-color-scheme: light) { #changeZone { border-color:rgba(28, 25, 23, .3); background:rgba(28, 25, 23, .05); } }
+  .fhead h2 { margin:0; }
+  .fsub { font-size:12px; color:var(--faint); margin:0 0 16px; font-variant-numeric:tabular-nums; }
+  #forecastSection { animation:fadein .4s ease; }
+  @keyframes fadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  /* Day tabs: plain text with an underline on the active day. */
+  .days { display:flex; border-bottom:1px solid var(--line); margin-bottom:18px; }
+  .days button { flex:1; background:transparent; color:var(--muted); border:0; border-bottom:2px solid transparent; border-radius:0;
+                 padding:6px 4px 8px; margin-bottom:-1px; font-size:12.5px; line-height:1.3; }
+  .days button small { display:block; color:var(--faint); font-size:11px; font-weight:400; }
+  .days button:hover:not(:disabled) { color:var(--fg); filter:none; }
+  .days button[aria-selected="true"] { color:var(--accent); border-bottom-color:var(--accent); background:transparent; }
+  .days button[aria-selected="true"] small { color:var(--muted); }
+  /* Stats: just the numbers and a small label, no boxes. */
+  .pstats { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+  .pstat { font-size:11px; color:var(--faint); line-height:1.35; }
+  .pstat b { display:block; font-size:20px; font-weight:600; color:var(--fg); font-variant-numeric:tabular-nums; margin-bottom:2px; }
+  .scale { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--faint); margin:18px 0 4px; }
+  .scale span:first-child { margin-right:4px; }
+  .scale i { flex:1; height:4px; border-radius:2px; background:linear-gradient(90deg, #fde68a, #fbbf24 20%, #f97316 40%, #dc2626 66%, #7f1d1d); }
+  .facts { margin:16px 0 0; padding-left:16px; font-size:12.5px; color:var(--muted); }
+  .facts li { margin:5px 0; }
+  .facts li::marker { color:var(--faint); }
+  .facts b { color:var(--fg); }
+  #hotspots h4 { margin:20px 0 4px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  .hot { display:flex; justify-content:space-between; width:100%; background:transparent; color:var(--fg); border:0;
+         border-bottom:1px solid var(--line); border-radius:0; padding:8px 0; font-size:12.5px; font-weight:400; font-variant-numeric:tabular-nums; }
+  .hot:hover:not(:disabled) { color:var(--accent); filter:none; }
+  .hot b { color:var(--accent); font-weight:600; }
+  .reliab { font-size:12px; color:var(--muted); border-left:2px solid var(--accent); padding:2px 0 2px 12px; margin:20px 0 0; }
+  .reliab b { color:var(--fg); }
+  .zoneinfo { font-size:13px; margin-top:10px; font-variant-numeric:tabular-nums; color:var(--fg); }
+  .zoneinfo b { font-weight:600; }
+
+  /* ---------- Zone selection: one block per method, separated by space rather than lines ---------- */
+  .methodpick select { margin-top:0; cursor:pointer; font-weight:500; color:var(--fg); }
+  .method { padding:12px 0 2px; }
+  .method[hidden] { display:none; }
+  .method:not([hidden]) { animation:fadein .25s ease; }
+  .mhead { display:flex; align-items:center; gap:8px; font-weight:600; font-size:13px; margin-bottom:2px; }
+  .mhead .ico { flex:none; display:grid; place-items:center; color:var(--accent); }
+  .method .hint { margin:2px 0 10px; }
+  button.wide { width:100%; }
+  .selected { border-top:1px solid var(--line); padding-top:16px; margin-top:16px; animation:fadein .25s ease; }
+  .selected[hidden] { display:none; }
+  .selected .mhead { font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  .selected .zoneinfo { margin-top:4px; }
+  /* "Clear zone": a clearly visible outlined button with an × icon; turns red on hover (it removes the zone). */
+  .selected #clear { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:14px !important;
+                     padding:9px 14px; border:1px solid var(--muted); border-radius:6px; background:transparent;
+                     color:var(--fg); font-size:13px; font-weight:500; }
+  .selected #clear svg { flex:none; }
+  .selected #clear:hover:not(:disabled) { border-color:#ef4444; color:#ef4444; background:rgba(239, 68, 68, .08); filter:none; }
+  .pinrow { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:end; }
+  #pin { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; height:36px; }
+  /* The pin on the map (tip anchored at the bottom centre). */
+  .map-pin { width:28px; height:40px; cursor:grab; filter:drop-shadow(0 3px 4px rgba(0,0,0,.45)) drop-shadow(0 0 8px rgba(249,115,22,.55)); }
+  .map-pin:active { cursor:grabbing; }
+  .map-pin svg { display:block; animation:pin-drop .45s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin:50% 100%; }
+  @keyframes pin-drop { from { transform:translateY(-28px) scale(.9); opacity:0; } to { transform:none; opacity:1; } }
+  @media (prefers-reduced-motion: reduce) { .map-pin svg { animation:none; } }
+  .hint { font-size:12px; color:var(--muted); margin:6px 0 0; }
+  .error { color:#dc2626; }
+  /* The map canvas is transparent around the globe, so the space scene below shows through. */
+  #map { height:100%; position:relative; z-index:1; background:transparent; }
+
+  /* ---------- Space backdrop behind the globe: night sky, smoky ember nebula, rising sparks ---------- */
+  .space { position:absolute; inset:0; overflow:hidden; pointer-events:none;
+           background:radial-gradient(ellipse 80% 70% at 55% 50%, #120a10 0%, #07040a 55%, #020103 100%); }
+  .space .nebula { position:absolute; inset:-25%; filter:blur(40px); opacity:.95;
+    background:
+      radial-gradient(ellipse 40% 32% at 22% 82%, rgba(220, 38, 38, .42), transparent 70%),
+      radial-gradient(ellipse 32% 26% at 36% 96%, rgba(249, 115, 22, .38), transparent 70%),
+      radial-gradient(ellipse 34% 28% at 86% 22%, rgba(234, 88, 12, .26), transparent 70%),
+      radial-gradient(ellipse 30% 24% at 72% 12%, rgba(185, 28, 28, .22), transparent 70%),
+      radial-gradient(ellipse 42% 34% at 82% 84%, rgba(91, 33, 182, .22), transparent 70%),
+      radial-gradient(ellipse 30% 24% at 40% 16%, rgba(76, 29, 149, .16), transparent 70%);
+    animation:nebula-drift 80s ease-in-out infinite alternate; }
+  @keyframes nebula-drift { from { transform:translate(-2%, 1%) scale(1); } to { transform:translate(2%, -2%) scale(1.06); } }
+  .space .stars { position:absolute; inset:0; background-repeat:repeat; }
+  .space .stars.far  { background-image:var(--stars-far);  background-size:520px 520px; opacity:.8; }
+  .space .stars.near { background-image:var(--stars-near); background-size:760px 760px;
+                       animation:twinkle 7s ease-in-out infinite alternate; }
+  @keyframes twinkle { 0% { opacity:.35; } 50% { opacity:1; } 100% { opacity:.55; } }
+  /* Low warm haze along the bottom, like light from fires below the horizon. */
+  .space::after { content:""; position:absolute; inset:auto 0 0 0; height:35%;
+                  background:linear-gradient(0deg, rgba(234, 88, 12, .10), transparent); }
+  #embers { position:absolute; inset:0; width:100%; height:100%; }
+  /* Warm glow hugging the globe's edge; positioned and sized from the camera in the script. */
+  .space .halo { position:absolute; left:0; top:0; width:100px; height:100px; border-radius:50%; will-change:transform, opacity;
+    background:radial-gradient(circle closest-side, transparent 58%, rgba(251, 146, 60, .42) 60.5%,
+               rgba(234, 88, 12, .18) 68%, rgba(185, 28, 28, .07) 82%, transparent 100%); }
+  @media (prefers-reduced-motion: reduce) { .space .nebula, .space .stars.near { animation:none; } }
+  #map.drawing .maplibregl-canvas-container { cursor:crosshair; }
+  .maplibregl-popup-content { background:var(--card); color:var(--fg); font-size:12px; }
+  .maplibregl-popup-tip { border-top-color:var(--card) !important; border-bottom-color:var(--card) !important; }
+  .maptip { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1000; background:var(--card); color:var(--fg);
+            border:1px solid var(--line); border-radius:999px; padding:6px 14px; font-size:13px; box-shadow:0 2px 8px rgba(0,0,0,.15); display:none; }
+  .mapwrap { position:relative; }
+  .legend { position:absolute; right:12px; bottom:36px; z-index:5; background:var(--card); color:var(--fg);
+            border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:12px; max-width:220px;
+            box-shadow:0 4px 16px rgba(0,0,0,.25); }
+  .legend[hidden] { display:none; }
+  .legend small { display:block; color:var(--muted); font-size:11px; line-height:1.35; margin:2px 0 8px; }
+  .legend ul { list-style:none; margin:0; padding:0; display:grid; gap:5px; }
+  .legend li { display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
+  .legend i { flex:none; width:12px; display:flex; justify-content:center; }
+  .legend i::before { content:""; width:var(--r); height:var(--r); border-radius:50%; background:var(--c);
+                      box-shadow:0 0 0 .5px #00000066; }
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  td { padding:2px 0; } td:last-child { text-align:right; }
+  /* ---------- Opening screen ---------- */
+  body.splash .maptip { display:none !important; }
+  #splash { position:fixed; inset:0; z-index:2000; display:flex; align-items:center; justify-content:flex-start;
+            padding:6vh 7vw; color:#fff7ed; }
+  /* Fire filter: the map itself is recoloured to red/orange (fades back to normal on entering the app),
+     then a red→orange→yellow wash goes over everything and the text side is darkened for readability. */
+  body.splash #map, body.splash .space { filter:sepia(1) saturate(3.2) hue-rotate(-18deg) brightness(.95) contrast(1.1); }
+
+  /* ---------- Desktop layout: the map stays full-screen and the side panel floats over it ----------
+     (so the map never has to be resized, which would blank the globe; the map is told to keep
+      its content clear of the panel with camera padding instead, see PANEL_W in the script) */
+  @media (min-width:801px) {
+    body { display:block; }
+    .mapwrap { position:fixed; inset:0; }
+    aside { position:fixed; top:0; bottom:0; left:0; width:360px; z-index:10; background:var(--bg);
+            box-shadow:4px 0 24px rgba(0,0,0,.18); will-change:transform; }
+    .maptip { left:calc(50% + 180px); }
+  }
+
+  /* ---------- Transition from the opening screen into the app (≈3 s, long overlapping eases) ---------- */
+  :root { --ease-out:cubic-bezier(.22, 1, .36, 1); --ease-io:cubic-bezier(.45, 0, .25, 1); }
+  /* 1. Text drifts up, softens and fades. */
+  #splash.gone .content, #splash.gone .credit { animation:leave .9s var(--ease-io) forwards; }
+  @keyframes leave { to { opacity:0; transform:translateY(-24px) scale(.985); filter:blur(8px); } }
+  /* 2. Fire wash and shading dissolve slowly while the globe's natural colours return. */
+  #splash.gone { opacity:0; visibility:hidden; pointer-events:none;
+                 transition:opacity 2.2s var(--ease-io) .15s, visibility 0s linear 2.35s; }
+  #map, .space { transition:filter 2.2s var(--ease-io) .15s; }
+  /* 3. After "Get started" the globe glides to the centre and a "Fire Pattern Predictor" pill fades in
+        top-left (desktop), together with the map controls. */
+  @media (max-width:800px) { body.splash aside { display:none; } #appToggle { display:none; } }
+  body.splash .maplibregl-ctrl-top-right, body.splash .maplibregl-ctrl-bottom-right { opacity:0; }
+  .maplibregl-ctrl-top-right, .maplibregl-ctrl-bottom-right { transition:opacity .9s ease 1.4s; }
+
+  /* The pill: a separate floating button. Hidden while the panel is open. */
+  #appToggle { position:fixed; top:20px; left:20px; z-index:12; display:flex; flex-direction:column; align-items:flex-start;
+               gap:5px; padding:16px 20px; border-radius:18px; color:var(--fg); font:inherit; text-align:left; cursor:pointer;
+               transition:opacity .45s ease .35s, transform .55s cubic-bezier(.16, 1, .3, 1) .35s, border-color .2s; }
+  #appToggle .pt { display:flex; align-items:center; gap:11px; font-size:20px; font-weight:650; letter-spacing:-.015em; white-space:nowrap; }
+  #appToggle .pt::before { content:""; flex:none; width:11px; height:11px; border-radius:50%; background:var(--accent);
+                           box-shadow:0 0 14px var(--accent); }
+  #appToggle .ps { margin-left:22px; font-size:13px; color:var(--faint); }
+  #appToggle .chev { width:18px; height:18px; color:var(--faint); margin-left:4px; transition:color .2s; }
+  #appToggle:hover { border-color:var(--accent); filter:none; }
+  #appToggle:hover .chev { color:var(--accent); }
+  body.splash #appToggle, body:not(.collapsed) #appToggle { opacity:0; transform:translateX(-14px) scale(.97); pointer-events:none; }
+  body:not(.collapsed) #appToggle { transition-delay:0s; }
+  body.intro #appToggle { transition-delay:1.1s; }                 /* first appearance, after the opening screen */
+  /* Hiding the pill (panel opening) must never wait for that delay, even during the opening transition. */
+  body.intro:not(.collapsed) #appToggle { transition-delay:0s; }
+  @media (max-width:800px) { #appToggle { display:none; } }         /* phones: the panel is always shown under the map */
+
+  /* 4. Clicking the pill slides the (wider) panel in from the left edge; its sections then fade in one
+        after another. Clicking the panel header slides it back out to the left and the pill returns. */
+  @media (min-width:801px) {
+    aside { transition:transform .75s cubic-bezier(.16, 1, .3, 1), opacity .45s ease; will-change:transform, opacity; }
+    /* Closed: parked just off-screen at a near-zero (not zero) opacity, so the browser keeps the blurred glass
+       layer prepared; with opacity 0 it was only built on the first click, which made the first slide-in stutter. */
+    body.collapsed aside { transform:translateX(calc(-100% - 40px)); opacity:.01; pointer-events:none;
+                           transition:transform .55s cubic-bezier(.7, 0, .84, 0), opacity .35s ease .2s; }
+    aside > * { transition:opacity .5s var(--ease-out), transform .5s var(--ease-out); }
+    aside > :nth-child(1) { transition-delay:.25s; }
+    aside > :nth-child(2) { transition-delay:.32s; }
+    aside > :nth-child(3) { transition-delay:.4s; }
+    aside > :nth-child(4) { transition-delay:.48s; }
+    aside > :nth-child(5) { transition-delay:.56s; }
+    aside > :nth-child(n+6) { transition-delay:.62s; }
+    body.collapsed aside > * { opacity:.01; transform:translateX(-18px); transition-duration:.2s; transition-delay:0s; }
+  }
+  #splash .tint { position:absolute; inset:0; opacity:.38;
+                  background:linear-gradient(160deg, #b91c1c 0%, #ea580c 50%, #facc15 100%); }
+  #splash .glow { position:absolute; inset:0;
+                  background:radial-gradient(circle at 71% 50%, rgba(251,146,60,.28), transparent 38%); }
+  #splash .shade { position:absolute; inset:0;
+                   background:linear-gradient(90deg, rgba(20,6,2,.9) 0%, rgba(20,6,2,.6) 38%, rgba(20,6,2,0) 62%); }
+  #splash .content { position:relative; width:100%; max-width:520px; animation:rise 1.1s ease both; }
+  #splash .eyebrow { font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:#fdba74; margin:0 0 14px; }
+  #splash h1 { font-size:clamp(38px, 6vw, 68px); line-height:1.02; margin:0 0 18px; font-weight:800; letter-spacing:-.02em;
+               background:linear-gradient(90deg, #fef3c7, #fdba74 55%, #f97316); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #splash .lead { font-size:17px; line-height:1.55; color:#fed7aa; margin:0 0 22px; }
+  #splash ul { list-style:none; margin:0 0 30px; padding:0; display:grid; gap:10px; }
+  #splash li { display:flex; gap:12px; align-items:baseline; font-size:14.5px; color:#ffedd5; }
+  #splash li b { color:#fff; }
+  #splash li::before { content:""; flex:none; width:8px; height:8px; border-radius:50%; background:#fb923c;
+                       box-shadow:0 0 10px #f97316; transform:translateY(-1px); }
+  #start { font-size:16px; font-weight:700; padding:14px 30px; border-radius:999px; color:#1c0a02;
+           background:linear-gradient(90deg, #facc15, #f97316); box-shadow:0 6px 30px rgba(249,115,22,.45);
+           transition:transform .15s ease, box-shadow .15s ease; }
+  #start:hover { transform:translateY(-2px); box-shadow:0 10px 40px rgba(249,115,22,.6); }
+  #start:focus-visible { outline:3px solid #fef3c7; outline-offset:3px; }
+  #splash .credit { position:absolute; bottom:18px; left:7vw; font-size:12px; color:#fdba74aa; }
+  @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+  @media (max-width:800px) {
+    #splash { align-items:flex-end; padding:24px 16px 64px; }
+    #splash .lead { font-size:15px; }
+    #splash .shade { background:linear-gradient(0deg, rgba(20,6,2,.92) 0%, rgba(20,6,2,.6) 50%, rgba(20,6,2,.1) 100%); }
+    #splash .credit { left:16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #splash .content, #splash.gone .content, #splash.gone .credit { animation:none; }
+    body, aside, aside > *, .apphead .chev, #appToggle, #splash.gone, #map, .space, .maplibregl-ctrl-top-right,
+    .maplibregl-ctrl-bottom-right { transition:none !important; }
+  }
+
+  @media (max-width:800px) {
+    body { grid-template-columns:1fr; grid-template-rows:55vh auto; }
+    .mapwrap { order:-1; }
+    aside { border-right:0; }
+  }
+
+  /* =====================================================================================
+     Glass: every panel, menu and map overlay is translucent frosted glass (iOS style).
+     A strong blur + saturation of whatever is behind, a thin light edge, a soft top highlight
+     and a gentle shadow. Lines and input fields inside become translucent too.
+     ===================================================================================== */
+  :root { --glass:rgba(250, 250, 249, .34); --glass-strong:rgba(250, 250, 249, .5); --glass-edge:rgba(255, 255, 255, .6);
+          --glass-hi:rgba(255, 255, 255, .65); --glass-blur:blur(30px) saturate(190%) brightness(1.08);
+          --line:rgba(28, 25, 23, .1); --field:rgba(28, 25, 23, .06); }
+  @media (prefers-color-scheme: dark) {
+    /* More see-through: a lighter tint, with the backdrop itself blurred harder and dimmed slightly
+       (like iOS) so text stays readable even though much more of the map shows through. */
+    :root { --glass:rgba(24, 21, 19, .3); --glass-strong:rgba(24, 21, 19, .45); --glass-edge:rgba(255, 255, 255, .14);
+            --glass-hi:rgba(255, 255, 255, .1); --line:rgba(255, 255, 255, .12); --field:rgba(255, 255, 255, .08);
+            --glass-blur:blur(30px) saturate(190%) brightness(.72);
+            /* brighter secondary text so it stays readable over bright map imagery seen through the glass */
+            --muted:#d0cbc7; --faint:#a9a19c; }
+  }
+  .glass, aside, #appToggle, .dialog, .legend, .maptip, .maplibregl-popup-content {
+    background:var(--glass) !important;
+    -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+    border:1px solid var(--glass-edge);
+    box-shadow:inset 0 1px 0 var(--glass-hi), 0 12px 40px rgba(0, 0, 0, .28);
+  }
+  /* Native dropdown lists can't be glass; keep their options readable. */
+  select option { background:#1c1917; color:#f5f5f4; }
+  @media (prefers-color-scheme: light) { select option { background:#fafaf9; color:#1c1917; } }
+
+  /* Side panel (desktop): a wide floating rounded glass card, 12px from the edges. It occupies
+     12 + 420 + 12 = 444px, which is PANEL_W in the script (the map keeps its content clear of it). */
+  @media (min-width:801px) {
+    aside { top:12px; left:12px; bottom:12px; width:420px; border-radius:24px; padding:28px 30px 26px; font-size:14px; }
+    .apphead:hover { background-color:rgba(255, 255, 255, .06); }
+    .maptip { left:calc(50% + 222px); }
+  }
+  /* Phones: the panel sits under the map, so give it a lightly frosted look over the page. */
+  @media (max-width:800px) { aside { border-width:1px 0 0; border-radius:20px 20px 0 0; box-shadow:none; } }
+
+  /* Scrollbars: thin black thumbs on a clear track, so the glass shows through. */
+  aside, .dialog { scrollbar-color:rgba(0, 0, 0, .55) transparent; }
+  aside::-webkit-scrollbar-track, .dialog::-webkit-scrollbar-track { background:transparent; }
+  aside::-webkit-scrollbar-thumb, .dialog::-webkit-scrollbar-thumb { background:rgba(0, 0, 0, .55); border:2px solid transparent;
+                                                                      background-clip:padding-box; }
+  aside::-webkit-scrollbar-thumb:hover, .dialog::-webkit-scrollbar-thumb:hover { background:rgba(0, 0, 0, .8); background-clip:padding-box; }
+
+  /* Analyse window: a glass card over a lightly dimmed, blurred map. */
+  #modal { background:rgba(10, 8, 7, .28); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .dialog { border-radius:20px; }
+  .choice { background:rgba(255, 255, 255, .03); }
+  .choice:has(input:checked) { background:rgba(234, 88, 12, .12); }
+
+  /* Map overlays */
+  .legend { border-radius:14px; }
+  .maptip { border-radius:999px; }
+  .maplibregl-popup-content { border-radius:12px; }
+  .maplibregl-popup-tip { border-top-color:rgba(28, 25, 23, .6) !important; border-bottom-color:rgba(28, 25, 23, .6) !important; }
+  /* Zoom buttons and credits: dark (black-tinted) glass. */
+  .maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact {
+    background:rgba(0, 0, 0, .26) !important; -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+    box-shadow:inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 0 1px rgba(255, 255, 255, .1) !important; }
+  .maplibregl-ctrl-group { border-radius:12px !important; overflow:hidden; }
+  .maplibregl-ctrl-group button + button { border-top:1px solid rgba(255, 255, 255, .1) !important; }
+  .maplibregl-ctrl-group button:hover:not(:disabled) { background:rgba(255, 255, 255, .1) !important; }
+  .maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact { border-radius:999px; }
+  /* Translucent, softer secondary buttons inside the glass. */
+  button.secondary { background:rgba(255, 255, 255, .04); }
+  button.secondary:hover:not(:disabled) { background:rgba(234, 88, 12, .1); }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass, aside, .dialog, .legend, .maptip, .maplibregl-popup-content { background:var(--bg) !important; backdrop-filter:none; }
+  }
+
+  /* React renders everything inside #root; make it layout-transparent so the body grid (phones) still applies
+     to the panel and the map directly, exactly as in the original single-file app. */
+  #root { display:contents; }

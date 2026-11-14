@@ -1,0 +1,1486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fire Pattern Predictor</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<style>
+  /* Palette unchanged (warm stone neutrals + fire orange); --field and --faint support the minimal style. */
+  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --faint:#a8a29e; --line:#e7e5e4; --field:#f1efed;
+          --accent:#c2410c; --card:#fff; --zone:#ea580c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --faint:#78716c; --line:#332e2b; --field:#26211f;
+            --accent:#fb923c; --card:#211d1b; --zone:#fb923c; }
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; font:13.5px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--fg);
+         display:grid; grid-template-columns:360px 1fr; -webkit-font-smoothing:antialiased; }
+
+  /* ---------- Side panel: flat, airy, separated by hairlines instead of boxes ---------- */
+  aside { overflow-y:auto; border-right:1px solid var(--line); padding:28px 24px 24px; display:flex; flex-direction:column; }
+  .apphead { align-self:flex-start; max-width:calc(100% + 32px); margin:-14px -16px 12px; padding:16px 20px; border-radius:16px;
+             border:1px solid transparent; outline:none; transition:border-color .4s, background-color .4s; }
+  .apphead .chev { width:18px; height:18px; color:var(--faint); margin-left:6px; transform:rotate(90deg);   /* ‹ : slides left */
+                   transition:transform .5s var(--ease-out, ease), color .2s; }
+  @media (min-width:801px) {
+    .apphead { cursor:pointer; }
+    .apphead:hover { background-color:var(--field); }
+    .apphead:hover .chev { color:var(--accent); }
+    .apphead:focus-visible { border-color:var(--accent); }
+  }
+  @media (max-width:800px) { .apphead .chev { display:none; } }
+  aside h1 { margin:0; font-size:20px; font-weight:650; letter-spacing:-.015em; display:flex; align-items:center; gap:11px;
+             white-space:nowrap; }
+  aside h1::before { content:""; flex:none; width:11px; height:11px; border-radius:50%; background:var(--accent);
+                     box-shadow:0 0 14px var(--accent); }
+  aside h1 + p { margin:5px 0 0 22px; color:var(--faint); font-size:13px; }
+  section { padding:22px 0; border-top:1px solid var(--line); }
+  section h2 { margin:0 0 16px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  label { display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--muted); }
+  input, select { font:inherit; padding:8px 10px; border:1px solid transparent; border-radius:6px; background:var(--field);
+                  color:var(--fg); width:100%; transition:border-color .15s, background .15s; }
+  input:focus, select:focus { outline:none; border-color:var(--accent); background:var(--bg); }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  button { font:inherit; font-weight:500; padding:8px 14px; border:1px solid transparent; border-radius:6px; background:var(--accent);
+           color:#fff; cursor:pointer; transition:background .15s, color .15s, border-color .15s, opacity .15s; }
+  button:hover:not(:disabled) { filter:brightness(1.06); }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button.secondary { background:transparent; color:var(--fg); border-color:var(--line); }
+  button.secondary:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); filter:none; }
+  button.on, button.secondary.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  #run { width:100%; padding:11px; font-weight:600; font-size:14px; margin-top:4px; }
+  #run[hidden] { display:none; }
+
+  /* ---------- Black scrollbars (side panel + Analyse window) ---------- */
+  aside, .dialog { scrollbar-width:thin; scrollbar-color:#3a3431 #000; }
+  aside::-webkit-scrollbar, .dialog::-webkit-scrollbar { width:10px; }
+  aside::-webkit-scrollbar-track, .dialog::-webkit-scrollbar-track { background:#000; }
+  aside::-webkit-scrollbar-thumb, .dialog::-webkit-scrollbar-thumb { background:#3a3431; border-radius:5px; border:2px solid #000; }
+  aside::-webkit-scrollbar-thumb:hover, .dialog::-webkit-scrollbar-thumb:hover { background:#57504c; }
+
+  /* ---------- Black map controls: + / − zoom buttons and the credits label ---------- */
+  .maplibregl-ctrl-group { background:#000 !important; box-shadow:0 0 0 1px #2a2523 !important; border-radius:6px; }
+  .maplibregl-ctrl-group button + button { border-top:1px solid #2a2523 !important; }
+  .maplibregl-ctrl-group button:hover:not(:disabled) { background:#1c1917 !important; filter:none; }
+  .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter:invert(1); }      /* dark icons → white */
+  .maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact { background:#000 !important; color:#a8a29e; }
+  .maplibregl-ctrl-attrib a { color:#d6d3d1 !important; }
+  .maplibregl-ctrl-attrib a:hover { color:var(--accent) !important; }
+  .maplibregl-ctrl-attrib-button { filter:invert(1); background-color:transparent !important; }
+
+  /* ---------- Analyse window ---------- */
+  #modal { position:fixed; inset:0; z-index:1500; display:flex; align-items:center; justify-content:center;
+           padding:16px; background:rgba(12,10,9,.5); backdrop-filter:blur(4px); }
+  #modal[hidden] { display:none; }
+  .dialog { width:100%; max-width:460px; max-height:calc(100vh - 32px); overflow-y:auto; background:var(--bg);
+            color:var(--fg); border:1px solid var(--line); border-radius:12px; padding:26px 26px 22px; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .dialog header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:2px; }
+  .dialog h2 { margin:0; font-size:16px; font-weight:600; }
+  .dialog .x { background:transparent; color:var(--faint); font-size:20px; line-height:1; padding:0 4px; border:0; }
+  .dialog .x:hover { color:var(--fg); filter:none; }
+  .dialog .sub { font-size:12px; color:var(--faint); margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .step { border-top:1px solid var(--line); padding-top:18px; margin-top:18px; }
+  .step h3 { margin:0 0 12px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  .step.locked h3, .step.locked p { opacity:.5; }
+  .choice { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line); border-radius:8px;
+            margin-bottom:8px; cursor:pointer; flex-direction:row; color:var(--fg); font-size:13.5px; transition:border-color .15s, background .15s; }
+  .choice:hover { border-color:var(--faint); }
+  .choice:has(input:checked) { border-color:var(--accent); background:rgba(234, 88, 12, .05); }
+  .choice b { font-weight:600; }
+  .choice input { width:auto; margin:3px 0 0; accent-color:var(--accent); }
+  .choice small { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+  .choice select { margin-top:10px; }
+  .dialog .go { width:100%; padding:10px; font-weight:600; margin-top:6px; }
+  .dialog .msg { font-size:12px; color:var(--muted); margin:10px 0 0; min-height:1em; }
+  .dialog .msg.ok { color:#16a34a; }
+
+  /* ---------- Forecast panel ---------- */
+  button.small { padding:2px 0; font-size:12px; background:none; border:0; color:var(--muted); }
+  button.small:hover:not(:disabled) { color:var(--accent); filter:none; }
+  .fhead { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+  /* "Change zone": a clearly visible outlined pill with a back arrow; turns orange on hover. */
+  #changeZone { display:inline-flex; align-items:center; gap:7px; flex:none; padding:7px 14px; border-radius:999px;
+                border:1px solid rgba(255, 255, 255, .35); background:rgba(255, 255, 255, .08); color:var(--fg);
+                font-size:13px; font-weight:600; }
+  #changeZone:hover:not(:disabled) { border-color:var(--accent); color:#fff; background:var(--accent); filter:none; }
+  @media (prefers-color-scheme: light) { #changeZone { border-color:rgba(28, 25, 23, .3); background:rgba(28, 25, 23, .05); } }
+  .fhead h2 { margin:0; }
+  .fsub { font-size:12px; color:var(--faint); margin:0 0 16px; font-variant-numeric:tabular-nums; }
+  #forecastSection { animation:fadein .4s ease; }
+  @keyframes fadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  /* Day tabs: plain text with an underline on the active day. */
+  .days { display:flex; border-bottom:1px solid var(--line); margin-bottom:18px; }
+  .days button { flex:1; background:transparent; color:var(--muted); border:0; border-bottom:2px solid transparent; border-radius:0;
+                 padding:6px 4px 8px; margin-bottom:-1px; font-size:12.5px; line-height:1.3; }
+  .days button small { display:block; color:var(--faint); font-size:11px; font-weight:400; }
+  .days button:hover:not(:disabled) { color:var(--fg); filter:none; }
+  .days button[aria-selected="true"] { color:var(--accent); border-bottom-color:var(--accent); background:transparent; }
+  .days button[aria-selected="true"] small { color:var(--muted); }
+  /* Stats: just the numbers and a small label, no boxes. */
+  .pstats { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+  .pstat { font-size:11px; color:var(--faint); line-height:1.35; }
+  .pstat b { display:block; font-size:20px; font-weight:600; color:var(--fg); font-variant-numeric:tabular-nums; margin-bottom:2px; }
+  .scale { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--faint); margin:18px 0 4px; }
+  .scale span:first-child { margin-right:4px; }
+  .scale i { flex:1; height:4px; border-radius:2px; background:linear-gradient(90deg, #fde68a, #fbbf24 20%, #f97316 40%, #dc2626 66%, #7f1d1d); }
+  .facts { margin:16px 0 0; padding-left:16px; font-size:12.5px; color:var(--muted); }
+  .facts li { margin:5px 0; }
+  .facts li::marker { color:var(--faint); }
+  .facts b { color:var(--fg); }
+  #hotspots h4 { margin:20px 0 4px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  .hot { display:flex; justify-content:space-between; width:100%; background:transparent; color:var(--fg); border:0;
+         border-bottom:1px solid var(--line); border-radius:0; padding:8px 0; font-size:12.5px; font-weight:400; font-variant-numeric:tabular-nums; }
+  .hot:hover:not(:disabled) { color:var(--accent); filter:none; }
+  .hot b { color:var(--accent); font-weight:600; }
+  .reliab { font-size:12px; color:var(--muted); border-left:2px solid var(--accent); padding:2px 0 2px 12px; margin:20px 0 0; }
+  .reliab b { color:var(--fg); }
+  .zoneinfo { font-size:13px; margin-top:10px; font-variant-numeric:tabular-nums; color:var(--fg); }
+  .zoneinfo b { font-weight:600; }
+
+  /* ---------- Zone selection: one block per method, separated by space rather than lines ---------- */
+  .methodpick select { margin-top:0; cursor:pointer; font-weight:500; color:var(--fg); }
+  .method { padding:12px 0 2px; }
+  .method[hidden] { display:none; }
+  .method:not([hidden]) { animation:fadein .25s ease; }
+  .mhead { display:flex; align-items:center; gap:8px; font-weight:600; font-size:13px; margin-bottom:2px; }
+  .mhead .ico { flex:none; display:grid; place-items:center; color:var(--accent); }
+  .method .hint { margin:2px 0 10px; }
+  button.wide { width:100%; }
+  .selected { border-top:1px solid var(--line); padding-top:16px; margin-top:16px; animation:fadein .25s ease; }
+  .selected[hidden] { display:none; }
+  .selected .mhead { font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); }
+  .selected .zoneinfo { margin-top:4px; }
+  /* "Clear zone": a clearly visible outlined button with an × icon; turns red on hover (it removes the zone). */
+  .selected #clear { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:14px !important;
+                     padding:9px 14px; border:1px solid var(--muted); border-radius:6px; background:transparent;
+                     color:var(--fg); font-size:13px; font-weight:500; }
+  .selected #clear svg { flex:none; }
+  .selected #clear:hover:not(:disabled) { border-color:#ef4444; color:#ef4444; background:rgba(239, 68, 68, .08); filter:none; }
+  .pinrow { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:end; }
+  #pin { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; height:36px; }
+  /* The pin on the map (tip anchored at the bottom centre). */
+  .map-pin { width:28px; height:40px; cursor:grab; filter:drop-shadow(0 3px 4px rgba(0,0,0,.45)) drop-shadow(0 0 8px rgba(249,115,22,.55)); }
+  .map-pin:active { cursor:grabbing; }
+  .map-pin svg { display:block; animation:pin-drop .45s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin:50% 100%; }
+  @keyframes pin-drop { from { transform:translateY(-28px) scale(.9); opacity:0; } to { transform:none; opacity:1; } }
+  @media (prefers-reduced-motion: reduce) { .map-pin svg { animation:none; } }
+  .hint { font-size:12px; color:var(--muted); margin:6px 0 0; }
+  .error { color:#dc2626; }
+  /* The map canvas is transparent around the globe, so the space scene below shows through. */
+  #map { height:100%; position:relative; z-index:1; background:transparent; }
+
+  /* ---------- Space backdrop behind the globe: night sky, smoky ember nebula, rising sparks ---------- */
+  .space { position:absolute; inset:0; overflow:hidden; pointer-events:none;
+           background:radial-gradient(ellipse 80% 70% at 55% 50%, #120a10 0%, #07040a 55%, #020103 100%); }
+  .space .nebula { position:absolute; inset:-25%; filter:blur(40px); opacity:.95;
+    background:
+      radial-gradient(ellipse 40% 32% at 22% 82%, rgba(220, 38, 38, .42), transparent 70%),
+      radial-gradient(ellipse 32% 26% at 36% 96%, rgba(249, 115, 22, .38), transparent 70%),
+      radial-gradient(ellipse 34% 28% at 86% 22%, rgba(234, 88, 12, .26), transparent 70%),
+      radial-gradient(ellipse 30% 24% at 72% 12%, rgba(185, 28, 28, .22), transparent 70%),
+      radial-gradient(ellipse 42% 34% at 82% 84%, rgba(91, 33, 182, .22), transparent 70%),
+      radial-gradient(ellipse 30% 24% at 40% 16%, rgba(76, 29, 149, .16), transparent 70%);
+    animation:nebula-drift 80s ease-in-out infinite alternate; }
+  @keyframes nebula-drift { from { transform:translate(-2%, 1%) scale(1); } to { transform:translate(2%, -2%) scale(1.06); } }
+  .space .stars { position:absolute; inset:0; background-repeat:repeat; }
+  .space .stars.far  { background-image:var(--stars-far);  background-size:520px 520px; opacity:.8; }
+  .space .stars.near { background-image:var(--stars-near); background-size:760px 760px;
+                       animation:twinkle 7s ease-in-out infinite alternate; }
+  @keyframes twinkle { 0% { opacity:.35; } 50% { opacity:1; } 100% { opacity:.55; } }
+  /* Low warm haze along the bottom, like light from fires below the horizon. */
+  .space::after { content:""; position:absolute; inset:auto 0 0 0; height:35%;
+                  background:linear-gradient(0deg, rgba(234, 88, 12, .10), transparent); }
+  #embers { position:absolute; inset:0; width:100%; height:100%; }
+  /* Warm glow hugging the globe's edge; positioned and sized from the camera in the script. */
+  .space .halo { position:absolute; left:0; top:0; width:100px; height:100px; border-radius:50%; will-change:transform, opacity;
+    background:radial-gradient(circle closest-side, transparent 58%, rgba(251, 146, 60, .42) 60.5%,
+               rgba(234, 88, 12, .18) 68%, rgba(185, 28, 28, .07) 82%, transparent 100%); }
+  @media (prefers-reduced-motion: reduce) { .space .nebula, .space .stars.near { animation:none; } }
+  #map.drawing .maplibregl-canvas-container { cursor:crosshair; }
+  .maplibregl-popup-content { background:var(--card); color:var(--fg); font-size:12px; }
+  .maplibregl-popup-tip { border-top-color:var(--card) !important; border-bottom-color:var(--card) !important; }
+  .maptip { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1000; background:var(--card); color:var(--fg);
+            border:1px solid var(--line); border-radius:999px; padding:6px 14px; font-size:13px; box-shadow:0 2px 8px rgba(0,0,0,.15); display:none; }
+  .mapwrap { position:relative; }
+  .legend { position:absolute; right:12px; bottom:36px; z-index:5; background:var(--card); color:var(--fg);
+            border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:12px; max-width:220px;
+            box-shadow:0 4px 16px rgba(0,0,0,.25); }
+  .legend[hidden] { display:none; }
+  .legend small { display:block; color:var(--muted); font-size:11px; line-height:1.35; margin:2px 0 8px; }
+  .legend ul { list-style:none; margin:0; padding:0; display:grid; gap:5px; }
+  .legend li { display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
+  .legend i { flex:none; width:12px; display:flex; justify-content:center; }
+  .legend i::before { content:""; width:var(--r); height:var(--r); border-radius:50%; background:var(--c);
+                      box-shadow:0 0 0 .5px #00000066; }
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  td { padding:2px 0; } td:last-child { text-align:right; }
+  /* ---------- Opening screen ---------- */
+  body.splash .maptip { display:none !important; }
+  #splash { position:fixed; inset:0; z-index:2000; display:flex; align-items:center; justify-content:flex-start;
+            padding:6vh 7vw; color:#fff7ed; }
+  /* Fire filter: the map itself is recoloured to red/orange (fades back to normal on entering the app),
+     then a red→orange→yellow wash goes over everything and the text side is darkened for readability. */
+  body.splash #map, body.splash .space { filter:sepia(1) saturate(3.2) hue-rotate(-18deg) brightness(.95) contrast(1.1); }
+
+  /* ---------- Desktop layout: the map stays full-screen and the side panel floats over it ----------
+     (so the map never has to be resized, which would blank the globe; the map is told to keep
+      its content clear of the panel with camera padding instead, see PANEL_W in the script) */
+  @media (min-width:801px) {
+    body { display:block; }
+    .mapwrap { position:fixed; inset:0; }
+    aside { position:fixed; top:0; bottom:0; left:0; width:360px; z-index:10; background:var(--bg);
+            box-shadow:4px 0 24px rgba(0,0,0,.18); will-change:transform; }
+    .maptip { left:calc(50% + 180px); }
+  }
+
+  /* ---------- Transition from the opening screen into the app (≈3 s, long overlapping eases) ---------- */
+  :root { --ease-out:cubic-bezier(.22, 1, .36, 1); --ease-io:cubic-bezier(.45, 0, .25, 1); }
+  /* 1. Text drifts up, softens and fades. */
+  #splash.gone .content, #splash.gone .credit { animation:leave .9s var(--ease-io) forwards; }
+  @keyframes leave { to { opacity:0; transform:translateY(-24px) scale(.985); filter:blur(8px); } }
+  /* 2. Fire wash and shading dissolve slowly while the globe's natural colours return. */
+  #splash.gone { opacity:0; visibility:hidden; pointer-events:none;
+                 transition:opacity 2.2s var(--ease-io) .15s, visibility 0s linear 2.35s; }
+  #map, .space { transition:filter 2.2s var(--ease-io) .15s; }
+  /* 3. After "Get started" the globe glides to the centre and a "Fire Pattern Predictor" pill fades in
+        top-left (desktop), together with the map controls. */
+  @media (max-width:800px) { body.splash aside { display:none; } #appToggle { display:none; } }
+  body.splash .maplibregl-ctrl-top-right, body.splash .maplibregl-ctrl-bottom-right { opacity:0; }
+  .maplibregl-ctrl-top-right, .maplibregl-ctrl-bottom-right { transition:opacity .9s ease 1.4s; }
+
+  /* The pill: a separate floating button. Hidden while the panel is open. */
+  #appToggle { position:fixed; top:20px; left:20px; z-index:12; display:flex; flex-direction:column; align-items:flex-start;
+               gap:5px; padding:16px 20px; border-radius:18px; color:var(--fg); font:inherit; text-align:left; cursor:pointer;
+               transition:opacity .45s ease .35s, transform .55s cubic-bezier(.16, 1, .3, 1) .35s, border-color .2s; }
+  #appToggle .pt { display:flex; align-items:center; gap:11px; font-size:20px; font-weight:650; letter-spacing:-.015em; white-space:nowrap; }
+  #appToggle .pt::before { content:""; flex:none; width:11px; height:11px; border-radius:50%; background:var(--accent);
+                           box-shadow:0 0 14px var(--accent); }
+  #appToggle .ps { margin-left:22px; font-size:13px; color:var(--faint); }
+  #appToggle .chev { width:18px; height:18px; color:var(--faint); margin-left:4px; transition:color .2s; }
+  #appToggle:hover { border-color:var(--accent); filter:none; }
+  #appToggle:hover .chev { color:var(--accent); }
+  body.splash #appToggle, body:not(.collapsed) #appToggle { opacity:0; transform:translateX(-14px) scale(.97); pointer-events:none; }
+  body:not(.collapsed) #appToggle { transition-delay:0s; }
+  body.intro #appToggle { transition-delay:1.1s; }                 /* first appearance, after the opening screen */
+  body.intro:not(.collapsed) #appToggle { transition-delay:0s; }   /* hiding it never waits for that delay */
+  @media (max-width:800px) { #appToggle { display:none; } }         /* phones: the panel is always shown under the map */
+
+  /* 4. Clicking the pill slides the (wider) panel in from the left edge; its sections then fade in one
+        after another. Clicking the panel header slides it back out to the left and the pill returns. */
+  @media (min-width:801px) {
+    aside { transition:transform .75s cubic-bezier(.16, 1, .3, 1), opacity .45s ease; will-change:transform, opacity; }
+    /* Closed: parked just off-screen at a near-zero (not zero) opacity, so the browser keeps the blurred glass
+       layer prepared; with opacity 0 it was only built on the first click, which made the first slide-in stutter. */
+    body.collapsed aside { transform:translateX(calc(-100% - 40px)); opacity:.01; pointer-events:none;
+                           transition:transform .55s cubic-bezier(.7, 0, .84, 0), opacity .35s ease .2s; }
+    aside > * { transition:opacity .5s var(--ease-out), transform .5s var(--ease-out); }
+    aside > :nth-child(1) { transition-delay:.25s; }
+    aside > :nth-child(2) { transition-delay:.32s; }
+    aside > :nth-child(3) { transition-delay:.4s; }
+    aside > :nth-child(4) { transition-delay:.48s; }
+    aside > :nth-child(5) { transition-delay:.56s; }
+    aside > :nth-child(n+6) { transition-delay:.62s; }
+    body.collapsed aside > * { opacity:.01; transform:translateX(-18px); transition-duration:.2s; transition-delay:0s; }
+  }
+  #splash .tint { position:absolute; inset:0; opacity:.38;
+                  background:linear-gradient(160deg, #b91c1c 0%, #ea580c 50%, #facc15 100%); }
+  #splash .glow { position:absolute; inset:0;
+                  background:radial-gradient(circle at 71% 50%, rgba(251,146,60,.28), transparent 38%); }
+  #splash .shade { position:absolute; inset:0;
+                   background:linear-gradient(90deg, rgba(20,6,2,.9) 0%, rgba(20,6,2,.6) 38%, rgba(20,6,2,0) 62%); }
+  #splash .content { position:relative; width:100%; max-width:520px; animation:rise 1.1s ease both; }
+  #splash .eyebrow { font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:#fdba74; margin:0 0 14px; }
+  #splash h1 { font-size:clamp(38px, 6vw, 68px); line-height:1.02; margin:0 0 18px; font-weight:800; letter-spacing:-.02em;
+               background:linear-gradient(90deg, #fef3c7, #fdba74 55%, #f97316); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #splash .lead { font-size:17px; line-height:1.55; color:#fed7aa; margin:0 0 22px; }
+  #splash ul { list-style:none; margin:0 0 30px; padding:0; display:grid; gap:10px; }
+  #splash li { display:flex; gap:12px; align-items:baseline; font-size:14.5px; color:#ffedd5; }
+  #splash li b { color:#fff; }
+  #splash li::before { content:""; flex:none; width:8px; height:8px; border-radius:50%; background:#fb923c;
+                       box-shadow:0 0 10px #f97316; transform:translateY(-1px); }
+  #start { font-size:16px; font-weight:700; padding:14px 30px; border-radius:999px; color:#1c0a02;
+           background:linear-gradient(90deg, #facc15, #f97316); box-shadow:0 6px 30px rgba(249,115,22,.45);
+           transition:transform .15s ease, box-shadow .15s ease; }
+  #start:hover { transform:translateY(-2px); box-shadow:0 10px 40px rgba(249,115,22,.6); }
+  #start:focus-visible { outline:3px solid #fef3c7; outline-offset:3px; }
+  #splash .credit { position:absolute; bottom:18px; left:7vw; font-size:12px; color:#fdba74aa; }
+  @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+  @media (max-width:800px) {
+    #splash { align-items:flex-end; padding:24px 16px 64px; }
+    #splash .lead { font-size:15px; }
+    #splash .shade { background:linear-gradient(0deg, rgba(20,6,2,.92) 0%, rgba(20,6,2,.6) 50%, rgba(20,6,2,.1) 100%); }
+    #splash .credit { left:16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #splash .content, #splash.gone .content, #splash.gone .credit { animation:none; }
+    body, aside, aside > *, .apphead .chev, #appToggle, #splash.gone, #map, .space, .maplibregl-ctrl-top-right,
+    .maplibregl-ctrl-bottom-right { transition:none !important; }
+  }
+
+  @media (max-width:800px) {
+    body { grid-template-columns:1fr; grid-template-rows:55vh auto; }
+    .mapwrap { order:-1; }
+    aside { border-right:0; }
+  }
+
+  /* =====================================================================================
+     Glass: every panel, menu and map overlay is translucent frosted glass (iOS style).
+     A strong blur + saturation of whatever is behind, a thin light edge, a soft top highlight
+     and a gentle shadow. Lines and input fields inside become translucent too.
+     ===================================================================================== */
+  :root { --glass:rgba(250, 250, 249, .34); --glass-strong:rgba(250, 250, 249, .5); --glass-edge:rgba(255, 255, 255, .6);
+          --glass-hi:rgba(255, 255, 255, .65); --glass-blur:blur(30px) saturate(190%) brightness(1.08);
+          --line:rgba(28, 25, 23, .1); --field:rgba(28, 25, 23, .06); }
+  @media (prefers-color-scheme: dark) {
+    /* More see-through: a lighter tint, with the backdrop itself blurred harder and dimmed slightly
+       (like iOS) so text stays readable even though much more of the map shows through. */
+    :root { --glass:rgba(24, 21, 19, .3); --glass-strong:rgba(24, 21, 19, .45); --glass-edge:rgba(255, 255, 255, .14);
+            --glass-hi:rgba(255, 255, 255, .1); --line:rgba(255, 255, 255, .12); --field:rgba(255, 255, 255, .08);
+            --glass-blur:blur(30px) saturate(190%) brightness(.72);
+            /* brighter secondary text so it stays readable over bright map imagery seen through the glass */
+            --muted:#d0cbc7; --faint:#a9a19c; }
+  }
+  .glass, aside, #appToggle, .dialog, .legend, .maptip, .maplibregl-popup-content {
+    background:var(--glass) !important;
+    -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+    border:1px solid var(--glass-edge);
+    box-shadow:inset 0 1px 0 var(--glass-hi), 0 12px 40px rgba(0, 0, 0, .28);
+  }
+  /* Native dropdown lists can't be glass; keep their options readable. */
+  select option { background:#1c1917; color:#f5f5f4; }
+  @media (prefers-color-scheme: light) { select option { background:#fafaf9; color:#1c1917; } }
+
+  /* Side panel (desktop): a wide floating rounded glass card, 12px from the edges. It occupies
+     12 + 420 + 12 = 444px, which is PANEL_W in the script (the map keeps its content clear of it). */
+  @media (min-width:801px) {
+    aside { top:12px; left:12px; bottom:12px; width:420px; border-radius:24px; padding:28px 30px 26px; font-size:14px; }
+    .apphead:hover { background-color:rgba(255, 255, 255, .06); }
+    .maptip { left:calc(50% + 222px); }
+  }
+  /* Phones: the panel sits under the map, so give it a lightly frosted look over the page. */
+  @media (max-width:800px) { aside { border-width:1px 0 0; border-radius:20px 20px 0 0; box-shadow:none; } }
+
+  /* Scrollbars: thin black thumbs on a clear track, so the glass shows through. */
+  aside, .dialog { scrollbar-color:rgba(0, 0, 0, .55) transparent; }
+  aside::-webkit-scrollbar-track, .dialog::-webkit-scrollbar-track { background:transparent; }
+  aside::-webkit-scrollbar-thumb, .dialog::-webkit-scrollbar-thumb { background:rgba(0, 0, 0, .55); border:2px solid transparent;
+                                                                      background-clip:padding-box; }
+  aside::-webkit-scrollbar-thumb:hover, .dialog::-webkit-scrollbar-thumb:hover { background:rgba(0, 0, 0, .8); background-clip:padding-box; }
+
+  /* Analyse window: a glass card over a lightly dimmed, blurred map. */
+  #modal { background:rgba(10, 8, 7, .28); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .dialog { border-radius:20px; }
+  .choice { background:rgba(255, 255, 255, .03); }
+  .choice:has(input:checked) { background:rgba(234, 88, 12, .12); }
+
+  /* Map overlays */
+  .legend { border-radius:14px; }
+  .maptip { border-radius:999px; }
+  .maplibregl-popup-content { border-radius:12px; }
+  .maplibregl-popup-tip { border-top-color:rgba(28, 25, 23, .6) !important; border-bottom-color:rgba(28, 25, 23, .6) !important; }
+  /* Zoom buttons and credits: dark (black-tinted) glass. */
+  .maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact {
+    background:rgba(0, 0, 0, .26) !important; -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+    box-shadow:inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 0 1px rgba(255, 255, 255, .1) !important; }
+  .maplibregl-ctrl-group { border-radius:12px !important; overflow:hidden; }
+  .maplibregl-ctrl-group button + button { border-top:1px solid rgba(255, 255, 255, .1) !important; }
+  .maplibregl-ctrl-group button:hover:not(:disabled) { background:rgba(255, 255, 255, .1) !important; }
+  .maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact { border-radius:999px; }
+  /* Translucent, softer secondary buttons inside the glass. */
+  button.secondary { background:rgba(255, 255, 255, .04); }
+  button.secondary:hover:not(:disabled) { background:rgba(234, 88, 12, .1); }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass, aside, .dialog, .legend, .maptip, .maplibregl-popup-content { background:var(--bg) !important; backdrop-filter:none; }
+  }
+</style>
+</head>
+<body class="splash collapsed">
+<div id="splash" role="dialog" aria-labelledby="splashTitle">
+  <div class="tint"></div><div class="glow"></div><div class="shade"></div>
+  <div class="content">
+    <p class="eyebrow">Powered by NASA satellite data</p>
+    <h1 id="splashTitle">Fire Pattern Predictor</h1>
+    <p class="lead">Wildfires move fast. This app reads what NASA's satellites see from orbit and
+      turns it into a picture of where fire is burning, and where it is likely to go next.</p>
+    <ul>
+      <li><span><b>Live detections</b> from MODIS, VIIRS and Landsat, merged into one consistent view.</span></li>
+      <li><span><b>Choose any zone on Earth</b>: draw it on the map or type its coordinates.</span></li>
+      <li><span><b>Fire patterns at a glance</b>: intensity, timing and spread across the days you choose.</span></li>
+    </ul>
+    <button type="button" id="start" autofocus>Get started →</button>
+  </div>
+  <p class="credit">Data: NASA FIRMS · Imagery © Esri · Maps © OpenStreetMap</p>
+</div>
+<!-- Desktop: the "Fire Pattern Predictor" pill. Clicking it slides the panel in from the left. -->
+<button type="button" id="appToggle" aria-expanded="false" aria-controls="panel" title="Open the panel">
+  <span class="pt">Fire Pattern Predictor
+    <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+         stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+  <span class="ps">NASA FIRMS · MODIS · VIIRS · Landsat</span>
+</button>
+<aside id="panel">
+  <!-- Panel header: clicking it slides the panel back out to the left (desktop). -->
+  <div class="apphead" id="appHead" role="button" tabindex="0" aria-expanded="true" title="Close the panel">
+    <h1>Fire Pattern Predictor
+      <svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h1>
+    <p>NASA FIRMS · MODIS · VIIRS · Landsat</p>
+  </div>
+
+  <section id="forecastSection" hidden>
+    <div class="fhead">
+      <h2>1 · Fire forecast</h2>
+      <button type="button" class="secondary" id="changeZone">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+        Change zone</button>
+    </div>
+    <p class="fsub" id="forecastSub"></p>
+    <div class="days" id="dayTabs" role="tablist" aria-label="Forecast day"></div>
+    <div class="pstats" id="pstats"></div>
+    <div class="scale"><span>Chance of fire</span><span>10%</span><i></i><span>85%+</span></div>
+    <ul class="facts" id="facts"></ul>
+    <div id="hotspots"></div>
+    <p class="reliab" id="reliab"></p>
+    <button type="button" class="secondary small" id="zoomZone" style="margin-top:10px">Zoom to zone</button>
+  </section>
+
+  <section id="zoneSection">
+    <h2>1 · Prediction zone</h2>
+    <label class="methodpick">How to set the zone
+      <select id="zoneMethod">
+        <option value="draw">Draw a rectangle</option>
+        <option value="pin">Pin a point</option>
+        <option value="coords">Type coordinates</option>
+        <option value="view">Use what's on screen</option>
+      </select>
+    </label>
+
+    <div class="method" data-method="draw">
+      <p class="hint">Click the button, then drag a rectangle on the map.</p>
+      <button type="button" id="draw" class="secondary wide">Draw on map</button>
+    </div>
+
+    <div class="method" data-method="pin" hidden>
+      <p class="hint" id="pinHint">Set the area, click <b>Drop a pin</b>, then click the map: a square zone of that size is centred on the pin. Drag the pin to move it.</p>
+      <div class="pinrow">
+        <label>Zone area (km²)<input id="pinArea" type="number" min="10" max="5000000" step="any" value="10000" inputmode="decimal"></label>
+        <button type="button" id="pin" class="secondary">
+          <svg viewBox="0 0 28 40" width="11" height="16" aria-hidden="true"><path d="M14 1C7 1 1.5 6.5 1.5 13.5 1.5 23 14 39 14 39S26.5 23 26.5 13.5C26.5 6.5 21 1 14 1Z" fill="currentColor"/><circle cx="14" cy="13.5" r="4.5" fill="var(--card)"/></svg>
+          Drop a pin</button>
+      </div>
+    </div>
+
+    <div class="method" data-method="coords" hidden>
+      <p class="hint">Enter the zone's edges in degrees (longitude −180 to 180, latitude −90 to 90).</p>
+      <div class="row">
+        <label>West (lon)<input id="w" type="number" step="0.01" min="-180" max="180"></label>
+        <label>East (lon)<input id="e" type="number" step="0.01" min="-180" max="180"></label>
+        <label>South (lat)<input id="s" type="number" step="0.01" min="-90" max="90"></label>
+        <label>North (lat)<input id="n" type="number" step="0.01" min="-90" max="90"></label>
+      </div>
+    </div>
+
+    <div class="method" data-method="view" hidden>
+      <p class="hint">Pan and zoom the map to the area you want, then click the button.</p>
+      <button type="button" id="useView" class="secondary wide">Use current view</button>
+    </div>
+
+    <div class="selected" id="zoneSelected" hidden>
+      <div class="mhead" style="margin-bottom:2px">Selected zone</div>
+      <div id="zoneinfo" class="zoneinfo">No zone selected.</div>
+      <button type="button" id="clear" class="secondary wide">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        Clear zone</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · Time window</h2>
+    <div class="row">
+      <label>Start date<input type="date" id="date"></label>
+      <label>Days of data<select id="days"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option></select></label>
+    </div>
+    <p class="hint" id="avail"></p>
+  </section>
+
+  <button type="button" id="run" disabled hidden>Analyse zone</button>
+  <div id="status" class="hint"></div>
+</aside>
+
+<div id="modal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header>
+      <h2 id="modalTitle">Analyse zone</h2>
+      <button type="button" class="x" id="modalClose" aria-label="Close">×</button>
+    </header>
+    <p class="sub" id="modalSub"></p>
+
+    <div class="step">
+      <h3>Step 1 · Get the data</h3>
+      <label class="choice">
+        <input type="radio" name="mode" value="harmonise" checked>
+        <span><b>Harmonise all sensors</b>
+          <small>Fetch every satellite (MODIS, VIIRS, Landsat) and merge them into one consistent dataset.</small></span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="mode" value="fetch">
+        <span style="flex:1"><b>Fetch one sensor</b>
+          <small>Raw detections from a single satellite product.</small>
+          <select id="sensor" aria-label="Sensor"></select>
+          <small id="sensorAvail"></small></span>
+      </label>
+      <button type="button" class="go" id="loadData">Load data</button>
+      <p class="msg" id="loadMsg"></p>
+    </div>
+
+    <div class="step locked" id="predictStep">
+      <h3>Step 2 · Predict</h3>
+      <p class="hint" style="margin:0 0 6px">Uses the data loaded in step 1 to predict how fire will develop in the zone.</p>
+      <button type="button" class="go" id="predict" disabled>Predict</button>
+      <p class="msg" id="predictMsg"></p>
+    </div>
+  </div>
+</div>
+
+<div class="mapwrap">
+  <div class="space" aria-hidden="true">
+    <div class="nebula"></div>
+    <div class="stars far"></div>
+    <div class="stars near"></div>
+    <div class="halo"></div>
+    <canvas id="embers"></canvas>
+  </div>
+  <div id="map"></div>
+  <div id="maptip" class="maptip">Drag to draw the prediction zone · Esc to cancel</div>
+  <div id="legend" class="legend" hidden>
+    <b>Fire detections</b>
+    <small>Fire radiative power (FRP): how much heat the fire gives off</small>
+    <ul>
+      <li><i style="--c:#facc15;--r:6px"></i>Under 10 MW</li>
+      <li><i style="--c:#f97316;--r:8px"></i>10–50 MW</li>
+      <li><i style="--c:#dc2626;--r:10px"></i>50–200 MW</li>
+      <li><i style="--c:#7f1d1d;--r:12px"></i>Over 200 MW</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---------------- Map: globe that blends into a flat map as you zoom in ----------------
+const ZONE_COLOR = '#ea580c';
+// Probability → colour for the prediction layer (pale yellow = unlikely, dark red = very likely).
+function riskColor(prop) {
+  return ['interpolate', ['linear'], ['get', prop],
+    0.1, '#fde68a', 0.25, '#fbbf24', 0.4, '#f97316', 0.6, '#dc2626', 0.85, '#7f1d1d'];
+}
+const EMPTY = { type: 'FeatureCollection', features: [] };
+
+const map = new maplibregl.Map({
+  container: 'map',
+  center: [15, 25],
+  zoom: 1.6,
+  maxPitch: 0,
+  attributionControl: { compact: true },
+  style: {
+    version: 8,
+    // Globe below zoom 3, fully flat (Web Mercator) from zoom 5; MapLibre morphs between them.
+    projection: { type: ['interpolate', ['linear'], ['zoom'], 3, 'vertical-perspective', 5, 'mercator'] },
+    sky: { 'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 3, 1, 5, 0] },
+    sources: {
+      imagery: { type: 'raster', tileSize: 256, maxzoom: 19,
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        attribution: 'Imagery &copy; Esri' },
+      osm: { type: 'raster', tileSize: 256, maxzoom: 19,
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        attribution: '&copy; OpenStreetMap contributors' },
+      zone: { type: 'geojson', data: EMPTY },
+      draft: { type: 'geojson', data: EMPTY },
+      fires: { type: 'geojson', data: EMPTY },
+      risk: { type: 'geojson', data: EMPTY },
+    },
+    layers: [
+      // Street map underneath; satellite imagery on top that fades out as you zoom in.
+      { id: 'osm', type: 'raster', source: 'osm' },
+      { id: 'imagery', type: 'raster', source: 'imagery',
+        paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 3, 1, 5.5, 0] } },
+      { id: 'zone-fill', type: 'fill', source: 'zone', paint: { 'fill-color': ZONE_COLOR, 'fill-opacity': .1 } },
+      { id: 'zone-line', type: 'line', source: 'zone',
+        paint: { 'line-color': ZONE_COLOR, 'line-width': 2, 'line-dasharray': [3, 2] } },
+      { id: 'draft-fill', type: 'fill', source: 'draft', paint: { 'fill-color': ZONE_COLOR, 'fill-opacity': .15 } },
+      { id: 'draft-line', type: 'line', source: 'draft', paint: { 'line-color': ZONE_COLOR, 'line-width': 2 } },
+      // Predicted fire probability per grid cell (drawn under the detections).
+      { id: 'risk-fill', type: 'fill', source: 'risk', paint: {
+        'fill-color': riskColor('p1'), 'fill-opacity': ['interpolate', ['linear'], ['get', 'p1'], 0.1, .35, 0.6, .7] } },
+      { id: 'risk-line', type: 'line', source: 'risk', minzoom: 6,
+        paint: { 'line-color': '#7f1d1d', 'line-width': .4, 'line-opacity': .5 } },
+      { id: 'fires', type: 'circle', source: 'fires', paint: {
+        'circle-color': ['step', ['get', 'frp'], '#facc15', 10, '#f97316', 50, '#dc2626', 200, '#7f1d1d'],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'],
+          2, ['+', 1.5, ['min', 3, ['/', ['sqrt', ['get', 'frp']], 4]]],
+          8, ['+', 3, ['min', 7, ['/', ['sqrt', ['get', 'frp']], 2]]]],
+        'circle-opacity': .8, 'circle-stroke-width': .5, 'circle-stroke-color': '#00000066' } },
+    ],
+  },
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+// ---------------- Space backdrop: star tiles + rising embers ----------------
+// Star tiles are drawn once into small images and repeated by CSS (two layers at different scales).
+function starTile(size, count, seed) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < count; i++) {
+    const x = rnd() * size, y = rnd() * size, big = rnd() < .08, r = big ? .9 + rnd() * .8 : .3 + rnd() * .55;
+    const warm = rnd() < .18;                              // a few stars glow ember-orange
+    g.fillStyle = warm ? `rgba(253, ${170 + rnd() * 60 | 0}, 110, ${.5 + rnd() * .5})`
+                       : `rgba(255, ${235 + rnd() * 20 | 0}, ${215 + rnd() * 40 | 0}, ${.35 + rnd() * .6})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    if (big) {   // soft glow fading out from the star, not a hard ring
+      const glow = g.createRadialGradient(x, y, 0, x, y, r * 5);
+      glow.addColorStop(0, warm ? 'rgba(251,146,60,.35)' : 'rgba(255,240,220,.25)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = glow; g.beginPath(); g.arc(x, y, r * 5, 0, Math.PI * 2); g.fill();
+    }
+  }
+  return `url(${c.toDataURL()})`;
+}
+document.documentElement.style.setProperty('--stars-far', starTile(520, 260, 7));
+document.documentElement.style.setProperty('--stars-near', starTile(760, 90, 42));
+
+// Embers: a few dozen glowing sparks drifting up from the bottom, flickering as they fade.
+(function embers() {
+  const cv = $('embers'), g = cv.getContext('2d');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let W = 0, H = 0, dpr = 1, last = performance.now(), cleared = false;
+  const fit = () => {
+    dpr = Math.min(2, devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  new ResizeObserver(fit).observe(cv);
+  fit();
+  const spawn = initial => ({
+    x: Math.random() * W,
+    y: initial ? H * (.3 + Math.random() * .7) : H + 10 + Math.random() * 40,
+    vy: 12 + Math.random() * 30,                 // px/s upward
+    sway: 8 + Math.random() * 18, phase: Math.random() * 6.28, freq: .4 + Math.random() * .9,
+    r: 1 + Math.random() * 1.8,
+    life: 0, max: 7 + Math.random() * 9,         // seconds
+    hue: 18 + Math.random() * 28,                // red-orange → amber
+  });
+  const N = Math.round(Math.min(70, Math.max(30, innerWidth / 22)));
+  const sparks = Array.from({ length: N }, () => spawn(true));
+  const frame = now => {
+    const dt = Math.min(.05, (now - last) / 1000);
+    last = now;
+    // Nothing to see once the flat map covers the backdrop, or when the tab is hidden.
+    if (document.hidden || map.getZoom() > 5.2) {
+      if (!cleared) { g.clearRect(0, 0, W, H); cleared = true; }
+      return requestAnimationFrame(frame);
+    }
+    cleared = false;
+    g.clearRect(0, 0, W, H);
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < sparks.length; i++) {
+      const p = sparks[i];
+      p.life += dt;
+      p.y -= p.vy * dt;
+      p.phase += p.freq * dt;
+      if (p.life > p.max || p.y < -20) { sparks[i] = spawn(false); continue; }
+      const x = p.x + Math.sin(p.phase) * p.sway;
+      const fade = Math.min(1, p.life / 1.2) * Math.min(1, (p.max - p.life) / 2.5);   // fade in, fade out
+      const flicker = .7 + .3 * Math.sin(now / 90 + p.phase * 7);
+      const heightFade = Math.min(1, .25 + p.y / H);                                  // dimmer as they rise
+      const a = fade * flicker * heightFade;
+      // Soft glow around the spark.
+      const glow = g.createRadialGradient(x, p.y, 0, x, p.y, p.r * 9);
+      glow.addColorStop(0, `hsla(${p.hue}, 100%, 60%, ${a * .45})`);
+      glow.addColorStop(.35, `hsla(${p.hue - 8}, 100%, 50%, ${a * .14})`);
+      glow.addColorStop(1, 'hsla(10, 100%, 40%, 0)');
+      g.fillStyle = glow;
+      g.beginPath(); g.arc(x, p.y, p.r * 9, 0, 6.283); g.fill();
+      // Short tail trailing below the spark as it rises.
+      const tx = x - Math.cos(p.phase) * p.sway * p.freq * .25, ty = p.y + p.vy * .22;
+      const tail = g.createLinearGradient(x, p.y, tx, ty);
+      tail.addColorStop(0, `hsla(${Math.min(44, p.hue + 8)}, 100%, 62%, ${a * .55})`);
+      tail.addColorStop(1, `hsla(${p.hue}, 100%, 50%, 0)`);
+      g.strokeStyle = tail; g.lineWidth = p.r * .9; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x, p.y); g.lineTo(tx, ty); g.stroke();
+      // Hot core: white-yellow centre.
+      g.fillStyle = `hsla(${Math.min(48, p.hue + 14)}, 100%, 80%, ${a})`;   // capped so it never tips into green
+      g.beginPath(); g.arc(x, p.y, p.r * .75, 0, 6.283); g.fill();
+    }
+    g.globalCompositeOperation = 'source-over';
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+})();
+
+// Globe halo: sits exactly around the globe *as drawn*, and fades out between zoom 2.5 and 4.5 as the
+// globe flattens into the map. Rather than assuming where the globe is, its rim is measured on screen
+// in four directions (east, west, north, south): walk away from the map centre along a great circle and
+// keep the furthest on-screen point. The halo is centred between opposite rim points and sized to match.
+const halo = document.querySelector('.space .halo');
+function globeRim(center, c, bearingDeg) {
+  const rad = Math.PI / 180, φ1 = center.lat * rad, λ1 = center.lng * rad, θ = bearingDeg * rad;
+  let best = null, bestD = -1;
+  for (let deg = 40; deg <= 90; deg += 2) {
+    const δ = deg * rad;
+    const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+    const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
+    const p = map.project([λ2 / rad, φ2 / rad]);
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+    const d = Math.hypot(p.x - c.x, p.y - c.y);
+    if (d > bestD) { bestD = d; best = p; }
+  }
+  return best;
+}
+function placeHalo() {
+  const z = map.getZoom();
+  if (z > 4.6) { halo.style.opacity = 0; return; }
+  const center = map.getCenter(), c = map.project(center);
+  const E = globeRim(center, c, 90), W = globeRim(center, c, 270), N = globeRim(center, c, 0), S = globeRim(center, c, 180);
+  let cx = c.x, cy = c.y, r = 512 * Math.pow(2, z) / (2 * Math.PI);
+  if (E && W && N && S) {
+    cx = (E.x + W.x) / 2;
+    cy = (N.y + S.y) / 2;
+    r = (Math.hypot(E.x - W.x, E.y - W.y) + Math.hypot(N.x - S.x, N.y - S.y)) / 4;
+  }
+  const D = r * 2 / 0.6;                                                        // 60% stop = globe edge
+  halo.style.width = halo.style.height = `${D}px`;
+  halo.style.transform = `translate(${cx - D / 2}px, ${cy - D / 2}px)`;
+  halo.style.opacity = Math.max(0, Math.min(1, (4.5 - z) / 2));
+}
+// Never let a decoration throw inside the map's render loop (an exception there freezes the map).
+const safePlaceHalo = () => { try { placeHalo(); } catch (err) { console.warn('halo', err); } };
+// Update on 'render' (when the globe is actually drawn) rather than 'move', so the halo and the globe
+// always change in the same frame and the halo never trails a moving globe.
+map.on('render', safePlaceHalo);
+map.on('resize', safePlaceHalo);
+safePlaceHalo();
+
+// Run map updates only once the style has loaded.
+const mapReady = new Promise(res => map.on('load', res));
+const setData = (src, data) => mapReady.then(() => map.getSource(src).setData(data));
+
+// Slow spin. While the Fire Pattern Predictor panel is closed (desktop) the globe always spins: touching
+// the map only pauses it, and it resumes shortly after the map comes to rest. With the panel open, the
+// first interaction stops it (so the globe holds still while you work on a zone).
+let spinning = true, paused = false;
+// The spin is one continuous frame-by-frame rotation (6°/s), not a chain of 1-second animations: a chain
+// hitches at every link and a new link can cut off other camera moves halfway (leaving the globe off-centre).
+// While spinning it also eases the framing back to where it belongs (beside the panel, or centred), so the
+// globe always settles in the right place even if something interrupted an earlier move.
+let lastSpinT = null;
+function spinFrame(now) {
+  requestAnimationFrame(spinFrame);
+  const dt = lastSpinT == null ? 0 : Math.min(.1, (now - lastSpinT) / 1000);
+  lastSpinT = now;
+  if (paused || gliding || document.hidden || map.isMoving()) return;
+  const next = {};
+  // Spin (only in globe view) — on the opening screen too.
+  if (spinning && map.getZoom() <= 3) {
+    const c = map.getCenter();
+    next.center = [c.lng - 6 * dt, c.lat];
+  }
+  // Keep the framing right whether or not it spins: if anything interrupted a glide, ease the globe back
+  // beside the open panel, or to the centre when it's closed. Not on the opening screen, where the globe
+  // deliberately sits to the right of the title text.
+  const have = map.getPadding().left, want = appPadding().left;
+  if (!document.body.classList.contains('splash') && Math.abs(have - want) > .5) {
+    next.padding = { left: Math.max(0, Math.round((have + (want - have) * Math.min(1, dt * 3)) * 100) / 100), top: 0, right: 0, bottom: 0 };
+  }
+  if (next.center || next.padding) map.jumpTo(next);
+}
+mapReady.then(() => requestAnimationFrame(spinFrame));
+function spin() { /* the frame loop above does the spinning whenever `spinning` is on */ }
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) spinning = false;
+// Used before the app moves the camera itself (fly to a zone, etc.): end the spin and its animation.
+function stopSpin() { if (spinning) { spinning = false; map.stop(); } }
+// Used when the user touches the map: only end the spin. Calling map.stop() here would also cancel the
+// zoom/pan the user just started (the map's own handlers already interrupt the spin animation).
+function userStopsSpin() { spinning = false; clearTimeout(resumeTimer); }
+
+// Panel closed → resume the spin ~1.5 s after the user lets go and the map is at rest.
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const panelClosed = () => isDesktop() && !panelOpen && !document.body.classList.contains('splash');
+let resumeTimer = null;
+function resumeSpinSoon() {
+  clearTimeout(resumeTimer);
+  if (reducedMotion() || !panelClosed()) return;
+  resumeTimer = setTimeout(() => {
+    if (!panelClosed() || drawing || pinMode) return;
+    if (map.isMoving()) return resumeSpinSoon();               // still settling: try again a bit later
+    spinning = true;
+    spin();                                                     // (does nothing while zoomed in past the globe)
+  }, 1500);
+}
+map.on('moveend', () => { if (!spinning) resumeSpinSoon(); });
+
+// ---------------- Layout padding ----------------
+// On desktop the side panel floats over the full-screen map, so the camera keeps its content
+// clear of it with padding (centring, fitBounds and flyTo all respect this).
+const PANEL_W = 444;            // 12px margin + 420px glass card + 12px gap (see the Glass CSS)
+const isDesktop = () => innerWidth > 800;
+const pad = (left = 0) => ({ left, top: 0, right: 0, bottom: 0 });
+// Desktop: the panel starts closed (only its header shows, as a pill) and the globe is centred on the
+// whole screen; once opened, the camera keeps the content clear of the panel.
+let panelOpen = false;
+const appPadding = () => pad(isDesktop() && panelOpen ? PANEL_W : 0);
+
+// Globe size. The globe's on-screen radius doubles with each zoom level, so the zoom that gives a wanted
+// radius follows from the radius measured right now (globeRadiusPx, using the halo's rim measurement).
+// Closed panel: the globe fills 84% of the smaller screen side; open panel: 72% of the space beside it.
+function globeRadiusPx() {
+  const center = map.getCenter(), c = map.project(center);
+  const E = globeRim(center, c, 90), W = globeRim(center, c, 270);
+  return E && W ? Math.hypot(E.x - W.x, E.y - W.y) / 2 : 512 * Math.pow(2, map.getZoom()) / (2 * Math.PI);
+}
+function globeZoomFor(open) {
+  const cv = map.getCanvas();                                   // the map's area (shorter on phones)
+  const w = cv.clientWidth - (isDesktop() && open ? PANEL_W : 0), h = cv.clientHeight;
+  const want = Math.min(w, h) * (open ? 0.36 : 0.42);          // radius = 72% / 84% of the side, halved
+  // Perspective makes the size not quite double per zoom level, so refine: try the zoom, measure the
+  // real radius there, correct, and repeat. The camera is put back before anything is drawn.
+  const z0 = map.getZoom();
+  let z = z0;
+  try {
+    for (let i = 0; i < 3; i++) {
+      if (i) map.jumpTo({ zoom: z });
+      const r = globeRadiusPx();
+      if (!(r > 0) || !Number.isFinite(r)) break;
+      z += Math.log2(want / r);
+      if (!Number.isFinite(z)) { z = z0; break; }
+      z = Math.max(1, Math.min(2.8, z));                        // stay in globe view (flattening starts at 3)
+    }
+  } finally {
+    map.jumpTo({ zoom: z0 });
+  }
+  return Number.isFinite(z) ? z : null;                         // null = leave the size alone
+}
+// Only resize while the whole globe is in view; never undo a zoom the user made into a region.
+const showingWholeGlobe = () => map.getZoom() < 3;
+
+// Open: the panel slides in from the left and the pill fades away. Close: the reverse.
+function setPanel(open) {
+  if (!isDesktop() || document.body.classList.contains('splash')) return;
+  // A first click during the opening transition ends it now (the fading opening screen would cover the
+  // panel, and the pill's fade-in delay would keep it frozen on screen over the sliding panel).
+  clearTimeout(introTimer);
+  $('splash')?.remove();
+  document.body.classList.remove('intro');
+  panelOpen = open;
+  if (!open) {
+    if (drawing) setDrawing(false);               // nothing half-started behind a closed panel
+    if (pinMode) setPinMode(false);
+    if (!reducedMotion()) spinning = true;        // closed panel: the globe always spins (glideTo restarts it)
+  }
+  document.body.classList.toggle('collapsed', !open);
+  $('appToggle').setAttribute('aria-expanded', String(open));
+  $('appHead').setAttribute('aria-expanded', String(open));
+  // Keep keyboard focus somewhere visible.
+  if (open) $('appHead').focus({ preventScroll: true }); else $('appToggle').focus({ preventScroll: true });
+  // The globe glides aside to make room for the panel (or back to the centre when it closes), and is
+  // resized to suit the space it gets.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  glideTo(appPadding(), reduced ? 0 : open ? 1200 : 1000, showingWholeGlobe() ? globeZoomFor(open) : null);
+}
+$('appToggle').addEventListener('click', () => setPanel(true));
+$('appHead').addEventListener('click', () => setPanel(false));
+$('appHead').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPanel(false); }
+});
+
+addEventListener('resize', () => {
+  if (!document.body.classList.contains('splash') && !gliding) map.setPadding(appPadding());
+});
+// The map container only changes size on narrow screens (stacked layout); keep the canvas in step.
+new ResizeObserver(() => map.resize()).observe($('map'));
+
+// ---------------- Opening screen ----------------
+// On wide screens the text sits on the left, so push the globe to the right.
+if (isDesktop()) map.setPadding(pad(innerWidth * 0.42));
+
+// Move the globe to its place in the app frame by frame: the padding eases in and out while the
+// globe keeps turning at its normal spin speed, so the motion never stops or jerks.
+let gliding = false;
+// Every glide gets an id. Its "user grabbed the map" listeners are removed when it ends and only ever act on
+// that same glide, and a new glide cancels whatever an older one left pending. (Before, old listeners piled up
+// and a later drag could re-apply an old glide's target, e.g. leaving the globe under an open panel.)
+let glideId = 0;
+const canvasBox = () => map.getCanvasContainer();
+// `toZoom` (optional) changes the globe's size during the same glide.
+function glideTo(target, ms, toZoom = null) {
+  const id = ++glideId;
+  if (!Number.isFinite(toZoom)) toZoom = null;                 // never feed the map an invalid zoom
+  const from = map.getPadding(), fromZoom = map.getZoom(), t0 = performance.now();
+  if (!Number.isFinite(from.left)) from.left = target.left;
+  from.left = Math.max(0, from.left);
+  // MapLibre rejects any negative padding, even a rounding error like -0.0000014 px, and after that
+  // every camera move fails. So padding is always rounded and clamped to zero or above.
+  const safeLeft = v => Math.max(0, Math.round(v * 100) / 100);
+  const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const zoomAt = e => toZoom == null ? {} : { zoom: fromZoom + (toZoom - fromZoom) * e };
+  let last = t0;
+  gliding = paused = true;
+  map.stop();
+  const grabEvents = ['mousedown', 'touchstart', 'wheel'];
+  const cleanup = () => grabEvents.forEach(ev => canvasBox().removeEventListener(ev, abort));
+  const finish = () => {
+    cleanup();
+    if (id !== glideId) return;                                 // a newer glide has taken over
+    gliding = paused = false;
+    map.jumpTo({ padding: target, ...zoomAt(1) });
+  };
+  const frame = now => {
+    if (!gliding || id !== glideId) return;
+    const k = Math.min(1, (now - t0) / ms), e = ease(k), c = map.getCenter();
+    const turn = spinning ? 6 * (now - last) / 1000 : 0;     // same 6°/s as spin()
+    last = now;
+    map.jumpTo({ center: [c.lng - turn, c.lat], ...zoomAt(e), padding: {
+      left: safeLeft(from.left + (target.left - from.left) * e), top: 0, right: 0, bottom: 0 } });
+    k < 1 ? requestAnimationFrame(frame) : finish();
+  };
+  // If the user grabs the map mid-glide, hand over control straight away and don't touch the camera
+  // while they're interacting. Moving the camera during a user gesture (or from inside the map's own
+  // move events) breaks MapLibre's render loop for good, which freezes the map: no zoom, and the
+  // halo drifts away from the frozen globe. So only finish the framing once the map is fully at rest,
+  // from a timer that runs outside the map's rendering.
+  // The framing is then finished by the frame loop (spinFrame) once the map is at rest.
+  function abort() {
+    cleanup();
+    if (id !== glideId || !gliding) return;
+    gliding = false; paused = false;
+  }
+  grabEvents.forEach(ev => canvasBox().addEventListener(ev, abort, { passive: true }));
+  ms > 0 ? requestAnimationFrame(frame) : finish();
+}
+
+const INTRO_MS = 3000;
+let introTimer;
+$('start').onclick = () => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('start').disabled = true;
+  // The CSS does the staging (see "Transition from the opening screen"): text leaves, the fire
+  // filter dissolves, then the "Fire Pattern Predictor" pill and the map controls fade in.
+  // On phones there's no floating pill: the panel simply sits under the map, open.
+  if (!isDesktop()) { panelOpen = true; document.body.classList.remove('collapsed'); }
+  document.body.classList.add('intro');           // the pill's first fade-in waits for the opening screen
+  $('splash').classList.add('gone');
+  document.body.classList.remove('splash');
+  // Meanwhile the globe glides from the right-hand side to the centre of the screen and grows.
+  glideTo(appPadding(), reduced ? 0 : 2400, globeZoomFor(panelOpen));
+  introTimer = setTimeout(() => { $('splash')?.remove(); document.body.classList.remove('intro'); }, reduced ? 0 : INTRO_MS);
+};
+['mousedown', 'touchstart', 'wheel'].forEach(ev => map.getCanvasContainer().addEventListener(ev, userStopsSpin, { passive: true }));
+// A click or tap that doesn't move the map fires no 'moveend', so also schedule the resume on release.
+['mouseup', 'touchend'].forEach(ev => map.getCanvasContainer().addEventListener(ev, () => { if (!spinning) resumeSpinSoon(); }, { passive: true }));
+// The zoom buttons and keyboard zoom don't touch the canvas, so end the spin for those too.
+map.on('zoomstart', e => { if (e.originalEvent) userStopsSpin(); });
+
+// A lat/lon box as a polygon, densified so its edges follow parallels/meridians on the globe.
+function boxRing({ w, s, e, n }, N = 32) {
+  const pts = [];
+  for (let i = 0; i <= N; i++) pts.push([w + (e - w) * i / N, s]);
+  for (let i = 1; i <= N; i++) pts.push([e, s + (n - s) * i / N]);
+  for (let i = 1; i <= N; i++) pts.push([e - (e - w) * i / N, n]);
+  for (let i = 1; i <= N; i++) pts.push([w, n - (n - s) * i / N]);
+  return pts;
+}
+function boxPolygon(z) {
+  return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {},
+    geometry: { type: 'Polygon', coordinates: [boxRing(z)] } }] };
+}
+
+// Fire dots + their legend always appear and disappear together.
+function setFires(data) {
+  setData('fires', data);
+  $('legend').hidden = !data.features.length;
+}
+
+let zone = null;              // {w, s, e, n}
+
+// ---------------- Zone handling ----------------
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const r2 = v => Math.round(v * 100) / 100;
+const r3 = v => Math.round(v * 1000) / 1000;      // 0.001° ≈ 100 m: keeps small pin zones accurate
+
+function normalise(z) {
+  const w = clamp(Math.min(z.w, z.e), -180, 180), e = clamp(Math.max(z.w, z.e), -180, 180);
+  const s = clamp(Math.min(z.s, z.n), -90, 90),   n = clamp(Math.max(z.s, z.n), -90, 90);
+  return { w: r3(w), s: r3(s), e: r3(e), n: r3(n) };
+}
+
+function areaKm2({ w, s, e, n }) {
+  const R = 6371, rad = Math.PI / 180;
+  return Math.abs(R * R * (e - w) * rad * (Math.sin(n * rad) - Math.sin(s * rad)));
+}
+
+// `fromPin`: the zone was built around the map pin; any other way of setting the zone removes the pin.
+function setZone(z, fit = false, fromPin = false) {
+  if (!fromPin) removePin();
+  zone = normalise(z);
+  if (zone.w === zone.e || zone.s === zone.n) return clearZone();
+  invalidateData();
+  setData('zone', boxPolygon(zone));
+  ['w', 's', 'e', 'n'].forEach(k => $(k).value = zone[k]);
+  const km = areaKm2(zone);
+  $('zoneinfo').innerHTML = `Zone <b>${zone.w}, ${zone.s} → ${zone.e}, ${zone.n}</b><br>` +
+    `≈ ${Math.round(km).toLocaleString()} km² · ${r2(zone.e - zone.w)}° × ${r2(zone.n - zone.s)}°` +
+    (fromPin && pin ? `<br>Centred on the pin at ${pin.getLngLat().lat.toFixed(3)}, ${pin.getLngLat().lng.toFixed(3)}` : '');
+  // "Analyse zone" only exists once there is a zone; bring it into view when it first appears.
+  const appearing = $('run').hidden;
+  $('run').disabled = false;
+  $('run').hidden = false;
+  $('zoneSelected').hidden = false;           // "Selected zone" only exists once there is a zone
+  if (appearing && document.activeElement?.tagName !== 'INPUT') $('run').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (fit) {
+    stopSpin();
+    // Flying in from the globe passes through the globe→flat transition on the way.
+    map.fitBounds([[zone.w, zone.s], [zone.e, zone.n]], { padding: 40, duration: 2500, essential: true });
+  }
+}
+
+function clearZone() {
+  removePin();
+  zone = null;
+  loaded = null;
+  clearPrediction();
+  setData('zone', EMPTY);
+  setFires(EMPTY); lastFires = null;
+  ['w', 's', 'e', 'n'].forEach(k => $(k).value = '');
+  $('zoneinfo').textContent = 'No zone selected.';
+  $('status').textContent = '';
+  $('run').disabled = true;
+  $('run').hidden = true;
+  $('zoneSelected').hidden = true;
+}
+
+['w', 's', 'e', 'n'].forEach(k => $(k).addEventListener('change', () => {
+  const v = Object.fromEntries(['w', 's', 'e', 'n'].map(k => [k, parseFloat($(k).value)]));
+  if (Object.values(v).every(Number.isFinite)) setZone(v, true);
+}));
+
+$('clear').onclick = clearZone;
+$('useView').onclick = () => {
+  stopSpin();
+  // Only the part of the map that isn't behind the side panel (on the globe, use the whole view).
+  let b = map.getBounds();
+  if (map.getZoom() >= 5) {
+    const c = map.getCanvas(), left = map.getPadding().left;
+    b = new maplibregl.LngLatBounds(map.unproject([left, c.clientHeight]), map.unproject([c.clientWidth, 0]));
+  }
+  let w = b.getWest(), e = b.getEast();
+  if (e - w >= 360) { w = -180; e = 180; } else { w = wrapLng(w); e = wrapLng(e); if (e < w) { w = -180; e = 180; } }
+  setZone({ w, s: b.getSouth(), e, n: b.getNorth() });
+};
+
+// ---------------- Rectangle drawing ----------------
+let drawing = false, start = null;
+
+function setDrawing(on) {
+  if (on && pinMode) setPinMode(false);
+  drawing = on;
+  stopSpin();
+  $('draw').classList.toggle('on', on);
+  $('map').classList.toggle('drawing', on);
+  $('maptip').textContent = 'Drag to draw the prediction zone · Esc to cancel';
+  $('maptip').style.display = on ? 'block' : 'none';
+  on ? map.dragPan.disable() : map.dragPan.enable();
+  if (!on) setData('draft', EMPTY);
+  start = null;
+}
+$('draw').onclick = () => setDrawing(!drawing);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && drawing) setDrawing(false); });
+
+const lngLatOk = ll => ll && Number.isFinite(ll.lng) && Number.isFinite(ll.lat);
+const wrapLng = lng => ((lng + 540) % 360) - 180;
+
+map.on('mousedown', e => {
+  if (!drawing || !lngLatOk(e.lngLat)) return;   // ignore clicks in space beside the globe
+  start = { lng: wrapLng(e.lngLat.lng), lat: e.lngLat.lat };
+});
+map.on('mousemove', e => {
+  if (!drawing || !start || !lngLatOk(e.lngLat)) return;
+  const b = { lng: wrapLng(e.lngLat.lng), lat: e.lngLat.lat };
+  setData('draft', boxPolygon({ w: Math.min(start.lng, b.lng), e: Math.max(start.lng, b.lng),
+                                s: Math.min(start.lat, b.lat), n: Math.max(start.lat, b.lat) }));
+});
+map.on('mouseup', e => {
+  if (!drawing || !start) return;
+  const a = start, b = lngLatOk(e.lngLat) ? { lng: wrapLng(e.lngLat.lng), lat: e.lngLat.lat } : start;
+  setDrawing(false);
+  setZone({ w: a.lng, s: a.lat, e: b.lng, n: b.lat });
+});
+
+// ---------------- Pin + area ----------------
+// Click "Drop a pin", click the map: a square zone with the typed area is centred on the pin.
+let pinMode = false, pin = null;
+
+function setPinMode(on) {
+  if (on && drawing) setDrawing(false);
+  pinMode = on;
+  stopSpin();
+  $('pin').classList.toggle('on', on);
+  $('map').classList.toggle('drawing', on);          // crosshair cursor
+  $('maptip').textContent = 'Click on the map to drop the pin · Esc to cancel';
+  $('maptip').style.display = on ? 'block' : 'none';
+}
+$('pin').onclick = () => setPinMode(!pinMode);
+
+// ---------------- Zone method dropdown: show only the chosen way of setting the zone ----------------
+$('zoneMethod').addEventListener('change', () => {
+  const m = $('zoneMethod').value;
+  if (drawing) setDrawing(false);              // don't leave a half-started draw/pin mode active
+  if (pinMode) setPinMode(false);
+  document.querySelectorAll('#zoneSection .method').forEach(el => { el.hidden = el.dataset.method !== m; });
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && pinMode) setPinMode(false); });
+
+function readPinArea() {
+  const a = parseFloat($('pinArea').value);
+  return Number.isFinite(a) && a >= 10 && a <= 5e6 ? a : null;
+}
+
+// Square of the given area (km²) centred on a point. 1° latitude ≈ 111.32 km; longitude shrinks with cos(lat).
+function zoneAroundPoint({ lng, lat }, km2) {
+  const half = Math.sqrt(km2) / 2;
+  const dLat = half / 111.32;
+  const dLng = Math.min(180, half / (111.32 * Math.max(.01, Math.cos(lat * Math.PI / 180))));
+  return { w: lng - dLng, e: lng + dLng, s: lat - dLat, n: lat + dLat };
+}
+
+const PIN_HINT = $('pinHint').innerHTML;
+function applyPin(fit) {
+  const area = readPinArea();
+  // Validate under the area box itself, so the current zone's details stay visible.
+  $('pinHint').innerHTML = area == null
+    ? '<span class="err" style="color:#dc2626">Zone area must be between 10 and 5,000,000 km².</span>' : PIN_HINT;
+  if (!pin || area == null) return;
+  setZone(zoneAroundPoint(pin.getLngLat(), area), fit, true);
+}
+
+function makePinElement() {
+  const el = document.createElement('div');
+  el.className = 'map-pin';
+  el.innerHTML = `<svg viewBox="0 0 28 40" width="28" height="40" aria-hidden="true">
+    <defs><linearGradient id="pinGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/><stop offset=".55" stop-color="#f97316"/><stop offset="1" stop-color="#dc2626"/></linearGradient></defs>
+    <path d="M14 1C7 1 1.5 6.5 1.5 13.5 1.5 23 14 39 14 39S26.5 23 26.5 13.5C26.5 6.5 21 1 14 1Z" fill="url(#pinGrad)" stroke="#fff" stroke-width="2"/>
+    <circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>`;
+  el.title = 'Drag to move the zone';
+  return el;
+}
+
+function placePin(lngLat) {
+  if (!pin) {
+    pin = new maplibregl.Marker({ element: makePinElement(), anchor: 'bottom', draggable: true });
+    // While dragging, preview the zone outline; apply it when the pin is dropped.
+    pin.on('drag', () => { const a = readPinArea(); if (a) setData('draft', boxPolygon(normalise(zoneAroundPoint(pin.getLngLat(), a)))); });
+    pin.on('dragend', () => { setData('draft', EMPTY); applyPin(false); });
+  }
+  pin.setLngLat(lngLat).addTo(map);
+  applyPin(true);
+}
+
+function removePin() {
+  if (pin) { pin.remove(); pin = null; }
+}
+
+map.on('click', e => {
+  if (!pinMode || !lngLatOk(e.lngLat)) return;
+  e.originalEvent.pinPlaced = true;          // so fire/forecast popups ignore this click
+  setPinMode(false);
+  const at = [wrapLng(e.lngLat.lng), e.lngLat.lat];
+  setTimeout(() => placePin(at), 0);           // fly to the zone outside the map's event handling
+});
+
+// Changing the area resizes the zone around the existing pin.
+$('pinArea').addEventListener('change', () => applyPin(true));
+
+// ---------------- Dates & availability ----------------
+$('date').value = new Date(Date.now() - 4 * 864e5).toISOString().slice(0, 10);
+let availability = {};
+fetch('/api/sensors').then(r => r.json()).then(d => {
+  const a = availability = d.availability || {};
+  const nrt = Object.entries(a).filter(([k]) => k.endsWith('_NRT')).map(([, v]) => v.max).sort();
+  if (nrt.length) $('avail').textContent = `Near-real-time data available up to ${nrt[nrt.length - 1]}.`;
+  $('sensor').innerHTML = (d.sensors || []).map(s => `<option>${esc(s)}</option>`).join('');
+  showSensorAvail();
+}).catch(() => {});
+
+function showSensorAvail() {
+  const s = $('sensor').value, a = availability[s];
+  $('sensorAvail').textContent = a ? `Available ${a.min} to ${a.max}.` +
+    (s === 'LANDSAT_NRT' ? ' Covers the US and Canada only.' : '') : '';
+}
+$('sensor').onchange = () => { document.querySelector('input[name=mode][value=fetch]').checked = true; showSensorAvail(); };
+
+// ---------------- Fire popups ----------------
+map.on('click', 'fires', e => {
+  if (drawing || pinMode || e.originalEvent?.pinPlaced) return;
+  const p = e.features[0].properties, [lon, lat] = e.features[0].geometry.coordinates;
+  new maplibregl.Popup({ offset: 6 }).setLngLat([lon, lat]).setHTML(
+    `<b>${esc(p.source)}</b><br>${esc(p.date)} ${esc(p.time)} UTC<br>` +
+    `FRP: ${p.frp ? (+p.frp).toFixed(1) + ' MW' : 'n/a'}<br>Confidence: ${esc(p.conf || 'n/a')}<br>${lat.toFixed(3)}, ${lon.toFixed(3)}`
+  ).addTo(map);
+});
+map.on('mouseenter', 'fires', () => { if (!drawing && !pinMode) map.getCanvas().style.cursor = 'pointer'; });
+map.on('mouseleave', 'fires', () => { map.getCanvas().style.cursor = ''; });
+
+// ---------------- Analyse window: step 1 get data, step 2 predict ----------------
+let loaded = null;   // { mode, sensor, params } of the data currently on the map
+let lastFires = null; // fire dots of the loaded data, shown on the map only after Predict
+
+const currentParams = () => ({
+  date: $('date').value, days: $('days').value,
+  area: [zone.w, zone.s, zone.e, zone.n].join(','),
+});
+const sameParams = (a, b) => a && b && a.date === b.date && a.days === b.days && a.area === b.area;
+
+function setPredictReady(ready) {
+  $('predict').disabled = !ready;
+  $('predictStep').classList.toggle('locked', !ready);
+}
+
+// Loaded data no longer matches once the zone or time window changes.
+function invalidateData() {
+  if (!loaded) return;
+  loaded = null;
+  setFires(EMPTY); lastFires = null;
+  clearPrediction();
+  $('status').textContent = '';
+}
+function clearPrediction() {
+  setData('risk', EMPTY);
+  showForecastPanel(false);
+  $('predictMsg').textContent = '';
+}
+// The forecast takes the place of part 1 (Prediction zone) in the side panel.
+function showForecastPanel(on) {
+  $('forecastSection').hidden = !on;
+  $('zoneSection').hidden = on;
+  if (on) $('forecastSection').scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+// Zoom in until the zone fills the map edge to edge. It's only a camera move:
+// the rest of the map is still there and you can zoom out or pan as usual.
+function zoomToZone(duration = 2000) {
+  if (!zone) return;
+  stopSpin();
+  map.fitBounds([[zone.w, zone.s], [zone.e, zone.n]], { padding: 0, duration, essential: true });
+}
+['date', 'days'].forEach(id => $(id).addEventListener('change', invalidateData));
+
+function openModal() {
+  if (!zone) return;
+  if (!$('date').value) return $('date').reportValidity();
+  setData('zone', boxPolygon(zone));          // outline back on the map (Change zone hides it)
+  const p = currentParams();
+  const end = new Date(Date.parse(p.date) + (p.days - 1) * 864e5).toISOString().slice(0, 10);
+  $('modalSub').textContent = `Zone ${zone.w}, ${zone.s} → ${zone.e}, ${zone.n} · ${p.date} to ${end} (${p.days} day${p.days > 1 ? 's' : ''})`;
+  if (!sameParams(loaded?.params, p)) {
+    loaded = null; $('loadMsg').textContent = ''; $('loadMsg').className = 'msg'; clearPrediction();
+  }
+  setPredictReady(!!loaded);
+  $('modal').hidden = false;
+  $('loadData').focus();
+}
+function closeModal() { $('modal').hidden = true; $('run').focus(); }
+
+$('run').onclick = openModal;
+$('modalClose').onclick = closeModal;
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
+
+async function getJSON(url) {
+  const res = await fetch(url);
+  let d;
+  try { d = await res.json(); } catch { d = {}; }
+  if (!res.ok) { const err = new Error(d.error || res.statusText); err.status = res.status; throw err; }
+  return d;
+}
+
+$('loadData').onclick = async () => {
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const sensor = $('sensor').value;
+  if (mode === 'fetch' && !sensor) { $('loadMsg').textContent = 'Sensor list not loaded yet: is the server running?'; return; }
+  const params = currentParams();
+  const btns = [$('loadData'), $('predict')];
+  btns.forEach(b => b.disabled = true);
+  loaded = null;
+  setFires(EMPTY); lastFires = null;
+  clearPrediction();
+  $('loadMsg').className = 'msg';
+  $('loadMsg').textContent = mode === 'harmonise'
+    ? 'Fetching every sensor and harmonising… this can take a little while.'
+    : `Fetching ${sensor}…`;
+  try {
+    const d = mode === 'harmonise'
+      ? await getJSON('/api/harmonise?' + new URLSearchParams(params))
+      : await getJSON('/api/fires?' + new URLSearchParams({ ...params, sensor }));
+    const n = prepareFires(d, mode === 'fetch' ? sensor : '');
+    loaded = { mode, sensor, params };
+    const what = mode === 'harmonise'
+      ? `${(d.sources || []).filter(s => s.status === 'ok' && s.count).length} sensors harmonised`
+      : sensor;
+    $('loadMsg').className = 'msg ok';
+    $('loadMsg').textContent = `✓ ${n.toLocaleString()} fire detections loaded (${what}). Click Predict to see them on the map with the forecast.`;
+    $('status').textContent = `${n.toLocaleString()} detections loaded (${what}).`;
+  } catch (err) {
+    $('loadMsg').innerHTML = `<span class="error">${esc(err.message)}</span>`;
+  } finally {
+    $('loadData').disabled = false;
+    setPredictReady(!!loaded);
+  }
+};
+
+$('predict').onclick = async () => {
+  if (!loaded) return;
+  // Remember where the map was when Predict was clicked, so "Change zone" can fly back there.
+  const c = map.getCenter();
+  cameraBeforePredict = { center: [c.lng, c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+  $('predict').disabled = true;
+  setData('risk', EMPTY);
+  $('predictMsg').className = 'msg';
+  $('predictMsg').textContent = 'Running prediction…';
+  try {
+    const d = await getJSON('/api/predict?' + new URLSearchParams({ ...loaded.params, source: loaded.mode,
+      ...(loaded.mode === 'fetch' ? { sensor: loaded.sensor } : {}) }));
+    $('predictMsg').className = 'msg ok';
+    $('predictMsg').textContent = `✓ ${d.forecast.length}-day forecast ready.`;
+    // Close the window, fly to the zone (fires + forecast are on the map) and show the details in the side panel.
+    closeModal();
+    if (lastFires) setFires(lastFires);       // fire dots + legend appear only now, with the forecast squares
+    renderPrediction(d);
+    showForecastPanel(true);
+    zoomToZone();
+  } catch (err) {
+    $('predictMsg').innerHTML = `<span class="error">${esc(err.message)}</span>`;
+  } finally {
+    $('predict').disabled = !loaded;
+  }
+};
+
+const pct = v => v == null ? 'n/a' : `${Math.round(v * 100)}%`;
+const num = v => v == null ? 'n/a' : (+v).toLocaleString(undefined, { maximumFractionDigits: 1 });
+const shortDate = s => new Date(s + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+function renderPrediction(d) {
+  // Map: one square per grid cell, carrying the probability for each forecast day.
+  setData('risk', { type: 'FeatureCollection', features: d.cells.map(c => ({
+    type: 'Feature',
+    properties: { p1: c.p[0], p2: c.p[1] ?? 0, p3: c.p[2] ?? 0, now: c.burning_now },
+    geometry: { type: 'Polygon', coordinates: [[[c.w, c.s], [c.e, c.s], [c.e, c.n], [c.w, c.n], [c.w, c.s]]] },
+  })) });
+
+  let day = 0;
+  const showDay = i => {
+    day = i;
+    const prop = `p${i + 1}`;
+    mapReady.then(() => {
+      map.setPaintProperty('risk-fill', 'fill-color', riskColor(prop));
+      map.setPaintProperty('risk-fill', 'fill-opacity', ['interpolate', ['linear'], ['get', prop], 0.1, .35, 0.6, .7]);
+      map.setFilter('risk-fill', ['>=', ['get', prop], 0.1]);
+    });
+    $('dayTabs').querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-selected', k === i));
+    const f = d.forecast[i];
+    $('pstats').innerHTML =
+      `<div class="pstat" title="Expected number of grid cells burning near current fires">Expected burning cells<b>~${num(Math.round(f.expected_cells))}</b></div>` +
+      `<div class="pstat" title="Cells with more than a 50% chance of burning">Likely to burn (&gt;50%)<b>${num(f.likely_cells)}</b></div>` +
+      `<div class="pstat" title="New fires expected far from any current fire, where the model can't place them">New fires elsewhere<b>${f.expected_new_elsewhere == null ? 'n/a' : '~' + num(Math.round(f.expected_new_elsewhere))}</b></div>`;
+    $('status').textContent = `Showing the fire forecast for ${shortDate(f.date)} (+${i + 1} day${i ? 's' : ''}) on the map.`;
+  };
+  $('dayTabs').innerHTML = d.forecast.map((f, i) =>
+    `<button type="button" role="tab" data-i="${i}">+${i + 1} day${i ? 's' : ''}<small>${esc(shortDate(f.date))}</small></button>`).join('');
+  $('dayTabs').querySelectorAll('button').forEach(b => b.onclick = () => showDay(+b.dataset.i));
+
+  const obs = d.observed_cells_per_day, facts = [];
+  facts.push(`Burning ${d.cell_km} km cells per day in the loaded window: ${obs.map(num).join(' → ')}.`);
+  if (d.trend_last_day != null) facts.push(`Fire activity ${d.trend_last_day >= 0 ? 'rose' : 'fell'} ${pct(Math.abs(d.trend_last_day))} on the last observed day.`);
+  facts.push(d.spread_direction
+    ? `Fire fronts have mostly been spreading towards the <b>${esc(d.spread_direction.compass)}</b> (${d.spread_direction.bearing_deg}°).`
+    : 'No consistent spread direction in this data.');
+  if (d.detections_skipped_non_vegetation) facts.push(`${num(d.detections_skipped_non_vegetation)} detections ignored (volcanoes, industrial heat sources, offshore).`);
+  if (d.cells_truncated) facts.push('Only the highest-risk cells are drawn on the map.');
+  $('facts').innerHTML = facts.map(f => `<li>${f}</li>`).join('');
+
+  $('hotspots').innerHTML = d.hotspots.length
+    ? '<h4>Where new fire is most likely tomorrow</h4>' + d.hotspots.map(h =>
+        `<button type="button" class="hot" data-lat="${h.lat}" data-lon="${h.lon}"><span>${h.lat.toFixed(2)}, ${h.lon.toFixed(2)}</span><b>${pct(h.p)}</b></button>`).join('')
+    : '';
+  $('hotspots').querySelectorAll('.hot').forEach(b => b.onclick = () => {
+    stopSpin();
+    map.flyTo({ center: [+b.dataset.lon, +b.dataset.lat], zoom: 9, duration: 2000 });
+  });
+
+  // How much to trust it: measured on this zone by predicting the last loaded day.
+  const bt = d.backtest, m = d.models[0];
+  let r;
+  if (!m.fitted) r = '⚠ Too few fires in this zone and time window to train the model, so it uses default settings. Treat the forecast as a rough guide.';
+  else if (!bt) r = 'Load at least 3 days of data to measure how accurate the forecast is for this zone.';
+  else if (!bt.model_fitted || bt.auc == null) r = `Accuracy check on ${esc(shortDate(bt.day))}: not enough fires to score it.`;
+  else r = `<b>Accuracy check</b> (model trained without ${esc(shortDate(bt.day))}, then asked to predict it): ` +
+    `${pct(bt.precision)} of the ${num(bt.top_k)} cells it ranked most likely did burn, versus ${pct(bt.baseline_precision)} for a ` +
+    `"same as yesterday" guess. Ranking score ${bt.auc} (0.5 = guessing, 1 = perfect).`;
+  $('reliab').innerHTML = r;
+
+  const src = loaded.mode === 'harmonise' ? 'all sensors harmonised' : loaded.sensor;
+  $('forecastSub').textContent = `Zone ${zone.w}, ${zone.s} → ${zone.e}, ${zone.n} · data ${shortDate(d.range[0])}–${shortDate(d.range[1])} · ` +
+    `${src} · ${d.cell_km} km grid`;
+
+  showDay(0);
+}
+
+$('zoomZone').onclick = () => zoomToZone(1500);
+// Back to the zone controls; the forecast stays on the map until the zone or dates change.
+// Back to the zone controls: clear the map (fire dots, legend, forecast squares and the zone outline)
+// and fly back to where the map was when Predict was clicked. The zone itself stays selected and the
+// loaded data is kept, so "Analyse zone" brings the outline back and predicting again redraws the rest.
+let cameraBeforePredict = null;
+$('changeZone').onclick = () => {
+  showForecastPanel(false);
+  setFires(EMPTY);
+  setData('risk', EMPTY);
+  setData('zone', EMPTY);
+  $('status').textContent = '';
+  if (cameraBeforePredict) map.flyTo({ ...cameraBeforePredict, duration: 2000, essential: true });
+};
+
+// Click a forecast square (when no fire dot is under the cursor) to see its probabilities.
+map.on('click', 'risk-fill', e => {
+  if (drawing || pinMode || e.originalEvent?.pinPlaced || map.queryRenderedFeatures(e.point, { layers: ['fires'] }).length) return;
+  const p = e.features[0].properties;
+  new maplibregl.Popup({ offset: 4 }).setLngLat(e.lngLat).setHTML(
+    `<b>Chance of fire</b><br>+1 day: ${pct(p.p1)}<br>+2 days: ${pct(p.p2)}<br>+3 days: ${pct(p.p3)}` +
+    (p.now === true || p.now === 'true' ? '<br><i>Burning on the last observed day</i>' : '')).addTo(map);
+});
+
+// Prepares the detections from either endpoint (/api/harmonise has `source` + `frp_mw`, /api/fires has
+// `frp`) as map dots. They are only put on the map when Predict is clicked, together with the legend
+// and the forecast squares.
+function prepareFires(d, sensor) {
+  const c = d.columns, col = name => c.indexOf(name);
+  const li = col('latitude'), lo = col('longitude'), di = col('acq_date'), ti = col('acq_time'),
+        si = col('source'), ci = col('confidence'), fi = col('frp_mw') >= 0 ? col('frp_mw') : col('frp');
+  const features = d.rows.map(r => ({ type: 'Feature',
+    geometry: { type: 'Point', coordinates: [+r[lo], +r[li]] },
+    properties: { frp: fi >= 0 ? parseFloat(r[fi]) || 0 : 0, source: si >= 0 ? r[si] : sensor,
+                  date: r[di], time: String(r[ti]).padStart(4, '0'), conf: ci >= 0 ? r[ci] : '' } }));
+  lastFires = { type: 'FeatureCollection', features };
+  return features.length;
+}
+</script>
+</body>
+</html>

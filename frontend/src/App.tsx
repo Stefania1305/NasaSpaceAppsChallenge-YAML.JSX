@@ -1,0 +1,33 @@
+import { useEffect } from 'react';
+import * as engine from './engine';
+import { useApp } from './store';
+import { Splash } from './components/Splash';
+import { Pill, Panel } from './components/Panel';
+import { AnalyseModal } from './components/AnalyseModal';
+import { MapView } from './components/MapView';
+
+export function App() {
+  useEffect(() => {
+    engine.init();                                  // creates the map once the map elements exist
+    useApp.getState().loadSensors();
+    // Esc: close the Analyse window, or cancel a half-started drawing / pin placement.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (useApp.getState().modalOpen) useApp.getState().closeModal();
+      if (engine.isDrawing()) engine.setDrawing(false);
+      if (engine.isPinMode()) engine.setPinMode(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  return (
+    <>
+      <Splash />
+      <Pill />
+      <Panel />
+      <AnalyseModal />
+      <MapView />
+    </>
+  );
+}

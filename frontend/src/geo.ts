@@ -50,8 +50,3 @@ export const wrapLng = (lng: number) => ((lng + 540) % 360) - 180;
 export const lngLatOk = (ll: LngLat | null | undefined): ll is LngLat =>
   !!ll && Number.isFinite(ll.lng) && Number.isFinite(ll.lat);
 
-// Probability → colour for the prediction layer (pale yellow = unlikely, dark red = very likely).
-export function riskColor(prop: string) {
-  return ['interpolate', ['linear'], ['get', prop],
-    0.1, '#fde68a', 0.25, '#fbbf24', 0.4, '#f97316', 0.6, '#dc2626', 0.85, '#7f1d1d'];
-}

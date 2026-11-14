@@ -4,11 +4,12 @@
 // UI through the app store (src/store.ts).
 
 import maplibregl from 'maplibre-gl';
-import type { ExpressionSpecification, GeoJSONSource } from 'maplibre-gl';
+import type { GeoJSONSource } from 'maplibre-gl';
 import { useApp } from './store';
-import { EMPTY, ZONE_COLOR, boxPolygon, lngLatOk, normalise, riskColor, wrapLng, zoneAroundPoint,
+import { EMPTY, ZONE_COLOR, boxPolygon, lngLatOk, normalise, wrapLng, zoneAroundPoint,
          type FC, type LngLat, type Zone } from './geo';
 import { pct } from './format';
+import { riskZones } from './riskShapes';
 
 let map!: maplibregl.Map;
 let mapReady!: Promise<void>;
@@ -64,6 +65,7 @@ export function init() {
         draft: { type: 'geojson', data: EMPTY as never },
         fires: { type: 'geojson', data: EMPTY as never },
         risk: { type: 'geojson', data: EMPTY as never },
+        riskzones: { type: 'geojson', data: EMPTY as never },
       },
       layers: [
         // Street map underneath; satellite imagery on top that fades out as you zoom in.
@@ -75,12 +77,14 @@ export function init() {
           paint: { 'line-color': ZONE_COLOR, 'line-width': 2, 'line-dasharray': [3, 2] } },
         { id: 'draft-fill', type: 'fill', source: 'draft', paint: { 'fill-color': ZONE_COLOR, 'fill-opacity': .15 } },
         { id: 'draft-line', type: 'line', source: 'draft', paint: { 'line-color': ZONE_COLOR, 'line-width': 2 } },
-        // Predicted fire probability per grid cell (drawn under the detections).
-        { id: 'risk-fill', type: 'fill', source: 'risk', paint: {
-          'fill-color': riskColor('p1') as ExpressionSpecification,
-          'fill-opacity': ['interpolate', ['linear'], ['get', 'p1'], 0.1, .35, 0.6, .7] } },
-        { id: 'risk-line', type: 'line', source: 'risk', minzoom: 6,
-          paint: { 'line-color': '#7f1d1d', 'line-width': .4, 'line-opacity': .5 } },
+        // Predicted fire risk as rounded zones (drawn under the detections): one shape per chance band, stacked, so
+        // a zone's core shows the deeper colour of its higher-risk part (see riskShapes.ts).
+        { id: 'risk-zones', type: 'fill', source: 'riskzones', paint: {
+          'fill-color': ['get', 'color'], 'fill-opacity': .4 } },
+        { id: 'risk-zones-line', type: 'line', source: 'riskzones', paint: {
+          'line-color': ['get', 'edge'], 'line-width': 1.3, 'line-opacity': .8 } },
+        // The grid cells themselves stay as an invisible layer, so clicking a spot still shows its chances.
+        { id: 'risk-fill', type: 'fill', source: 'risk', paint: { 'fill-color': '#000', 'fill-opacity': 0 } },
         { id: 'fires', type: 'circle', source: 'fires', paint: {
           'circle-color': ['step', ['get', 'frp'], '#facc15', 10, '#f97316', 50, '#dc2626', 200, '#7f1d1d'],
           'circle-radius': ['interpolate', ['linear'], ['zoom'],
@@ -311,7 +315,13 @@ function syncZoomLimit() {
   if (Math.abs(map.getMinZoom() - want) < 1e-6) return;
   // Only set it when the map is at (or inside) the limit: setting it below would make the map jump.
   const now = sizeZoom();
-  if (now >= want - 0.01) setMinZoomQuiet(Math.min(want, now));
+  if (now >= want - 0.01) { setMinZoomQuiet(Math.min(want, now)); return; }
+  // Smaller than the limit (the user scrolled out while a glide was still bringing the globe to its size):
+  // stop it shrinking any further right away, then, once the map is at rest, ease it back up to the limit
+  // (the 'moveend' at the end of that ease sets the full limit, and the spin resumes there).
+  setMinZoomQuiet(Math.min(map.getMinZoom() > 0 ? map.getMinZoom() : now, now));
+  if (map.isMoving()) return;                                   // still being moved: try again on 'moveend'
+  map.easeTo({ zoom: map.getZoom() + (want - now), duration: reducedMotion() ? 0 : 700, essential: true });
 }
 // Outside map events and gestures (camera changes there can break MapLibre's render loop).
 const syncZoomLimitSoon = () => { clearTimeout(limitTimer); limitTimer = setTimeout(syncZoomLimit, 0); };
@@ -427,6 +437,11 @@ function glideTo(target: { left: number; top: number; right: number; bottom: num
     cleanup();
     if (id !== glideId || !gliding) return;
     gliding = false; paused = false;
+    // The user took over mid-glide: put the zoom-out limit back straight away (only the limit, no camera move,
+    // which would fight their gesture), so scrolling out can't shrink the centred globe past where it is.
+    if (panelClosed() && closedZoom != null && sizeZoom() < closedZoom - 0.01)
+      setMinZoomQuiet(Math.min(map.getMinZoom() > 0 ? map.getMinZoom() : sizeZoom(), sizeZoom()));
+    else syncZoomLimit();
   }
   grabEvents.forEach(ev => box.addEventListener(ev, abort, { passive: true }));
   if (ms > 0) requestAnimationFrame(frame); else finish();
@@ -483,14 +498,17 @@ export function setFires(data: FC) {
   setData('fires', data);
   useApp.setState({ firesShown: data.features.length > 0 });
 }
-export const setRisk = (data: FC) => setData('risk', data);
+// The forecast squares (one per grid cell) and the day shown; the map draws them as rounded zones.
+let riskSquares: FC = EMPTY, riskProp = 'p1';
+export function setRisk(data: FC) {
+  riskSquares = data;
+  setData('risk', data);
+  setData('riskzones', riskZones(data, riskProp));
+}
 export function setRiskDay(i: number) {
-  const prop = `p${i + 1}`;
-  mapReady.then(() => {
-    map.setPaintProperty('risk-fill', 'fill-color', riskColor(prop));
-    map.setPaintProperty('risk-fill', 'fill-opacity', ['interpolate', ['linear'], ['get', prop], 0.1, .35, 0.6, .7]);
-    map.setFilter('risk-fill', ['>=', ['get', prop], 0.1]);
-  });
+  riskProp = `p${i + 1}`;
+  setData('riskzones', riskZones(riskSquares, riskProp));
+  mapReady.then(() => map.setFilter('risk-fill', ['>=', ['get', riskProp], 0.1]));
 }
 
 // ---------------- Camera helpers ----------------

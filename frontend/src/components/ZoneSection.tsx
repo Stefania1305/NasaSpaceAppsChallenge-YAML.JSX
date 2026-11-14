@@ -35,7 +35,7 @@ export function ZoneSection() {
 
   return (
     <section id="zoneSection" hidden={hidden}>
-      <h2>1 · Prediction zone</h2>
+      <h2>Prediction zone</h2>
       <label className="methodpick">How to set the zone
         <select id="zoneMethod" value={method} onChange={e => setMethod(e.target.value as Method)}>
           <option value="draw">Draw a rectangle</option>

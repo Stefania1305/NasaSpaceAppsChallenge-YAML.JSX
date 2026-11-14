@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { num, pct, shortDate } from '../format';
 
 const FIRE = '#ea580c';
-// The map's square colours by chance band (same ramp as the risk layer in engine/geo.ts).
+// The risk zones' colours by chance band (same as ZONE_BANDS in riskShapes.ts).
 export const RISK_BANDS = [
   { from: .10, to: .25, color: '#fde68a', label: '10–25%' },
   { from: .25, to: .40, color: '#fbbf24', label: '25–40%' },
@@ -71,14 +71,14 @@ export function Timeline({ observed, start, forecast, day, onPick }: {
   );
 }
 
-// ---------------- How the map squares split by chance ----------------
-// A histogram of forecast squares per chance band, coloured exactly like the squares on the map, so it
+// ---------------- How the forecast spots split by chance ----------------
+// A histogram of forecast grid spots per chance band, coloured exactly like the risk zones on the map, so it
 // doubles as their key. Each bar sits on a faint full-height track so even the darkest red stays visible.
 export function RiskHistogram({ probs }: { probs: number[] }) {
   const counts = RISK_BANDS.map(b => probs.filter(p => p >= b.from && p < b.to).length);
   const max = Math.max(1, ...counts);
   const total = counts.reduce((a, b) => a + b, 0);
-  const label = 'Map squares by chance of fire: ' + RISK_BANDS.map((b, i) => `${b.label} ${counts[i]}`).join(', ');
+  const label = 'Forecast spots by chance of fire: ' + RISK_BANDS.map((b, i) => `${b.label} ${counts[i]}`).join(', ');
   const top = counts.indexOf(max);
   return (
     <figure className="chart">
@@ -90,12 +90,12 @@ export function RiskHistogram({ probs }: { probs: number[] }) {
               <div className="colbar" style={{ height: counts[i] ? `${Math.max(3, (counts[i] / max) * 100)}%` : 0, background: b.color }} />
             </div>
             <span className="coldate">{b.label}</span>
-            <Tip><b>{num(counts[i])}</b> square{counts[i] === 1 ? '' : 's'} with a {b.label} chance
+            <Tip><b>{num(counts[i])}</b> spot{counts[i] === 1 ? '' : 's'} with a {b.label} chance
               {total ? <> ({pct(counts[i] / total)} of the map)</> : null}</Tip>
           </div>
         ))}
       </div>
-      <figcaption className="dim">Map squares by chance of fire · colours match the map</figcaption>
+      <figcaption className="dim">Forecast spots by chance of fire · colours match the map zones</figcaption>
     </figure>
   );
 }

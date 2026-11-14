@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import * as engine from './engine';
 import { useApp } from './store';
 import { Splash } from './components/Splash';
-import { Pill, Panel } from './components/Panel';
+import { Panel } from './components/Panel';
+import { NavBar } from './components/NavBar';
 import { AnalyseModal } from './components/AnalyseModal';
 import { MapView } from './components/MapView';
 
@@ -24,7 +25,7 @@ export function App() {
   return (
     <>
       <Splash />
-      <Pill />
+      <NavBar />
       <Panel />
       <AnalyseModal />
       <MapView />

@@ -1,17 +1,55 @@
 import { useApp } from '../store';
 import { num, pct, shortDate } from '../format';
+import { Compass, MiniBar, RankingGauge, RiskHistogram, Timeline } from './Charts';
 
 // Part 1 of the side panel after Predict: the fire forecast (it takes the place of the zone controls).
+// The information is grouped into titled cards: about the forecast, the forecast itself, recent fire
+// activity, where new fire is most likely, and how reliable the forecast is.
+
+// Plain-language label for the ranking score (AUC): 0.5 is guessing, 1 is perfect.
+const aucLabel = (a: number) => a >= .85 ? 'strong' : a >= .75 ? 'good' : a >= .6 ? 'fair' : 'weak';
+
+function Group({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="fgroup">
+      <div className="fgt"><span>{title}</span>{action}</div>
+      {children}
+    </div>
+  );
+}
+
+// Two horizontal bars: the model's hit rate against the naive "same as yesterday" guess.
+function CompareBars({ rows }: { rows: { name: string; v: number; muted?: boolean }[] }) {
+  const max = Math.max(.01, ...rows.map(r => r.v));
+  return (
+    <div className="hbars">
+      {rows.map(r => (
+        <div className="hbar" key={r.name} tabIndex={0}>
+          <span className="hname">{r.name}</span>
+          <span className="htrack"><span className={`hfill${r.muted ? ' muted' : ''}`} style={{ width: `${(r.v / max) * 100}%` }} /></span>
+          <span className="hval">{pct(r.v)}</span>
+          <span className="tip" role="tooltip"><b>{pct(r.v)}</b> of the cells it ranked most likely did burn</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Forecast() {
   const visible = useApp(s => s.forecastVisible);
   const d = useApp(s => s.forecast);
   const day = useApp(s => s.day);
-  const sub = useApp(s => s.forecastSub);
+  const zone = useApp(s => s.zone);
+  const loaded = useApp(s => s.loaded);
   const { showDay, changeZone, zoomToZone, flyToHotspot } = useApp.getState();
 
   const f = d?.forecast?.[day];
   const bt = d?.backtest, m = d?.models?.[0];
   const obs: number[] = d?.observed_cells_per_day ?? [];
+  const source = loaded?.mode === 'harmonise' ? 'All sensors (harmonised)' : loaded?.sensor ?? '';
+  const notes: string[] = [];
+  if (d?.detections_skipped_non_vegetation) notes.push(`${num(d.detections_skipped_non_vegetation)} detections ignored (volcanoes, industrial heat sources, offshore).`);
+  if (d?.cells_truncated) notes.push('Only the highest-risk cells are drawn on the map.');
 
   return (
     <section id="forecastSection" hidden={!visible}>
@@ -22,67 +60,101 @@ export function Forecast() {
                strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
           Change zone</button>
       </div>
-      <p className="fsub" id="forecastSub">{sub}</p>
 
-      <div className="days" id="dayTabs" role="tablist" aria-label="Forecast day">
-        {d?.forecast?.map((fd: { date: string }, i: number) => (
-          <button key={i} type="button" role="tab" aria-selected={i === day} onClick={() => showDay(i)}>
-            +{i + 1} day{i ? 's' : ''}<small>{shortDate(fd.date)}</small>
-          </button>
-        ))}
-      </div>
+      {d && <>
+        {/* About this forecast */}
+        <Group title="About this forecast"
+               action={<button type="button" className="secondary small" id="zoomZone" onClick={() => zoomToZone(1500)}>Zoom to zone</button>}>
+          <dl className="meta">
+            <dt>Zone</dt><dd>{zone ? `${zone.w}, ${zone.s} → ${zone.e}, ${zone.n}` : '—'}</dd>
+            <dt>Data</dt><dd>{shortDate(d.range[0])} – {shortDate(d.range[1])}</dd>
+            <dt>Source</dt><dd>{source}</dd>
+            <dt>Grid</dt><dd>{d.cell_km} km cells</dd>
+          </dl>
+        </Group>
 
-      <div className="pstats" id="pstats">
-        {f && <>
-          <div className="pstat" title="Expected number of grid cells burning near current fires">Expected burning cells
-            <b>~{num(Math.round(f.expected_cells))}</b></div>
-          <div className="pstat" title="Cells with more than a 50% chance of burning">Likely to burn (&gt;50%)
-            <b>{num(f.likely_cells)}</b></div>
-          <div className="pstat" title="New fires expected far from any current fire, where the model can't place them">New fires elsewhere
-            <b>{f.expected_new_elsewhere == null ? 'n/a' : '~' + num(Math.round(f.expected_new_elsewhere))}</b></div>
-        </>}
-      </div>
+        {/* The forecast itself */}
+        <Group title="Forecast">
+          <div className="days" id="dayTabs" role="tablist" aria-label="Forecast day">
+            {d.forecast.map((fd: { date: string }, i: number) => (
+              <button key={i} type="button" role="tab" aria-selected={i === day} onClick={() => showDay(i)}>
+                +{i + 1} day{i ? 's' : ''}<small>{shortDate(fd.date)}</small>
+              </button>
+            ))}
+          </div>
+          {f && (
+            <div className="pstats" id="pstats">
+              <div className="pstat" title="Expected number of grid cells burning near current fires">
+                <b>~{num(Math.round(f.expected_cells))}</b>Expected burning cells</div>
+              <div className="pstat" title="Cells with more than a 50% chance of burning">
+                <b>{num(f.likely_cells)}</b>Likely to burn (&gt;50%)</div>
+              <div className="pstat" title="New fires expected far from any current fire, where the model can't place them">
+                <b>{f.expected_new_elsewhere == null ? 'n/a' : '~' + num(Math.round(f.expected_new_elsewhere))}</b>New fires elsewhere</div>
+            </div>
+          )}
+          <RiskHistogram probs={(d.cells ?? []).map((c: { p: number[] }) => c.p[day] ?? 0)} />
+        </Group>
 
-      <div className="scale"><span>Chance of fire</span><span>10%</span><i /><span>85%+</span></div>
+        {/* Fire activity: the observed days flowing into the forecast */}
+        <Group title="Fire activity · past and forecast">
+          <p className="gsub">Burning {d.cell_km} km cells per day</p>
+          <Timeline observed={obs} start={d.range[0]} forecast={d.forecast} day={day} onPick={showDay} />
+          <div className="spread-row" id="facts">
+            <Compass bearing={d.spread_direction?.bearing_deg ?? null} compass={d.spread_direction?.compass ?? null} />
+            <dl className="meta">
+              <dt>Spread</dt>
+              <dd>{d.spread_direction
+                ? <>Towards the <b>{d.spread_direction.compass}</b> ({d.spread_direction.bearing_deg}°)</>
+                : 'No consistent direction'}</dd>
+              <dt>Trend</dt>
+              <dd>{d.trend_last_day == null ? 'n/a'
+                : <><span className="trend" aria-hidden="true">{d.trend_last_day >= 0 ? '▲' : '▼'}</span>
+                    {d.trend_last_day >= 0 ? 'Rose' : 'Fell'} {pct(Math.abs(d.trend_last_day))} on the last day</>}</dd>
+            </dl>
+          </div>
+          {notes.length > 0 && <p className="notes">{notes.join(' ')}</p>}
+        </Group>
 
-      {d && (
-        <ul className="facts" id="facts">
-          <li>Burning {d.cell_km} km cells per day in the loaded window: {obs.map(v => num(v)).join(' → ')}.</li>
-          {d.trend_last_day != null &&
-            <li>Fire activity {d.trend_last_day >= 0 ? 'rose' : 'fell'} {pct(Math.abs(d.trend_last_day))} on the last observed day.</li>}
-          <li>{d.spread_direction
-            ? <>Fire fronts have mostly been spreading towards the <b>{d.spread_direction.compass}</b> ({d.spread_direction.bearing_deg}°).</>
-            : 'No consistent spread direction in this data.'}</li>
-          {!!d.detections_skipped_non_vegetation &&
-            <li>{num(d.detections_skipped_non_vegetation)} detections ignored (volcanoes, industrial heat sources, offshore).</li>}
-          {d.cells_truncated && <li>Only the highest-risk cells are drawn on the map.</li>}
-        </ul>
-      )}
+        {/* Where new fire is most likely */}
+        {!!d.hotspots?.length && (
+          <Group title="Most likely new fire · tomorrow">
+            <div id="hotspots">
+              {d.hotspots.map((h: { lat: number; lon: number; p: number }, i: number) => (
+                <button key={i} type="button" className="hot" onClick={() => flyToHotspot(h.lat, h.lon)}
+                        title="Fly to this place">
+                  <span>{h.lat.toFixed(2)}, {h.lon.toFixed(2)}</span><MiniBar p={h.p} /><b>{pct(h.p)}</b>
+                </button>
+              ))}
+            </div>
+          </Group>
+        )}
 
-      <div id="hotspots">
-        {!!d?.hotspots?.length && <>
-          <h4>Where new fire is most likely tomorrow</h4>
-          {d.hotspots.map((h: { lat: number; lon: number; p: number }, i: number) => (
-            <button key={i} type="button" className="hot" onClick={() => flyToHotspot(h.lat, h.lon)}>
-              <span>{h.lat.toFixed(2)}, {h.lon.toFixed(2)}</span><b>{pct(h.p)}</b>
-            </button>
-          ))}
-        </>}
-      </div>
-
-      {/* How much to trust it: measured on this zone by predicting the last loaded day. */}
-      <p className="reliab" id="reliab">
-        {!d ? null
-          : !m?.fitted ? '⚠ Too few fires in this zone and time window to train the model, so it uses default settings. Treat the forecast as a rough guide.'
-          : !bt ? 'Load at least 3 days of data to measure how accurate the forecast is for this zone.'
-          : (!bt.model_fitted || bt.auc == null) ? `Accuracy check on ${shortDate(bt.day)}: not enough fires to score it.`
-          : <><b>Accuracy check</b> (model trained without {shortDate(bt.day)}, then asked to predict it):{' '}
-              {pct(bt.precision)} of the {num(bt.top_k)} cells it ranked most likely did burn, versus {pct(bt.baseline_precision)} for
-              a "same as yesterday" guess. Ranking score {bt.auc} (0.5 = guessing, 1 = perfect).</>}
-      </p>
-
-      <button type="button" className="secondary small" id="zoomZone" style={{ marginTop: 10 }} onClick={() => zoomToZone(1500)}>
-        Zoom to zone</button>
+        {/* How reliable is this? Measured on this zone by predicting the last loaded day. */}
+        <Group title="How reliable is this?">
+          <div id="reliab">
+            {!m?.fitted
+              ? <p className="warn">⚠ Too few fires in this zone and time window to train the model, so it uses default settings. Treat the forecast as a rough guide.</p>
+              : !bt
+              ? <p className="gsub">Load at least 3 days of data to measure how accurate the forecast is for this zone.</p>
+              : (!bt.model_fitted || bt.auc == null)
+              ? <p className="gsub">Accuracy check on {shortDate(bt.day)}: not enough fires to score it.</p>
+              : <>
+                  <p className="gsub">Trained without {shortDate(bt.day)}, then asked to predict it. Share of its top {num(bt.top_k)} cells that really burned:</p>
+                  <CompareBars rows={[
+                    { name: 'This model', v: bt.precision },
+                    { name: 'Same as yesterday', v: bt.baseline_precision ?? 0, muted: true },
+                  ]} />
+                  <div className="gauge-row">
+                    <RankingGauge auc={bt.auc} label={aucLabel(bt.auc)} />
+                    <p className="gsub" style={{ margin: 0 }}>
+                      <b className="strong">Ranking score: {aucLabel(bt.auc)}</b><br />
+                      How well it ranks the cells that burned above those that didn't. 0.5 is guessing, 1 is perfect.
+                    </p>
+                  </div>
+                </>}
+          </div>
+        </Group>
+      </>}
     </section>
   );
 }

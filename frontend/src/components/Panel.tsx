@@ -2,20 +2,6 @@ import { useApp } from '../store';
 import { Forecast } from './Forecast';
 import { ZoneSection } from './ZoneSection';
 
-// Desktop: the "Fire Pattern Predictor" pill. Clicking it slides the panel in from the left.
-export function Pill() {
-  const open = useApp(s => s.panelOpen);
-  const setPanel = useApp(s => s.setPanel);
-  return (
-    <button type="button" id="appToggle" aria-expanded={open} aria-controls="panel" title="Open the panel" onClick={() => setPanel(true)}>
-      <span className="pt">Fire Pattern Predictor
-        <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"
-             strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
-      <span className="ps">NASA FIRMS · MODIS · VIIRS · Landsat</span>
-    </button>
-  );
-}
-
 // The side panel. Its children stay in this order: the CSS fades them in one after another by position.
 export function Panel() {
   const open = useApp(s => s.panelOpen);

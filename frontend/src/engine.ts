@@ -24,8 +24,9 @@ const isSplash = () => document.body.classList.contains('splash');
 // clear of it with padding (centring, fitBounds and flyTo all respect this).
 export const PANEL_W = 444;            // 12px margin + 420px glass card + 12px gap (see the Glass CSS)
 export const isDesktop = () => innerWidth > 800;
-const pad = (left = 0) => ({ left, top: 0, right: 0, bottom: 0 });
+const pad = (left = 0, top = 0) => ({ left, top, right: 0, bottom: 0 });
 const panelOpen = () => useApp.getState().panelOpen;
+// The menu sits at the left edge, so nothing is reserved at the top: the globe is centred in the free space.
 export const appPadding = () => pad(isDesktop() && panelOpen() ? PANEL_W : 0);
 
 // Run map updates only once the style has loaded.
@@ -268,8 +269,9 @@ function globeZoomFor(open: boolean): number | null {
   const want = Math.min(w, h) * (open ? 0.36 : 0.42);          // radius = 72% / 84% of the side, halved
   // Perspective makes the size not quite double per zoom level, so refine: try the zoom, measure the
   // real radius there, correct, and repeat. The camera is put back before anything is drawn.
-  const z0 = map.getZoom();
+  const z0 = map.getZoom(), min0 = map.getMinZoom();
   let z = z0;
+  map.setMinZoom(null);                                         // the trial zooms must not be clamped by the limit
   try {
     for (let i = 0; i < 3; i++) {
       if (i) map.jumpTo({ zoom: z });
@@ -281,9 +283,39 @@ function globeZoomFor(open: boolean): number | null {
     }
   } finally {
     map.jumpTo({ zoom: z0 });
+    setMinZoomQuiet(min0);
   }
   return Number.isFinite(z) ? z : null;                         // null = leave the size alone
 }
+
+// ---------------- Zoom-out limit ----------------
+// With the panel closed the globe can't be zoomed out further than the size it has right after "Get started"
+// (`closedZoom`). The limit is lifted while the panel is open (the globe is smaller there), on the opening
+// screen, and during every glide (so glides can pass through any size); it's put back once the camera rests.
+// On the globe MapLibre applies minZoom to the latitude-adjusted zoom (which tracks the globe's drawn size:
+// at the same zoom it looks bigger further from the equator), so the limit is kept in that unit too.
+let closedZoom: number | null = null;
+const sizeZoom = (z = map.getZoom(), lat = map.getCenter().lat) =>
+  z + Math.log2(1 / Math.max(0.05, Math.cos(lat * Math.PI / 180)));
+// map.setMinZoom() also snaps the camera by comparing the *raw* zoom, which on the globe would wrongly enlarge
+// it; setting the limit on the transform only changes the clamp that scrolling and pinching respect.
+function setMinZoomQuiet(z: number | null) {
+  const t = (map as unknown as { transform?: { setMinZoom?: (z: number) => void } }).transform;
+  if (z == null || !t?.setMinZoom) { map.setMinZoom(z); return; }
+  t.setMinZoom(z);
+}
+let limitTimer: ReturnType<typeof setTimeout> | undefined;
+function syncZoomLimit() {
+  const want = panelClosed() && closedZoom != null && !gliding ? closedZoom : null;
+  if (want == null) { if (map.getMinZoom() > 0) map.setMinZoom(null); return; }
+  if (Math.abs(map.getMinZoom() - want) < 1e-6) return;
+  // Only set it when the map is at (or inside) the limit: setting it below would make the map jump.
+  const now = sizeZoom();
+  if (now >= want - 0.01) setMinZoomQuiet(Math.min(want, now));
+}
+// Outside map events and gestures (camera changes there can break MapLibre's render loop).
+const syncZoomLimitSoon = () => { clearTimeout(limitTimer); limitTimer = setTimeout(syncZoomLimit, 0); };
+const atZoomLimit = () => closedZoom != null && sizeZoom() <= closedZoom + 0.05;
 // Only resize while the whole globe is in view; never undo a zoom the user made into a region.
 const showingWholeGlobe = () => map.getZoom() < 3;
 
@@ -308,10 +340,11 @@ function setupSpin() {
     }
     // Keep the framing right: ease the globe back beside the open panel, or to the centre when it's closed.
     // Not on the opening screen, where the globe deliberately sits to the right of the title text.
-    const have = map.getPadding().left ?? 0, want = appPadding().left;
-    if (!isSplash() && Math.abs(have - want) > .5) {
-      next.padding = { left: Math.max(0, Math.round((have + (want - have) * Math.min(1, dt * 3)) * 100) / 100),
-                       top: 0, right: 0, bottom: 0 };
+    const cur = map.getPadding(), want = appPadding();
+    const haveL = cur.left ?? 0, haveT = cur.top ?? 0;
+    if (!isSplash() && (Math.abs(haveL - want.left) > .5 || Math.abs(haveT - want.top) > .5)) {
+      const k = Math.min(1, dt * 3), step = (a: number, b: number) => Math.max(0, Math.round((a + (b - a) * k) * 100) / 100);
+      next.padding = { left: step(haveL, want.left), top: step(haveT, want.top), right: 0, bottom: 0 };
     }
     if (next.center || next.padding) map.jumpTo(next);
   };
@@ -320,17 +353,21 @@ function setupSpin() {
   // Used when the user touches the map: only end the spin (map.stop() here would cancel their own gesture).
   const userStopsSpin = () => { spinning = false; clearTimeout(resumeTimer); };
   ['mousedown', 'touchstart', 'wheel'].forEach(ev => map.getCanvasContainer().addEventListener(ev, userStopsSpin, { passive: true }));
+  // Scrolling out while already at the limit moves nothing (no 'moveend'), so the wheel schedules the resume
+  // itself; each new wheel tick pushes it back, so it starts ~0.6 s after the scrolling stops.
+  map.getCanvasContainer().addEventListener('wheel', () => resumeSpinSoon(), { passive: true });
   // A click or tap that doesn't move the map fires no 'moveend', so also schedule the resume on release.
   ['mouseup', 'touchend'].forEach(ev => map.getCanvasContainer().addEventListener(ev, () => { if (!spinning) resumeSpinSoon(); }, { passive: true }));
   // The zoom buttons and keyboard zoom don't touch the canvas, so end the spin for those too.
   map.on('zoomstart', e => { if (e.originalEvent) userStopsSpin(); });
-  map.on('moveend', () => { if (!spinning) resumeSpinSoon(); });
+  map.on('moveend', () => { syncZoomLimitSoon(); if (!spinning) resumeSpinSoon(); });
 }
 
 // Before the app moves the camera itself (fly to a zone, etc.): end the spin and its animation.
 export function stopSpin() { if (spinning) { spinning = false; map.stop(); } }
 
-// Panel closed → resume the spin ~1.5 s after the user lets go and the map is at rest.
+// Panel closed → resume the spin shortly after the user lets go, once the map is at rest and zoomed all the
+// way out (to the limit). Zoomed in to a region, the globe stays still.
 const panelClosed = () => isDesktop() && !panelOpen() && !isSplash();
 function resumeSpinSoon() {
   clearTimeout(resumeTimer);
@@ -338,8 +375,9 @@ function resumeSpinSoon() {
   resumeTimer = setTimeout(() => {
     if (!panelClosed() || drawing || pinMode) return;
     if (map.isMoving()) { resumeSpinSoon(); return; }             // still settling: try again a bit later
-    spinning = true;                                              // (the frame loop does nothing while zoomed in)
-  }, 1500);
+    if (!atZoomLimit()) return;                                   // zoomed in: stay still
+    spinning = true;
+  }, 600);
 }
 
 // ---------------- Glide ----------------
@@ -347,12 +385,14 @@ function resumeSpinSoon() {
 // the globe keeps turning at its spin speed. Every glide has an id; its "user grabbed the map" listeners are
 // removed when it ends and only act on that same glide. If the user grabs the map mid-glide, control is handed
 // over straight away and the frame loop finishes the framing once the map is at rest.
-function glideTo(target: { left: number; top: number; right: number; bottom: number }, ms: number, toZoom: number | null = null) {
+function glideTo(target: { left: number; top: number; right: number; bottom: number }, ms: number, toZoom: number | null = null,
+                 onDone?: () => void) {
   const id = ++glideId;
   if (toZoom != null && !Number.isFinite(toZoom)) toZoom = null;   // never feed the map an invalid zoom
   const from = map.getPadding(), fromZoom = map.getZoom(), t0 = performance.now();
   let fromLeft = Number.isFinite(from.left) ? (from.left as number) : target.left;
   fromLeft = Math.max(0, fromLeft);
+  const fromTop = Math.max(0, Number.isFinite(from.top) ? (from.top as number) : target.top);
   // MapLibre rejects any negative padding (even -0.0000014 px) and then every camera move fails.
   const safeLeft = (v: number) => Math.max(0, Math.round(v * 100) / 100);
   const ease = (t: number) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -360,6 +400,8 @@ function glideTo(target: { left: number; top: number; right: number; bottom: num
   let last = t0;
   gliding = paused = true;
   map.stop();
+  if (map.getMinZoom() > 0) map.setMinZoom(null);               // glides may pass below the limit
+  clearTimeout(limitTimer);
   const grabEvents = ['mousedown', 'touchstart', 'wheel'];
   const box = map.getCanvasContainer();
   const cleanup = () => grabEvents.forEach(ev => box.removeEventListener(ev, abort));
@@ -368,6 +410,8 @@ function glideTo(target: { left: number; top: number; right: number; bottom: num
     if (id !== glideId) return;                                 // a newer glide has taken over
     gliding = paused = false;
     map.jumpTo({ padding: target, ...zoomAt(1) });
+    syncZoomLimit();
+    onDone?.();
   };
   const frame = (now: number) => {
     if (!gliding || id !== glideId) return;
@@ -375,7 +419,8 @@ function glideTo(target: { left: number; top: number; right: number; bottom: num
     const turn = spinning ? 6 * (now - last) / 1000 : 0;     // same 6°/s as the spin
     last = now;
     map.jumpTo({ center: [c.lng - turn, c.lat], ...zoomAt(e), padding: {
-      left: safeLeft(fromLeft + (target.left - fromLeft) * e), top: 0, right: 0, bottom: 0 } });
+      left: safeLeft(fromLeft + (target.left - fromLeft) * e), top: safeLeft(fromTop + (target.top - fromTop) * e),
+      right: 0, bottom: 0 } });
     if (k < 1) requestAnimationFrame(frame); else finish();
   };
   function abort() {
@@ -389,7 +434,29 @@ function glideTo(target: { left: number; top: number; right: number; bottom: num
 
 // After "Get started": the globe glides from the right-hand side to the centre and grows.
 export function introGlide(open: boolean) {
-  glideTo(appPadding(), reducedMotion() ? 0 : 2400, globeZoomFor(open));
+  const z = globeZoomFor(open);
+  if (!open && z != null) closedZoom = sizeZoom(z);             // this size becomes the zoom-out limit
+  glideTo(appPadding(), reducedMotion() ? 0 : 2400, z);
+}
+
+// Home button: back to the opening-screen framing — the globe glides back to the right of the title text and
+// shrinks to its opening size (zoom 1.6), still spinning.
+export function goHome() {
+  if (!reducedMotion()) spinning = true;
+  glideTo(pad(isDesktop() ? innerWidth * 0.42 : 0), reducedMotion() ? 0 : 1800, 1.6);
+}
+
+// Globe button: just the globe, centred and spinning. From a zoomed-in map this flies back out to the whole globe.
+export function globeView() {
+  if (!reducedMotion()) spinning = true;
+  if (showingWholeGlobe()) { glideTo(appPadding(), reducedMotion() ? 0 : 1100, closedZoomNow()); return; }
+  // From a flat (zoomed-in) map the globe can't be measured yet (the map only becomes a globe when it next
+  // draws), so glide out to an approximate globe size first, then settle to the exact size once it's drawn.
+  glideTo(appPadding(), reducedMotion() ? 0 : 1800, 2.2, () => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!gliding && showingWholeGlobe()) glideTo(appPadding(), reducedMotion() ? 0 : 500, closedZoomNow());
+    }));
+  });
 }
 
 // Panel opened/closed: the globe glides aside to make room (or back to the centre) and is resized to suit.
@@ -399,7 +466,14 @@ export function panelChanged(open: boolean) {
     if (pinMode) setPinMode(false);
     if (!reducedMotion()) spinning = true;        // closed panel: the globe always spins
   }
-  glideTo(appPadding(), reducedMotion() ? 0 : open ? 1200 : 1000, showingWholeGlobe() ? globeZoomFor(open) : null);
+  glideTo(appPadding(), reducedMotion() ? 0 : open ? 1200 : 1000,
+          showingWholeGlobe() ? (open ? globeZoomFor(true) : closedZoomNow()) : null);
+}
+// The closed-panel globe size, measured now (it also refreshes the zoom-out limit, e.g. after a window resize).
+function closedZoomNow() {
+  const z = globeZoomFor(false);
+  if (z != null) closedZoom = sizeZoom(z);
+  return z;
 }
 
 // ---------------- Map layers ----------------

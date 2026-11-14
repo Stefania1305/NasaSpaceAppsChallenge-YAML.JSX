@@ -27,6 +27,7 @@ interface AppState {
   // Opening screen / panel
   splashLeaving: boolean;
   splashGone: boolean;
+  splashReturning: boolean;     // the opening screen came back via the Home button (it fades back in)
   panelOpen: boolean;
   // Zone
   method: Method;
@@ -62,6 +63,9 @@ interface AppState {
 
   start: () => void;
   setPanel: (open: boolean) => void;
+  goHome: () => void;
+  showGlobe: () => void;
+  openFire: () => void;
   setMethod: (m: Method) => void;
   toggleDrawing: () => void;
   togglePinMode: () => void;
@@ -80,6 +84,7 @@ interface AppState {
   setSensor: (s: string) => void;
   loadData: () => Promise<void>;
   predict: () => Promise<void>;
+  analyse: () => Promise<void>;
   showDay: (i: number) => void;
   zoomToZone: (duration?: number) => void;
   flyToHotspot: (lat: number, lon: number) => void;
@@ -112,6 +117,7 @@ function prepareFires(d: any, sensor: string): FC {
 export const useApp = create<AppState>((set, get) => ({
   splashLeaving: false,
   splashGone: false,
+  splashReturning: false,
   panelOpen: false,
   method: 'draw',
   drawing: false,
@@ -143,9 +149,9 @@ export const useApp = create<AppState>((set, get) => ({
   // ---------------- Opening screen → app ----------------
   start: () => {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // On phones there's no floating pill: the panel simply sits under the map, open.
+    // On phones the panel simply sits under the map, open.
     if (!engine.isDesktop()) { set({ panelOpen: true }); body().remove('collapsed'); }
-    body().add('intro');                                   // the pill's first fade-in waits for the opening screen
+    body().add('intro');                                   // the menu bar's first appearance waits for the opening screen
     set({ splashLeaving: true });
     body().remove('splash');
     engine.introGlide(get().panelOpen);                    // globe glides to the centre and grows
@@ -155,15 +161,47 @@ export const useApp = create<AppState>((set, get) => ({
   // Open: the panel slides in from the left and the pill fades away. Close: the reverse.
   setPanel: (open) => {
     if (!engine.isDesktop() || body().contains('splash')) return;
-    // The first click usually comes while the opening transition is still finishing (the pill appears ~1.5 s
-    // after "Get started", the transition ends at 3 s). End it now: otherwise the fading opening screen still
-    // covers the panel and the pill's fade-in delay keeps it frozen on screen over the panel as it slides in.
+    // The first click often comes while the opening transition is still finishing (the menu appears ~1.5 s
+    // after "Get started", the transition ends at 3 s). End it now, or the fading opening screen would still
+    // cover the panel as it slides in.
     finishIntro();
     set({ panelOpen: open });
     body().toggle('collapsed', !open);
     // Keep keyboard focus somewhere visible.
-    if (open) $('appHead')?.focus({ preventScroll: true }); else $('appToggle')?.focus({ preventScroll: true });
+    if (open) $('appHead')?.focus({ preventScroll: true }); else $('navFire')?.focus({ preventScroll: true });
     engine.panelChanged(open);
+  },
+
+  // ---------------- Menu bar: Home · Globe · Fire ----------------
+  // Home: back to the opening screen. It fades back in (text rising as on first load), the fire tint returns,
+  // the globe glides back to the right and shrinks to its opening size, and the side panel slides away.
+  goHome: () => {
+    if (body().contains('splash')) return;
+    finishIntro();
+    if (engine.isDrawing()) engine.setDrawing(false);
+    if (engine.isPinMode()) engine.setPinMode(false);
+    set({ modalOpen: false, splashGone: false, splashLeaving: false, splashReturning: true });
+    if (engine.isDesktop()) { set({ panelOpen: false }); body().add('collapsed'); }
+    body().add('splash');
+    engine.goHome();
+    afterRender(() => $('start')?.focus({ preventScroll: true }));
+  },
+
+  // Globe: just the globe, spinning in the middle of the screen (closes the panel; zooms back out if needed).
+  showGlobe: () => {
+    if (body().contains('splash')) return;
+    finishIntro();
+    if (engine.isDrawing()) engine.setDrawing(false);
+    if (engine.isPinMode()) engine.setPinMode(false);
+    set({ modalOpen: false });
+    if (engine.isDesktop() && get().panelOpen) { set({ panelOpen: false }); body().add('collapsed'); }
+    engine.globeView();
+  },
+
+  // Fire: open the Fire Pattern Predictor panel (on phones it's always open below the map: scroll to it).
+  openFire: () => {
+    if (!engine.isDesktop()) { $('panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (!get().panelOpen) get().setPanel(true);
   },
 
   // ---------------- Zone ----------------
@@ -245,7 +283,7 @@ export const useApp = create<AppState>((set, get) => ({
       get().clearPrediction();
     }
     set({ modalOpen: true });
-    afterRender(() => $('loadData')?.focus());
+    afterRender(() => $('predict')?.focus());
   },
   closeModal: () => { set({ modalOpen: false }); afterRender(() => $('run')?.focus()); },
 
@@ -278,7 +316,7 @@ export const useApp = create<AppState>((set, get) => ({
       set({
         lastFires: fires,
         loaded: { mode, sensor, params },
-        loadMsg: { kind: 'ok', text: `✓ ${n.toLocaleString()} fire detections loaded (${what}). Click Predict to see them on the map with the forecast.` },
+        loadMsg: { kind: 'ok', text: `✓ ${n.toLocaleString()} fire detections loaded (${what}).` },
         status: `${n.toLocaleString()} detections loaded (${what}).`,
       });
     } catch (err) {
@@ -319,6 +357,20 @@ export const useApp = create<AppState>((set, get) => ({
     } finally {
       set({ predicting: false });
     }
+  },
+
+  // The single "Predict" button: load the data first unless exactly this data (zone, dates, source) is
+  // already loaded, then run the prediction.
+  analyse: async () => {
+    const { loaded, mode, sensor, zone, date, days } = get();
+    if (!zone) return;
+    const needLoad = !loaded || !sameParams(loaded.params, currentParams(zone, date, days)) ||
+                     loaded.mode !== mode || (mode === 'fetch' && loaded.sensor !== sensor);
+    if (needLoad) {
+      await get().loadData();
+      if (!get().loaded) return;                         // loading failed: its error message stays visible
+    }
+    await get().predict();
   },
 
   showDay: (i) => {

@@ -5,10 +5,13 @@ import { useApp } from '../store';
 export function Splash() {
   const leaving = useApp(s => s.splashLeaving);
   const gone = useApp(s => s.splashGone);
+  const returning = useApp(s => s.splashReturning);
   const start = useApp(s => s.start);
   if (gone) return null;
+  // `again`: it came back via the Home button, so the whole screen fades back in (not just the text).
+  const cls = leaving ? 'gone' : returning ? 'again' : undefined;
   return (
-    <div id="splash" className={leaving ? 'gone' : undefined} role="dialog" aria-labelledby="splashTitle">
+    <div id="splash" className={cls} role="dialog" aria-labelledby="splashTitle">
       <div className="tint" /><div className="glow" /><div className="shade" />
       <div className="content">
         <p className="eyebrow">Powered by NASA satellite data</p>

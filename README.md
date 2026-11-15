@@ -1,65 +1,76 @@
 # Nasa: wildfire tracking and 3-day fire prediction
 
-**Turns raw NASA FIRMS satellite fire detections into tracked fires, a knowledge graph and a 3-day forecast of how each fire grows, moves, burns and merges.**
+**Turns raw NASA FIRMS satellite fire detections into tracked fires, a knowledge graph and a 3-day forecast of how each fire grows, moves, burns and merges, with an interactive globe to explore it.**
+
+![Fire Pattern Predictor, the app's opening screen](docs/images/frontend_home.jpg)
 
 ```bash
 python run_pipeline.py --date 2026-11-01 --days 1 --area world --no-weather
 python prediction_engine.py --run data/runs/2026-11-01_1d_world --limit 200 --weather forecast.json
 ```
 
-The first command downloads one day of worldwide MODIS and VIIRS detections and runs the full tracking pipeline on it. The second predicts, for the 200 largest active fires, their footprint, spread direction and rate, fire power, chance of going out or merging with a neighbour, and a 1 km burn-chance map for each of the next 3 days, using the weather forecast you provide. Each value comes as a low / likely / high range.
+The first command downloads one day of worldwide MODIS and VIIRS detections from NASA FIRMS and runs the full tracking pipeline on it. The second predicts, for the 200 largest active fires, their footprint, spread direction and rate, fire power, chance of going out or merging with a neighbour, and a 1 km burn-chance map for each of the next 3 days. Each number comes as a low / likely / high range.
 
 ## What it does
 
-| Stage | What you get |
+| Part | What you get |
 |---|---|
 | Harmonisation | MODIS, VIIRS (Suomi NPP, NOAA-20, NOAA-21) and Landsat detections made directly comparable, with the FIRMS `type` field inferred where a file lacks it |
-| Correlation and interpretation | Detections linked across satellites and passes, false and duplicate detections removed |
-| Localisation and fire power | Each fire's position, movement and radiative power (FRP) per satellite pass |
-| Epicenters | Where each fire started, checked against the satellite's actual swath |
-| Fire expansion | Clusters followed pass by pass: ignitions, bursts, merges, splits and extinctions |
-| Weather | Hourly weather for every fire (Open-Meteo: ERA5 observations and archived ECMWF forecasts) |
-| Knowledge graph | Every result of every stage as Neo4j-import CSV files: fires, detections, clusters, events, weather and their relationships |
-| Prediction | GPU-trained models that forecast each active fire 3 days ahead |
-| Merge dataset | Every observed merge of two separate fires, with geometry and weather at the time |
+| Tracking pipeline | Detections linked across satellites and passes, false and duplicate detections removed, then each fire's position, movement, radiative power (FRP), starting points and pass-by-pass expansion: ignitions, bursts, merges, splits, extinctions |
+| Weather | Hourly weather for every fire from Open-Meteo (ERA5 observations and archived ECMWF forecasts) |
+| Knowledge graph | Every result of every stage as Neo4j bulk-import CSV files |
+| Prediction engine | Two GPU-trained models, XGBoost and a sequence network, blended into a 3-day forecast per fire, plus a calibrated burn-chance map |
+| Merge dataset | Every observed merge, with the individual fires before it and the merged fire after it, their geometry and the weather |
+| Frontend | A React app with a 3D globe: pick a zone, load the detections, see the forecast and fire weather |
+
+## Screenshots
+
+| | |
+|---|---|
+| ![The globe after opening the fire map](docs/images/frontend_map.jpg) | ![A 3-day forecast for a zone in Chad, with the panel and timeline](docs/images/frontend_forecast.jpg) |
+| **Frontend: the globe.** Satellite imagery from Esri, borders from Natural Earth | **Frontend: a forecast** for a zone in southern Chad: expected burning cells for days +1 to +3, chance-of-fire chart, weather layers and a timeline of observed and forecast days |
+| ![Fire outlook map with all predicted fires](docs/images/outlook_world.jpg) | ![One fire's predicted spread as a fire-power heatmap](docs/images/outlook_fire_heat.png) |
+| **Outlook map:** the 200 largest fires on 1 Nov 2026, coloured by predicted growth. The side panel shows one fire's 3-day ranges | **Fire view:** satellite pixels and the burned scar, the predicted likely and high footprints, spread arrows and merge partners for day +2 |
+
+![Animation: fire 1501 and its neighbours, 4 observed days then 3 predicted days](docs/images/spread_1501.gif)
+
+*Fire 1501 in southern Chad: four observed days of satellite fire pixels (bright on the day they burned, dark afterwards), then the 3 predicted days with likely and high footprints, spread direction and the chances of merging or going out. Made with `prediction_animation.py`.*
 
 ## Contents
 
-- [Requirements](#requirements)
-- [Installation](#installation)
+- [Requirements and installation](#requirements-and-installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Frontend](#frontend)
 - [Pipeline](#pipeline)
-- [Prediction engine](#prediction-engine)
-- [Accuracy](#accuracy)
+- [Prediction models](#prediction-models)
+- [Metrics](#metrics)
 - [Data layout](#data-layout)
 - [Testing](#testing)
 - [Limitations](#limitations)
-- [Data sources](#data-sources)
+- [Data sources and APIs](#data-sources-and-apis)
+- [Credits](#credits)
 
-## Requirements
+## Requirements and installation
 
-- Python 3.14 (developed and tested on 3.14.7)
-- A NASA FIRMS map key ([request one](https://firms.modaps.eosdis.nasa.gov/api/map_key/))
-- An NVIDIA GPU with CUDA for training (an RTX 5060 was used). Prediction and training also run on the CPU, about 7.5 times slower to train.
-- Disk space: the 10-year archive and its runs take tens of GB
-
-## Installation
-
-The project has no package manifest. Install the libraries it imports:
-
-```bash
-pip install pandas numpy requests scipy scikit-learn xgboost matplotlib pillow
-```
-
-The trained v2 models are in `models/v2/` and stored with [Git LFS](https://git-lfs.com/) (285 MB). Install Git LFS before cloning, or fetch them afterwards:
+| Need | Version used | For |
+|---|---|---|
+| Python | 3.14.7 | Everything in Python |
+| A NASA FIRMS map key | [request one](https://firms.modaps.eosdis.nasa.gov/api/map_key/) | Downloading detections |
+| [Git LFS](https://git-lfs.com/) | 3.8 | The trained models in `models/v2/` (285 MB) |
+| NVIDIA GPU with CUDA | RTX 5060, CUDA 12.8 | Training only; prediction runs on the CPU too |
+| Node.js and npm | – | Only to change the frontend; its built version is in the repository |
 
 ```bash
 git lfs install
-git lfs pull
+git clone https://github.com/Stefania1305/Nasa.git
+cd Nasa
+pip install pandas numpy requests scipy scikit-learn xgboost matplotlib pillow
 ```
 
-Tested with pandas 3.0.6, numpy 2.5.4, xgboost 3.4.1 (CUDA build), scikit-learn 1.9.1, scipy 1.18.1, requests 2.34.2, matplotlib 3.11.2 and Pillow 12.3.0.
+Tested with pandas 3.0.6, numpy 2.5.4, xgboost 3.4.1 (CUDA build), scikit-learn 1.9.1, scipy 1.18.1, requests 2.34.2, matplotlib 3.11.2 and Pillow 12.3.0. Training the sequence network also needs PyTorch with CUDA: `pip install torch --index-url https://download.pytorch.org/whl/cu128`. Running predictions does not.
+
+If you cloned without Git LFS, fetch the models afterwards with `git lfs pull`.
 
 ## Configuration
 
@@ -72,21 +83,13 @@ FIRMS_MAP_KEY=your_firms_key
 | Variable | Required | Default | Used for |
 |---|---|---|---|
 | `FIRMS_MAP_KEY` | yes | none | All FIRMS downloads |
-| `FIRMS_MAP_KEYS` | no | `FIRMS_MAP_KEY` | Comma-separated list of keys for the archive scan. When one key reaches its quota (5,000 transactions per 10 minutes), the next one is used |
-| `PORT` | no | `8000` | Port of the local browsing server |
-| `EWDS_API_KEY`, `EWDS_API_URL` | no | none | Copernicus CEMS fire danger indices. Not used by default: the weather stage uses Open-Meteo soil moisture instead |
+| `FIRMS_MAP_KEYS` | no | `FIRMS_MAP_KEY` | Comma-separated keys for the 10-year archive scan; when one reaches its quota (5,000 transactions per 10 minutes), the next is used |
+| `PORT` | no | `8000` | Port of the local server |
+| `EWDS_API_KEY`, `EWDS_API_URL` | no | none | Copernicus CEMS fire danger indices; off by default |
 
-Open-Meteo needs no key. Its free limits are 600 calls per minute, 5,000 per hour and about 10,000 per day; `weather_worker.py` stays under them.
+Open-Meteo needs no key. Its free limits are 600 calls a minute, 5,000 an hour and about 10,000 a day.
 
 ## Usage
-
-### Browse FIRMS data
-
-```bash
-python server.py
-```
-
-Open http://localhost:8000. The server proxies the FIRMS API so the key never reaches the browser, and adds the harmonised and inferred `type` columns to every table. `test.html` is a test bench for the harmonisation.
 
 ### Run the pipeline for a date and area
 
@@ -99,34 +102,10 @@ python run_pipeline.py --date 2026-11-01 --days 1 --area world --no-weather
 | `--date` | required | First day, `YYYY-MM-DD` |
 | `--days` | `1` | Number of days |
 | `--area` | `world` | `world` or a box `west,south,east,north`, for example `--area=-48,-12,-42,-6` |
-| `--no-weather` | off | Skip the weather join and knowledge-graph feed 2. A world day needs about 32,000 Open-Meteo calls, more than the free daily quota |
+| `--no-weather` | off | Skip the weather join and knowledge-graph feed 2 (a world day needs about 32,000 Open-Meteo calls) |
 | `--start-at` | none | Skip earlier stages and reuse their output, for example `--start-at interpreter` |
 
-Output goes to `data/runs/<date>_<days>d_<area>/`, with stage timings in `timings.json`. On a one-day world run, the stages from the interpreter to KG feed 1 took about 7 minutes, not counting the FIRMS download and correlation.
-
-### Build the 10-year archive and train the models
-
-```bash
-python archive_scan.py --start 2016-11-14 --end 2026-11-13
-python fire_runs.py --major 1000 --medium 1000
-python weather_fires.py
-python prediction_data.py
-python forecast_errors.py
-python prediction_train.py --device cuda --full --noise
-python prediction_seq.py --full --epochs 16 --out models_seq_full
-python prediction_spread.py fit
-```
-
-| Step | What it does |
-|---|---|
-| `archive_scan.py` | Downloads 10 years of MODIS and VIIRS (Suomi NPP, then NOAA-20) worldwide, builds a fire frequency map (`frequency.csv.gz`) and ranks the biggest fires. Options: `--threads`, `--agg-workers`, `--top`, `--out` |
-| `fire_runs.py` | Picks the major and medium fires across regions and runs the full pipeline on them in batches (`data/runs/fires_batch_000` to `_039`). Options: `--batch`, `--parallel`, `--limit`, `--reselect` |
-| `weather_fires.py` | Adds weather to every batch and feeds it into the knowledge graph, within the Open-Meteo quota (`--budget`, default 9,000 calls). Skips batches that already have weather |
-| `prediction_data.py` | Builds the training table `data/prediction/fire_days.csv.gz`: one row per fire per day, with the targets for days +1 to +3 |
-| `forecast_errors.py` | Measures how wrong real weather forecasts were (forecast minus observed) at about 200 weather cells, using archived forecasts from Open-Meteo. Writes a pool of 4,590 error vectors used in training. Option: `--cells` |
-| `prediction_train.py` | Trains the models with and without weather (118 and 55 features, 42 models) and writes `data/prediction/model_card.json`. `--noise` trains on forecast-like weather, `--full` uses all years (production), `--out` picks the model folder. About 25 minutes on the GPU |
-| `prediction_seq.py` | Trains the sequence network with PyTorch on the GPU (about 1 minute) and saves it also as plain arrays for numpy. Without `--full` it trains on 2016–2023 and stops when 2024 stops improving |
-| `prediction_spread.py fit` | Calibrates the 1 km burn-chance map on 2024 and checks it on 2025–2026 (`data/prediction/models/spread.json`) |
+Output goes to `data/runs/<date>_<days>d_<area>/`, with stage timings in `timings.json`. On a one-day world run, the stages from the interpreter to KG feed 1 took about 7 minutes.
 
 ### Predict
 
@@ -134,13 +113,19 @@ python prediction_spread.py fit
 python prediction_engine.py --run data/runs/fires_batch_039 --weather forecast.json
 ```
 
+```python
+from prediction_engine import predict
+result = predict(run_dir, weather=forecast_rows)      # forecast_rows: hourly forecast, list of dicts or DataFrame
+```
+
 | Option | Default | Meaning |
 |---|---|---|
 | `--run` | required | A pipeline run folder |
-| `--weather` | none | Hourly weather forecast for the fires' area, as `.json` or `.csv`. Without it, the no-weather models are used |
+| `--weather` | none | Hourly weather forecast for the fires' area (`.json` or `.csv`). Without it, the no-weather models are used |
+| `--weather-label` | none | Where the forecast came from; shown in `summary.json` and on the map |
 | `--limit` | `0` (all) | Only the N largest active fires |
 
-The engine does not download weather. The forecast comes from the caller (the frontend), as hourly rows in the units the models were trained on. In code, `prediction_engine.predict(run_dir, weather=rows)` also accepts a list of dicts or a DataFrame.
+The engine does not download weather: the forecast comes from the caller (the frontend), as hourly rows in the units the models were trained on.
 
 | Field | Unit | Required |
 |---|---|---|
@@ -163,28 +148,89 @@ The engine does not download weather. The forecast comes from the caller (the fr
 ]}
 ```
 
-- **Coverage:** the forecast should cover the run's last day through 3 days ahead. A few days before that let the engine count the hours since the last rain.
-- **Matching:** each fire uses the forecast point in its 0.25° cell, or the nearest point within 0.5°. Points in the same cell are averaged. Fires with no point nearby keep empty weather features.
-- **Gaps:** missing variables or hours are allowed; the models were trained with gaps.
+The forecast should cover the run's last day through 3 days ahead; a few days before that let the engine count the hours since the last rain. Each fire uses the forecast point in its 0.25° cell, or the nearest within 0.5°. Missing variables or hours are allowed.
 
-Output, in `<run>/prediction/`:
-
-| File | Content |
+| Output in `<run>/prediction/` | Content |
 |---|---|
 | `predictions.csv`, `predictions.json` | One row per fire and day ahead, with low / likely / high values |
 | `spread.csv` | Burn chance per 1 km cell around each fire and day ahead (cells of at least 2%) |
+| `merge_outlook.csv` | Each fire's nearest neighbour, the gap between their predicted footprints and the merge chance |
 | `summary.json` | Run, weather used and its coverage, models, timing |
 
-### Animate a fire and build the merge dataset
+### Build the 10-year archive and train the models
+
+```bash
+python archive_scan.py --start 2016-11-14 --end 2026-11-13
+python fire_runs.py --major 1000 --medium 1000
+python weather_fires.py
+python prediction_data.py
+python forecast_errors.py
+python prediction_train.py --device cuda --full --noise
+python prediction_seq.py --full --epochs 16 --out models_seq_full
+python prediction_spread.py fit
+```
+
+| Step | What it does |
+|---|---|
+| `archive_scan.py` | Downloads 10 years of MODIS and VIIRS worldwide, builds a fire frequency map and ranks the biggest fires |
+| `fire_runs.py` | Picks 1,000 major and 1,000 medium fires across regions and runs the full pipeline on them in 40 batches |
+| `weather_fires.py` | Adds weather to every batch and feeds it into the knowledge graph, within the Open-Meteo quota |
+| `prediction_data.py` | Builds the training table: one row per fire per day, 333,452 fire-days from 188,559 fires, with targets for days +1 to +3 |
+| `forecast_errors.py` | Measures how wrong real weather forecasts were at about 200 cells: a pool of 4,590 error vectors used in training |
+| `prediction_train.py` | Trains the XGBoost models with and without weather (42 models, about 25 minutes on the GPU). `--noise` uses forecast-like weather, `--full` all years |
+| `prediction_seq.py` | Trains the sequence network (about 1 minute on the GPU) and saves it for numpy too |
+| `prediction_spread.py fit` | Calibrates the burn-chance map on 2024 and checks it on 2025–2026 |
+
+### Animation and merge datasets
 
 ```bash
 python prediction_animation.py --run data/runs/fires_batch_039 --fire 1501
 python merges_dataset.py
 ```
 
-`prediction_animation.py` writes `<run>/prediction/spread_<fire>.gif`: the last observed days of satellite pixels, then the 3 predicted days. Options: `--half-km` (view size, default 15), `--past` (observed frames, default 4), `--ms` (milliseconds per frame).
+`prediction_animation.py` writes `<run>/prediction/spread_<fire>.gif`. `merges_dataset.py` writes `data/prediction/merges.csv.gz` (one row per merge: 166,044 merges, 51,051 of them lasting merges of separate fires) and `merge_members.csv.gz` (one row per fire involved: 405,039 individual fires before a merge and 275,049 merged fires after it, sharing an `event_id`).
 
-`merges_dataset.py` writes `data/prediction/merges.csv.gz`, one row per observed merge, and `<run>/prediction/merge_outlook.csv` for runs with predictions. Use `--runs` to process only some runs.
+## Frontend
+
+**Fire Pattern Predictor** is a React app by Diaco12, on the [`frontend`](https://github.com/Stefania1305/Nasa/tree/frontend) branch. It is not yet connected to the prediction models described below: its forecast uses a separate grid model ([see below](#frontend-grid-model)).
+
+| Feature | Description |
+|---|---|
+| Opening screen | Live status of each satellite's latest data (MODIS, VIIRS on Suomi NPP, NOAA-20 and NOAA-21, Landsat OLI) and a spinning globe |
+| 3D globe | MapLibre GL globe with Esri satellite imagery, Natural Earth borders, zoom and a live UTC clock |
+| Zones | Draw a box, click a country (or one of its territories), drop a pin with an area, or type coordinates |
+| Analyse zone | Load either all sensors harmonised into one dataset, or one sensor's raw detections, for a chosen date range |
+| Forecast | Expected burning cells for days +1 to +3, cells by chance of fire, spread direction, trend, most likely new fires, and a timeline of observed and forecast days |
+| Fire weather | Temperature, humidity and wind layers over the zone from Open-Meteo |
+
+![Analyse zone dialog: choose harmonised sensors or one sensor](docs/images/frontend_analyse.jpg)
+
+| Part | Technology |
+|---|---|
+| UI | [React](https://react.dev/) 18, TypeScript, [Vite](https://vite.dev/) 6 |
+| Map | [MapLibre GL](https://maplibre.org/) 5.6 (globe projection) |
+| State | [Zustand](https://github.com/pmndrs/zustand) 5 |
+| Fonts | IBM Plex Sans and IBM Plex Mono |
+| Backend | `server.py` serves the built app at `http://localhost:8000/app` |
+
+```bash
+git switch frontend
+python server.py          # then open http://localhost:8000/app
+
+cd frontend               # only to change the app
+npm install
+npm run dev               # http://localhost:5173/app/, API calls go to the backend on :8000
+npm run build
+```
+
+| Endpoint (`frontend` branch) | Returns |
+|---|---|
+| `/api/sensors` | Available FIRMS sensors and their date ranges |
+| `/api/harmonise` | All sensors harmonised for a date range and area |
+| `/api/fires` | One sensor's detections |
+| `/api/compare` | MODIS and VIIRS made comparable |
+| `/api/predict` | The grid forecast for a zone (`date`, `days`, `area`, optional `country`) |
+| `/api/weather` | Fire weather for a zone from Open-Meteo |
 
 ## Pipeline
 
@@ -201,143 +247,203 @@ FIRMS download
   -> KG feed 2 (weather)  kg_weather_feed.py
 ```
 
-Each stage reads the previous stage's files in the run folder. Workers never read the knowledge graph; it is an output that holds every worker's results.
+Each stage reads the previous stage's files in the run folder. The knowledge graph (`<run>/kg/`) holds every worker's results as `nodes_*.csv.gz` and `rels_*.csv.gz` in [Neo4j bulk-import format](https://neo4j.com/docs/operations-manual/current/import/). Node types include `Fire`, `SourceFire`, `Detection`, `Cluster`, `FireState`, `Epicenter`, `ExpansionEvent`, `Pass`, `Satellite`, `WeatherCell` and `WeatherHour`.
 
-The knowledge graph (`<run>/kg/`) is a set of `nodes_*.csv.gz` and `rels_*.csv.gz` files in Neo4j bulk-import format, with `schema.json` and `summary.json`. Node types include `Fire`, `Detection`, `Cluster`, `FireState`, `Epicenter`, `ExpansionEvent`, `Pass`, `Satellite`, `WeatherCell`, `WeatherHour` and `FireWeather`.
+## Prediction models
 
-## Prediction engine
+| Model | What it is | Where | Status |
+|---|---|---|---|
+| Fast model | XGBoost, 87 features, trained on observed weather; one quantile model per output and day ahead (42 models) | `data/prediction/models_split`, `models_fast_all` | Superseded, kept for comparison |
+| Full model: XGBoost v2 | XGBoost, 118 features (history, separate parts, neighbours), trained on forecast-like weather | `models/v2/weather`, `models/v2/no_weather` | In production |
+| Full model: sequence network | A GRU over the fire's previous 4 fire-days plus dense layers, all outputs and days at once, trained with weather dropout and forecast noise. Trained with [PyTorch](https://pytorch.org/), run with numpy | `models/v2/seq` | In production |
+| **Production blend** | XGBoost v2 and the network averaged for growth, fire power, movement and merging; the chance a fire is out from XGBoost alone | `prediction_engine.py` | **In production** |
+| Spread map | Logistic model turning distance and position around today's moved and spread-out pixels into a burn chance per 1 km cell | `models/v2/spread.json` | In production |
+| Frontend grid model | Ridge-regularised logistic regression on 5.6 km grid cells, refitted on each zone's loaded days | `prediction.py` on the `frontend` branch | In the app today |
 
 For every fire seen on the run's last day, the engine predicts days +1, +2 and +3:
 
 | Output | Unit | Form |
 |---|---|---|
 | New burned area and total footprint | km² | low / likely / high (10th / 50th / 90th percentile) |
-| Movement of the fire centre | km east, km north | low / likely / high |
-| Spread direction and rate, predicted centre and radius | degrees, km/day, lat/lon, km | from the likely movement and footprint |
+| Movement of the fire centre, spread direction and rate | km, degrees, km/day | low / likely / high |
 | Mean and peak fire power of a VIIRS pass | MW | low / likely / high |
 | Chance the fire is out | 0 to 1 | probability |
 | Chance it merges with a separate neighbouring fire | 0 to 1 | probability |
 | Burn chance of each 1 km cell around the fire | 0 to 1 | spread map |
 
-Two models are combined:
-
-| Model | What it is | Used for |
-|---|---|---|
-| XGBoost | Gradient-boosted trees on the GPU, one quantile model per output and day ahead (42 models) | Every output |
-| Sequence network | A GRU that reads the fire's previous 4 fire-days, followed by dense layers; predicts all outputs and days at once. Trained with PyTorch, run with numpy (`seq_numpy.py`), so the engine needs no PyTorch | Averaged with XGBoost for growth, fire power, movement and merging. The chance a fire is out comes from XGBoost alone, because averaging made it less well calibrated |
-
-Both use the same 118 features:
-
-| Group | Features |
+| Feature group | Features (118 in the full model) |
 |---|---|
 | Fire now | Size, footprint, growth, fire power, pixels, passes, clusters, front distance, age, merges so far |
-| History | The previous 4 fire-days: growth, power, separate parts, days back; 3-day growth and power trends |
-| Separate parts | How many not-yet-joined fires the fire consists of that day, and the gap between them. Merges happen between these parts |
+| History | The previous 4 fire-days: growth, power, separate parts, days back; 3-day trends |
+| Separate parts | How many not-yet-joined fires the fire consists of that day, and the gap between them |
 | Neighbours | Distance and gap to the nearest other fire, its size, growth and power, fires within 10 and 25 km |
 | Place | Latitude, region, season, elevation, local 10-year fire frequency |
-| Weather, days d to d+3 | Temperature, humidity, vapour pressure deficit, wind, gusts and wind direction, rain, hours since rain, soil moisture at three depths, wind blowing towards the nearest fire |
+| Weather, days d to d+3 | Temperature, humidity, vapour pressure deficit, wind, gusts and direction, rain, hours since rain, soil moisture at 3 depths, wind towards the nearest fire |
 
-The models train on **forecast-like weather**: each training row's weather for days +1 to +3 gets a real forecast error added, drawn from the `forecast_errors.py` pool for the same day ahead and region. That way the models trust a forecast only as much as forecasts deserve. Days +1 to +3 also use day d's soil moisture, as in real use.
+The full models train on **forecast-like weather**: each training row's weather for days +1 to +3 gets a real forecast error added (same day ahead and region), so they trust a forecast only as much as forecasts deserve.
 
-The spread map takes today's satellite pixels, moves and spreads them with the predicted centre shift and footprint, and turns each 1 km cell's distance and position into a burn chance with a logistic model. It was calibrated on 2024 and checked on 2025–2026: AUC 0.73–0.75, and cells marked 30% burned about 30% of the time.
+## Metrics
 
-The training data runs from 2016 to 2026: 333,452 fire-days from 188,559 fires. For testing it was split by time: train on 2016–2023, stop training on 2024, test on 2025–2026. The production models are then trained on all years, keeping 5% of fires aside only to decide when to stop.
+All models below were trained on 2016–2023 (2024 used only to decide when to stop and to pick thresholds) and tested on **2025–2026, which none of them saw: 49,378 fire-days from 28,657 fires**. Each cell shows **day +1 / +2 / +3**, with weather unless stated. Persistence means "the fire keeps doing what it did today": still burning, never merges, same growth, power and movement. The production models are the same setups trained on all years, so these are the best estimate for them. Produced by `prediction_metrics.py` and `test_prediction_accuracy.py`; full results are in `data/prediction/accuracy/`.
 
-## Accuracy
+### Headline accuracy
 
-Measured on the 2025–2026 test years, which training never saw: 49,378 fire-days from 28,657 fires. Persistence means "the fire keeps doing what it did today". The production models use the same setup trained on all years, so these figures are the best estimate for them.
+The overall figure is the mean of five accuracies: growth class (none / small / large), fire power within a factor of 2, direction within 45°, extinction, and merge balanced accuracy, with the merge threshold chosen for the best balanced accuracy on 2024.
 
-| Accuracy %, day +1 / +2 / +3 | With weather | No weather | Persistence |
-|---|---|---|---|
-| **Overall** (mean of the five rows below it) | **65.4 / 65.6 / 65.4** | 64.7 / 64.1 / 64.1 | 34.1 / 30.7 / 28.9 |
-| *(this table: XGBoost alone; the blend is compared below)* | | | |
-| Growth class right (none / small / large) | 79 / 82 / 84 | 78 / 79 / 81 | 26 / 23 / 20 |
-| Right about extinction | 83 / 84 / 85 | 81 / 81 / 82 | 42 / 33 / 26 |
-| Merge, balanced accuracy | 87 / 87 / 87 | 87 / 87 / 86 | 50 |
-| Spread direction within 45° | 39 / 40 / 37 | 39 / 39 / 38 | 20 / 19 / 19 |
-| Fire power within a factor of 2 | 38 / 36 / 35 | 37 / 35 / 34 | 32 / 29 / 29 |
-| Real growth inside the low–high range | 88 / 87 / 88 | 88 / 88 / 89 | – |
+| Model | Overall accuracy %, with weather | Overall accuracy %, no weather |
+|---|---|---|
+| Fast model | 65.2 / 65.0 / 64.9 | 64.3 / 63.5 / 63.3 |
+| Full model: XGBoost v2 | 65.4 / 65.6 / 65.4 | 64.7 / 64.1 / 64.1 |
+| Full model: sequence network | 64.9 / 65.4 / 65.6 | 63.9 / 64.0 / 64.2 |
+| Blend, averaging both for every output | 65.8 / 65.8 / 65.8 | 64.9 / 64.2 / 64.5 |
+| **Production blend** (extinction from XGBoost) | **about 65.9 / 65.9 / 65.8** | – |
+| Persistence baseline | 34.1 / 30.7 / 28.9 | – |
 
-- **Strong:** growth class, extinction and merges. Extinction AUC is 0.91–0.92 and merge AUC 0.94–0.95.
-- **Calibrated chances:** predicted chances are within 0.6–0.9 percentage points of how often things happened.
-- **Weak:** spread direction and fire power, though both are about twice as good as persistence.
-- **Merges:** caught 86–90% of the time, but only 22–34% of merge alarms are right.
+The production row is worked out from the per-output results of the two rows above it. In the detailed tables below the merge threshold is instead chosen for the **best F1**, which raises merge precision and lowers merge balanced accuracy; with that threshold the production blend's overall figure is 62.5 / 63.3 / 63.9%.
 
-### XGBoost, sequence network and the blend
+### Extinction (is the fire out by that day?)
 
-Same test years, with weather:
+Threshold 0.5. Calibration error: mean gap between the predicted chance and how often fires were really out, over 10 bins.
 
-| Overall accuracy %, day +1 / +2 / +3 | |
-|---|---|
-| XGBoost | 65.4 / 65.6 / 65.4 |
-| Sequence network | 64.9 / 65.4 / 65.6 |
-| Blend, averaging both | **65.8 / 65.8 / 65.8** |
-| **Blend with extinction from XGBoost (production)** | **about 65.9 / 65.9 / 65.8** |
+| Model | Accuracy % | Precision % | Recall % | F1 % | ROC AUC | PR AUC | Brier | Calibration error, pts |
+|---|---|---|---|---|---|---|---|---|
+| Fast model (XGBoost, first version) | 83.0 / 83.7 / 84.4 | 83.8 / 86.4 / 88.0 | 87.7 / 89.9 / 91.3 | 85.7 / 88.1 / 89.6 | 0.914 / 0.909 / 0.903 | 0.932 / 0.952 / 0.963 | 0.1164 / 0.1125 / 0.1073 | 0.90 / 1.12 / 1.34 |
+| Full model: XGBoost v2 | 83.4 / 84.0 / 84.7 | 83.4 / 86.3 / 87.7 | 89.0 / 90.7 / 92.3 | 86.1 / 88.5 / 89.9 | 0.917 / 0.913 / 0.907 | 0.936 / 0.954 / 0.964 | 0.1142 / 0.1100 / 0.1045 | 0.72 / 0.74 / 0.83 |
+| Full model: sequence network | 79.9 / 82.7 / 84.8 | 78.5 / 83.5 / 86.5 | 89.8 / 92.7 / 94.0 | 83.8 / 87.9 / 90.1 | 0.867 / 0.881 / 0.885 | 0.885 / 0.933 / 0.952 | 0.1407 / 0.1230 / 0.1104 | 0.49 / 0.54 / 1.22 |
+| **Production: blend** | 83.4 / 84.0 / 84.7 | 83.4 / 86.3 / 87.7 | 89.0 / 90.7 / 92.3 | 86.1 / 88.5 / 89.9 | 0.917 / 0.913 / 0.907 | 0.936 / 0.954 / 0.964 | 0.1142 / 0.1100 / 0.1045 | 0.72 / 0.74 / 0.83 |
+| Persistence baseline | 42.1 / 32.6 / 26.1 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | – / – / – | – / – / – | – / – / – | – / – / – |
 
-The network is slightly better than XGBoost on growth, fire power and merges and worse at extinction (AUC 0.87–0.89 against 0.91–0.92). The blend beats both. The production row is worked out from the per-output results of the two rows above it. The blend passes 10 of 11 behaviour checks, including turning the spread when the wind turns.
+### Merging with a separate fire
 
-### With real forecasts
+Threshold chosen for the best F1 on 2024. Merges are rare (4–8% of fire-days), so plain accuracy is not shown; PR AUC is the more telling ranking score.
 
-On 600 fire-days from 2024–2026, predicted again with the weather forecasts that were actually issued at the time:
+| Model | Balanced acc. % | Precision % | Recall % | F1 % | ROC AUC | PR AUC | Brier |
+|---|---|---|---|---|---|---|---|
+| Fast model (XGBoost, first version) | 67.9 / 74.4 / 75.9 | 43.8 / 46.3 / 50.9 | 37.8 / 53.1 / 56.4 | 40.6 / 49.4 / 53.5 | 0.935 / 0.928 / 0.925 | 0.418 / 0.496 / 0.552 | 0.0327 / 0.0457 / 0.0522 |
+| Full model: XGBoost v2 | 72.9 / 76.8 / 78.7 | 47.0 / 51.5 / 54.4 | 48.1 / 57.3 / 61.9 | 47.6 / 54.2 / 57.9 | 0.946 / 0.939 / 0.935 | 0.502 / 0.591 / 0.641 | 0.0271 / 0.0382 / 0.0445 |
+| Full model: sequence network | 72.9 / 77.0 / 78.0 | 48.4 / 52.5 / 56.0 | 47.9 / 57.6 / 60.1 | 48.2 / 54.9 / 58.0 | 0.945 / 0.938 / 0.934 | 0.515 / 0.596 / 0.643 | 0.0265 / 0.0377 / 0.0442 |
+| **Production: blend** | 71.1 / 74.6 / 77.6 | 53.1 / 57.3 / 58.7 | 43.9 / 51.9 / 58.9 | 48.1 / 54.4 / 58.8 | 0.947 / 0.941 / 0.937 | 0.519 / 0.601 / 0.649 | 0.0265 / 0.0376 / 0.0439 |
+| Persistence baseline | 50.0 / 50.0 / 50.0 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | – / – / – | – / – / – | – / – / – |
 
-| Overall accuracy %, day +1 / +2 / +3 | |
-|---|---|
-| Observed weather | 67.0 / 65.7 / 66.4 |
-| **Issued forecasts (real use)** | **65.0 / 63.8 / 64.8** |
-| No-weather models | 65.2 / 63.1 / 64.4 |
-| Persistence | 35.8 / 33.3 / 31.9 |
+### Growth of the burned area
 
-Training on forecast-like weather raised real-use accuracy by 0.3–1.7 points over the earlier models. With real forecasts, the weather models now match or beat the no-weather models on every day (day +1 is a tie within this sample's ±2 points).
+Class: none (< 0.1 km²), small (0.1–2 km²) or large (≥ 2 km²). Coverage: share of real values inside the low–high range (the 10th–90th percentile, aim about 80%).
+
+| Model | MAE km² | Class accuracy % | Class macro F1 % | Low–high coverage % | Pinball loss (log) |
+|---|---|---|---|---|---|
+| Fast model (XGBoost, first version) | 1.95 / 3.55 / 4.87 | 79.1 / 81.2 / 83.0 | 61.6 / 60.6 / 57.6 | 87.8 / 88.0 / 88.7 | 0.0670 / 0.0767 / 0.0800 |
+| Full model: XGBoost v2 | 1.96 / 3.52 / 4.82 | 79.3 / 81.5 / 83.5 | 61.8 / 60.7 / 58.4 | 87.6 / 87.1 / 87.7 | 0.0662 / 0.0750 / 0.0775 |
+| Full model: sequence network | 1.96 / 3.49 / 4.77 | 79.7 / 81.9 / 83.8 | 65.0 / 63.5 / 61.9 | 87.5 / 88.6 / 87.6 | 0.0652 / 0.0722 / 0.0736 |
+| **Production: blend** | 1.91 / 3.40 / 4.63 | 79.7 / 81.7 / 83.6 | 64.4 / 62.9 / 61.3 | 87.5 / 88.1 / 88.5 | 0.0641 / 0.0716 / 0.0734 |
+| Persistence baseline | 2.86 / 5.99 / 9.51 | 26.2 / 22.9 / 20.3 | 33.8 / 27.7 / 22.7 | – / – / – | – / – / – |
+
+### Fire power (FRP)
+
+| Model | MAE MW | Within ×2 % | Low–high coverage % | Peak FRP MAE MW |
+|---|---|---|---|---|
+| Fast model (XGBoost, first version) | 372 / 465 / 537 | 37.6 / 34.6 / 34.2 | 73.1 / 72.3 / 72.8 | 679 / 876 / 1019 |
+| Full model: XGBoost v2 | 370 / 464 / 535 | 38.0 / 35.5 / 34.8 | 72.4 / 73.3 / 71.3 | 682 / 871 / 1000 |
+| Full model: sequence network | 374 / 468 / 533 | 38.2 / 35.9 / 35.2 | 77.4 / 77.8 / 77.7 | 687 / 873 / 1020 |
+| **Production: blend** | 365 / 459 / 526 | 38.9 / 36.2 / 35.1 | 75.8 / 76.5 / 75.2 | 670 / 857 / 993 |
+| Persistence baseline | 520 / 715 / 805 | 32.1 / 28.9 / 28.5 | – / – / – | 956 / 1342 / 1549 |
+
+### Spread direction and centre movement
+
+Fires that moved at least 1 km.
+
+| Model | Within 45° % | Within 90° % | Median angle error ° | Median centre error km |
+|---|---|---|---|---|
+| Fast model (XGBoost, first version) | 39.7 / 39.4 / 37.2 | 63.2 / 63.4 / 61.8 | 62.6 / 62.9 / 66.7 | 2.93 / 3.48 / 3.96 |
+| Full model: XGBoost v2 | 39.2 / 39.7 / 37.2 | 62.9 / 63.1 / 61.9 | 64.1 / 62.7 / 66.3 | 2.92 / 3.50 / 3.96 |
+| Full model: sequence network | 39.1 / 39.0 / 37.7 | 63.0 / 63.1 / 62.2 | 63.3 / 64.1 / 67.0 | 2.92 / 3.49 / 3.95 |
+| **Production: blend** | 39.6 / 40.0 / 38.4 | 63.5 / 63.2 / 62.4 | 63.0 / 62.5 / 65.7 | 2.90 / 3.47 / 3.90 |
+| Persistence baseline | 20.1 / 19.1 / 19.4 | 36.3 / 36.2 / 36.9 | 120.7 / 120.7 / 118.4 | 6.03 / 9.90 / 13.98 |
+
+### Without weather
+
+| Model | Overall % (F1 threshold) | Extinction ROC AUC | Merge ROC AUC | Growth MAE km² | FRP within ×2 % |
+|---|---|---|---|---|---|
+| Fast model (XGBoost, first version) | 61.3 / 61.1 / 61.7 | 0.890 / 0.867 / 0.851 | 0.929 / 0.923 / 0.918 | 2.13 / 4.12 / 6.07 | 37.4 / 33.3 / 33.5 |
+| Full model: XGBoost v2 | 61.4 / 61.9 / 62.2 | 0.896 / 0.875 / 0.861 | 0.942 / 0.934 / 0.929 | 2.11 / 4.07 / 5.89 | 37.3 / 34.7 / 34.2 |
+| Full model: sequence network | 60.5 / 61.8 / 62.2 | 0.834 / 0.831 / 0.824 | 0.942 / 0.933 / 0.926 | 2.11 / 4.00 / 5.75 | 38.0 / 35.4 / 34.8 |
+| **Production: blend** | 61.9 / 62.4 / 62.6 | 0.896 / 0.875 / 0.861 | 0.944 / 0.936 / 0.930 | 2.05 / 3.88 / 5.59 | 37.9 / 35.0 / 34.9 |
+
+### With real weather forecasts
+
+Training uses weather that actually happened, with forecast errors added. To check real use, 600 fire-days from 2024–2026 were predicted again with the forecasts that were issued at the time (Open-Meteo previous-runs API):
+
+| Overall accuracy %, day +1 / +2 / +3 | Fast model | Full model: XGBoost v2 |
+|---|---|---|
+| Observed weather | 66.1 / 65.3 / 65.9 | 67.0 / 65.7 / 66.4 |
+| **Issued forecasts (real use)** | 64.1 / 62.1 / 64.5 | **65.0 / 63.8 / 64.8** |
+| No-weather models | 64.9 / 62.8 / 64.7 | 65.2 / 63.1 / 64.4 |
+| Persistence | 35.8 / 33.3 / 31.9 | 35.8 / 33.3 / 31.9 |
+
+Training on forecast-like weather raised real-use accuracy by 0.3–1.7 points. The fast model's figures were measured before a fix to the merge targets. The blend has not been tested with real forecasts yet.
 
 ### Robustness
 
-The models were retrained without one year or one world region and tested on what was left out. These check models use a quicker setup (learning rate 0.1, days +1 and +3 only).
+Retrained without one year or one world region and tested on what was left out (quicker check models: learning rate 0.1, days +1 and +3).
 
-| Left out of training | Overall accuracy %, day +1 / +3 |
-|---|---|
-| Year 2024 | 65.5 / 64.7 |
-| Americas | 62.5 / 62.5 |
-| Africa | 64.9 / 64.5 |
+| Left out of training | Fast model, overall % day +1 / +3 | Full model XGBoost v2, overall % day +1 / +3 |
+|---|---|---|
+| Year 2022 | 65.3 / 65.5 | – |
+| Year 2023 | 65.3 / 64.2 | – |
+| Year 2024 | 65.4 / 64.4 | 65.5 / 64.7 |
+| Americas | 62.8 / 63.0 | 62.5 / 62.5 |
+| Africa | 64.1 / 63.9 | 64.9 / 64.5 |
+| Asia and Australia | 63.5 / 63.7 | – |
 
-Accuracy is stable from year to year. In a region the models never saw, it drops by up to 3 points; the Americas, with the least training data, are the hardest.
+### Spread map (burn chance per 1 km cell)
 
-### Behaviour
+Calibrated on 2024, checked on 2025–2026. A cell counts as burned if any satellite detected fire in it that day.
 
-10 of 11 behaviour checks pass. More wind or drier air gives more growth, drier air gives more fire power, rain raises the chance of extinction and cuts growth, and turning the wind turns the predicted spread the same way. The one failure: the raw growth model sometimes outputs tiny negative values, which the engine sets to zero before writing predictions.
+| Day | ROC AUC | Brier | Brier of the base rate | Cells that burned % | Cells checked |
+|---|---|---|---|---|---|
+| Day +1 | 0.728 | 0.0477 | 0.0502 | 5.3 | 451,051 |
+| Day +2 | 0.732 | 0.0338 | 0.0348 | 3.61 | 473,015 |
+| Day +3 | 0.753 | 0.0250 | 0.0257 | 2.64 | 491,278 |
 
-Full results are in `data/prediction/accuracy/`, produced by `test_prediction_accuracy.py`.
+Cells marked 30% burned about 30% of the time.
+
+### Behaviour checks
+
+| Check | Fast | XGBoost v2 | Network | Blend |
+|---|---|---|---|---|
+| More wind gives more growth | ✓ | ✓ | ✓ | ✓ |
+| Drier air gives more growth and more fire power | ✓ | ✓ | ✓ | ✓ |
+| Rain raises the chance of extinction and cuts growth | ✓ | ✓ | ✓ | ✓ |
+| Turning the wind turns the predicted spread | ✓ | ✓ | ✗ | ✓ |
+| Raw growth never negative (the engine sets negatives to zero) | ✗ | ✗ | ✓ | ✗ |
+| Ranges ordered, chances in 0..1, deterministic, works without weather | ✓ | ✓ | ✓ | ✓ |
+
+### Frontend grid model
+
+The app's grid model scores itself on each request: it is refitted without the last loaded day and asked to predict it, then compared with persistence. For the southern Chad zone in the screenshots (18.5–19.6° E, 9.8–11.0° N, 9–13 Nov 2026, 5.6 km cells, top 123 cells):
+
+| | AUC | Precision % | Recall % | F1 % |
+|---|---|---|---|---|
+| Frontend grid model | 0.739 | 28.5 | 33.0 | 30.6 |
+| Persistence (cells burning yesterday) | – | 37.6 | 44.3 | 40.7 |
+
+That is one zone and one day, so it says little in general, but here persistence did better than the grid model.
 
 ## Data layout
 
 ```
-data/
-  archive/                 10-year scan: raw FIRMS files, frequency map, biggest and selected fires
-  runs/<run>/              one folder per pipeline run
-    correlation/ interpreter/ localisation/ fire_power/ epicenter/ expansion/
-    kg/                    knowledge graph, Neo4j-import CSV
-    prediction/            predictions, spread map, merge outlook, animations
-    timings.json
-  prediction/
-    fire_days.csv.gz       training table
-    models/weather/        21 models trained with weather (production)
-    models/no_weather/     21 models trained without weather (production)
-    models/spread.json     spread map calibration
-    models_seq_full/       sequence network trained on all years (weights.npz for numpy, model.pt for PyTorch)
-    models_split/          earlier models trained on 2016-2023, kept for comparison
-    forecast_residuals.csv.gz  real forecast errors used in training
-    model_card.json        training scores
-    merges.csv.gz          observed merges
-    accuracy/              accuracy test results
-  weather_cache/           cached Open-Meteo responses
+models/v2/                   production models shipped with the repository (Git LFS)
+  weather/ no_weather/       21 compressed XGBoost models each
+  seq/                       sequence network as numpy arrays
+  spread.json, model_card.json
+docs/images/                 README images
+data/                        git-ignored: rebuild with the commands in Usage
+  archive/                   10-year scan: raw FIRMS files, frequency map, selected fires
+  runs/<run>/                one folder per pipeline run: stage outputs, kg/, prediction/, timings.json
+  prediction/                training table, models, forecast errors, merge datasets, accuracy results
+  weather_cache/             cached Open-Meteo responses
 ```
 
-The repository ships the production models in `models/v2/`: `weather/` and `no_weather/` (21 compressed XGBoost models each), `seq/` (the sequence network as numpy arrays), `spread.json` and `model_card.json`. The engine uses `data/prediction/models/` when you have trained models locally, and `models/v2/` otherwise.
-
-`data/` is git-ignored: it holds about 1 GB of models and tables plus the raw archive. Rebuild it with the commands in [Usage](#usage).
-
 ## Testing
-
-Offline checks need no network or API key:
 
 ```bash
 python test_correlation.py
@@ -350,41 +456,56 @@ python test_weather.py
 python test_prediction.py
 ```
 
-Accuracy tests of the prediction engine need the training table and trained models. `PRED_MODELS=<folder>` tests another model folder, and `PRED_SOIL_FROM_D=1` gives days +1 to +3 day d's soil moisture, as the production models expect:
+These run offline, with no key. The accuracy tests need the training table and models:
 
-```bash
-python test_prediction_accuracy.py heldout
-python test_prediction_accuracy.py behaviour
-python test_prediction_accuracy.py cv
-python test_prediction_accuracy.py forecast
-```
-
-| Test | Checks |
+| Command | Checks |
 |---|---|
-| `heldout` | Accuracy on 2025–2026, split by region, fire size, season and weather coverage, plus calibration |
-| `behaviour` | Response to wind, humidity and rain changes, plus output rules |
-| `cv` | Retrains without one year or one world region and tests on what was left out (GPU) |
-| `forecast` | Accuracy when real issued forecasts replace observed weather (downloads archived forecasts from Open-Meteo) |
+| `python prediction_metrics.py` | Every metric above for every model |
+| `python test_prediction_accuracy.py heldout` | Accuracy on 2025–2026, by region, fire size, season and weather coverage, plus calibration |
+| `python test_prediction_accuracy.py behaviour` | Response to wind, humidity and rain, plus output rules |
+| `python test_prediction_accuracy.py cv` | Retrains without one year or region (GPU) |
+| `python test_prediction_accuracy.py forecast` | Accuracy with archived real forecasts (uses Open-Meteo) |
 
-`python run_test_plan.py` runs the harmonisation test plan in `test.html` against the running server.
+`PRED_MODELS=<folder>` tests another model folder, `PRED_BLEND=models_v2,models_seq` the blend, and `PRED_SOIL_FROM_D=1` gives days +1 to +3 day d's soil moisture, as the full models expect.
 
 ## Limitations
 
 - **Shape:** the engine predicts each fire's area, centre shift, direction and power, not its outline.
-- **Forecast errors are simulated in training:** they are drawn from real forecast errors at about 200 cells, which approximates but does not replace training on archived forecasts.
-- **Weather coverage:** only about half of the training rows have weather. Small fires outside the fetched weather cells have none.
-- **First day:** a fire seen for the first time has no history, so its predictions are less reliable.
+- **Direction and fire power** are the weakest outputs (about 39% within 45° and 35–39% within ×2), though about twice as good as persistence.
+- **Merge alarms:** about half of them are right at the F1 threshold, fewer at the balanced threshold.
+- **Weather coverage:** only about half of the training rows have weather; small fires outside the fetched cells have none.
+- **Simulated forecast errors:** drawn from real errors at about 200 cells, which approximates training on archived forecasts.
 - **Soil moisture:** days +1 to +3 use day d's value, because the forecast archive has none.
-- **Spread map:** satellites only see actively burning pixels at overpass time, so only 3–5% of nearby cells register as burning on a given day. That limits how sharp the burn-chance map can be.
-- **Training the network needs PyTorch** with CUDA (`pip install torch --index-url https://download.pytorch.org/whl/cu128`); running predictions does not.
-- **Short runs:** runs shorter than 4 days produce no training rows for the 3-day horizon.
+- **First day:** a fire seen for the first time has no history, so its predictions are less reliable.
+- **Spread map:** satellites see only actively burning pixels at overpass time, so 3–5% of nearby cells register as burning on a day, which limits how sharp the map can be.
+- **Frontend:** not yet connected to the production models.
 
-## Data sources
+## Data sources and APIs
 
-- Fire detections: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS, VIIRS, Landsat)
-- Weather for the knowledge graph and training: [Open-Meteo](https://open-meteo.com/), with ERA5 reanalysis and archived ECMWF IFS forecasts
-- Weather forecast for predictions: provided by the caller
-- Fire danger indices (optional, off by default): Copernicus Emergency Management Service
+| Source | Used for | Links |
+|---|---|---|
+| **NASA FIRMS** (Fire Information for Resource Management System) | All fire detections: MODIS, VIIRS and Landsat, near-real-time and standard products | [FIRMS](https://firms.modaps.eosdis.nasa.gov/) · [API](https://firms.modaps.eosdis.nasa.gov/api/) · [Area API](https://firms.modaps.eosdis.nasa.gov/api/area/) · [Data availability](https://firms.modaps.eosdis.nasa.gov/api/data_availability/) · [Map key](https://firms.modaps.eosdis.nasa.gov/api/map_key/) · [About FIRMS](https://www.earthdata.nasa.gov/data/tools/firms) · [FAQ](https://www.earthdata.nasa.gov/data/tools/firms/faq) |
+| **MODIS** on NASA's Terra and Aqua | 1 km active fire detections | [NASA Earthdata: MODIS](https://www.earthdata.nasa.gov/data/instruments/modis) |
+| **VIIRS** on Suomi NPP, NOAA-20 and NOAA-21 | 375 m active fire detections | [NASA Earthdata: VIIRS](https://www.earthdata.nasa.gov/data/instruments/viirs) · [NOAA JPSS](https://www.nesdis.noaa.gov/our-satellites/currently-flying/joint-polar-satellite-system) |
+| **Landsat** 8 and 9 (OLI) | 30 m active fire detections (frontend) | [NASA Landsat](https://landsat.gsfc.nasa.gov/) |
+| **Open-Meteo** | Observed hourly weather (ERA5), archived forecasts for training and testing, frontend fire weather | [Open-Meteo](https://open-meteo.com/) · [Forecast API](https://open-meteo.com/en/docs) · [Historical weather API (ERA5)](https://open-meteo.com/en/docs/historical-weather-api) · [Previous runs API](https://open-meteo.com/en/docs/previous-runs-api) |
+| **ECMWF IFS** | The forecast model behind the archived forecasts (0.25°) | [ECMWF forecasts](https://www.ecmwf.int/en/forecasts/datasets/set-i) |
+| **ERA5** (Copernicus Climate Change Service) | The reanalysis behind the observed weather | [ERA5 single levels](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels) |
+| **Copernicus CEMS** fire danger indices | Optional, off by default | [CEMS fire historical](https://ewds.climate.copernicus.eu/datasets/cems-fire-historical-v1) |
+| **Esri World Imagery** | Frontend globe imagery | [World Imagery service](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer) |
+| **Natural Earth** | Country borders (frontend) | [Natural Earth](https://www.naturalearthdata.com/) |
+| **world-atlas** | Basemap of the outlook map | [topojson/world-atlas](https://github.com/topojson/world-atlas) |
+
+Libraries: [XGBoost](https://xgboost.readthedocs.io/), [PyTorch](https://pytorch.org/), [scikit-learn](https://scikit-learn.org/), [pandas](https://pandas.pydata.org/), [d3](https://d3js.org/), [React](https://react.dev/), [MapLibre GL](https://maplibre.org/), [Vite](https://vite.dev/), [Zustand](https://github.com/pmndrs/zustand).
+
+## Credits
+
+We acknowledge the use of data from NASA's Fire Information for Resource Management System ([FIRMS](https://www.earthdata.nasa.gov/data/tools/firms)), part of NASA's Earth Science Data and Information System. Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0), based on ECMWF IFS forecasts and Copernicus ERA5. Imagery © Esri; borders from Natural Earth.
+
+| Contributor | Area |
+|---|---|
+| [Diaco12](https://github.com/Diaco12) | Frontend (React app) |
+| [Adelin12378](https://github.com/Adelin12378) | Pipeline, knowledge graph and prediction models |
 
 ## License
 

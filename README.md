@@ -837,4 +837,4 @@ Not every contributor pushed to this repository; the table lists the whole team.
 
 ## License
 
-No license file yet. Until one is added, all rights are reserved by the authors.
+Triple-licensed under [MIT](LICENSE-MIT), [Apache 2.0](LICENSE-APACHE) or [GPL-3.0-or-later](LICENSE-GPL), at your choice. See [LICENSE.md](LICENSE.md), which also lists the terms of the third-party data.

@@ -234,11 +234,21 @@ export const useApp = create<AppState>((set, get) => ({
   // ---------------- Menu bar: Home · Globe · Fire ----------------
   // Home: back to the opening screen. It fades back in (text rising as on first load), the fire tint returns,
   // the globe glides back to the right and shrinks to its opening size, and the side panel slides away.
+  // Everything is reset as on first entering the app: no zone, no forecast, and the default settings.
   goHome: () => {
     if (body().contains('splash')) return;
     finishIntro();
     if (engine.isDrawing()) engine.setDrawing(false);
     if (engine.isPinMode()) engine.setPinMode(false);
+    get().clearTimeline();
+    get().clearZone();                                    // zone, pin, loaded data, forecast and map layers
+    set({
+      method: 'draw', date: new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10), days: '5',
+      mode: 'harmonise', sensor: get().sensors[0] || '',
+      loadMsg: null, predictMsg: null, forecast: null, forecastSub: '', day: 0, cameraBeforePredict: null,
+      weatherLayers: { temp: false, rh: false, wind: false }, weatherError: null,
+      switchError: null, pinError: false, status: '',
+    });
     set({ modalOpen: false, splashGone: false, splashLeaving: false, splashReturning: true });
     if (engine.isDesktop()) { set({ panelOpen: false }); body().add('collapsed'); }
     body().add('splash');
@@ -575,16 +585,12 @@ export const useApp = create<AppState>((set, get) => ({
   },
   flyToHotspot: (lat, lon) => { engine.stopSpin(); engine.flyTo({ center: [lon, lat], zoom: 9, duration: 2400 }); },
 
-  // Back to the zone controls: clear the map (fire dots, legend, forecast squares and the zone outline) and fly back
-  // to where the map was when Predict was clicked. The zone stays selected and the loaded data is kept, so
-  // "Analyse zone" brings the outline back and predicting again redraws the rest.
+  // Back to the zone controls: clear the map (fire dots, legend, forecast squares and the zone outline), clear the
+  // selected zone so a new one can be picked straight away, and fly back to where the map was when Predict was clicked.
   changeZone: () => {
     get().showForecastPanel(false);
     get().clearTimeline();
-    engine.setFires(EMPTY);
-    engine.setRisk(EMPTY);
-    engine.setWeather(null);
-    engine.showZone(null);
+    get().clearZone();                                  // also drops the loaded data and the forecast
     set({ status: '' });
     const cam = get().cameraBeforePredict;
     if (cam) engine.flyTo({ ...cam, duration: 2600, essential: true });

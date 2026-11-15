@@ -313,10 +313,13 @@ export function globeRadiusPx() {
   const E = globeRim(center, c, 90), W = globeRim(center, c, 270);
   return E && W ? Math.hypot(E.x - W.x, E.y - W.y) / 2 : 512 * Math.pow(2, map.getZoom()) / (2 * Math.PI);
 }
-function globeZoomFor(open: boolean): number | null {
+function wantedRadius(open: boolean) {
   const cv = map.getCanvas();                                   // the map's area (shorter on phones)
   const w = cv.clientWidth - (isDesktop() && open ? PANEL_W : 0), h = cv.clientHeight;
-  const want = Math.min(w, h) * (open ? 0.36 : 0.42);          // radius = 72% / 84% of the side, halved
+  return Math.min(w, h) * (open ? 0.36 : 0.42);                // radius = 72% / 84% of the side, halved
+}
+function globeZoomFor(open: boolean): number | null {
+  const want = wantedRadius(open);
   // Perspective makes the size not quite double per zoom level, so refine: try the zoom, measure the
   // real radius there, correct, and repeat. The camera is put back before anything is drawn.
   const z0 = map.getZoom(), min0 = map.getMinZoom();
@@ -340,11 +343,25 @@ function globeZoomFor(open: boolean): number | null {
 
 // ---------------- Zoom-out limit ----------------
 // With the panel closed the globe can't be zoomed out further than the size it has right after "Get started"
-// (`closedZoom`). The limit is lifted while the panel is open (the globe is smaller there), on the opening
-// screen, and during every glide (so glides can pass through any size); it's put back once the camera rests.
+// (`closedZoom`); with the Fire Pattern Predictor panel open, no further than the (smaller) size it has beside
+// the panel (`openZoom`). The limit is lifted on the opening screen and during every glide (so glides can pass
+// through any size); it's put back once the camera rests.
 // On the globe MapLibre applies minZoom to the latitude-adjusted zoom (which tracks the globe's drawn size:
 // at the same zoom it looks bigger further from the equator), so the limit is kept in that unit too.
 let closedZoom: number | null = null;
+let openZoom: { z: number; size: string } | null = null;          // measured beside the panel, for this map size
+const mapSize = () => `${map.getCanvas().clientWidth}x${map.getCanvas().clientHeight}`;
+// The limit that applies right now (null: none).
+function zoomLimit(): number | null {
+  if (gliding) return null;
+  if (panelClosed()) return closedZoom;
+  if (!(isDesktop() && panelOpen() && !isSplash())) return null;
+  if (openZoom && openZoom.size === mapSize()) return openZoom.z;
+  // Not measured at this size (e.g. the panel was opened while zoomed in): derive it from the closed-panel size;
+  // the globe's radius doubles with each zoom level.
+  return closedZoom == null ? null : closedZoom + Math.log2(wantedRadius(true) / wantedRadius(false));
+}
+const rememberOpenZoom = (z: number | null) => { if (z != null) openZoom = { z: sizeZoom(z), size: mapSize() }; };
 const sizeZoom = (z = map.getZoom(), lat = map.getCenter().lat) =>
   z + Math.log2(1 / Math.max(0.05, Math.cos(lat * Math.PI / 180)));
 // map.setMinZoom() also snaps the camera by comparing the *raw* zoom, which on the globe would wrongly enlarge
@@ -356,7 +373,7 @@ function setMinZoomQuiet(z: number | null) {
 }
 let limitTimer: ReturnType<typeof setTimeout> | undefined;
 function syncZoomLimit() {
-  const want = panelClosed() && closedZoom != null && !gliding ? closedZoom : null;
+  const want = zoomLimit();
   if (want == null) { if (map.getMinZoom() > 0) map.setMinZoom(null); return; }
   if (Math.abs(map.getMinZoom() - want) < 1e-6) return;
   // Only set it when the map is at (or inside) the limit: setting it below would make the map jump.
@@ -485,7 +502,8 @@ function glideTo(target: { left: number; top: number; right: number; bottom: num
     gliding = false; paused = false;
     // The user took over mid-glide: put the zoom-out limit back straight away (only the limit, no camera move,
     // which would fight their gesture), so scrolling out can't shrink the centred globe past where it is.
-    if (panelClosed() && closedZoom != null && sizeZoom() < closedZoom - 0.01)
+    const limit = zoomLimit();
+    if (limit != null && sizeZoom() < limit - 0.01)
       setMinZoomQuiet(Math.min(map.getMinZoom() > 0 ? map.getMinZoom() : sizeZoom(), sizeZoom()));
     else syncZoomLimit();
   }
@@ -497,6 +515,7 @@ function glideTo(target: { left: number; top: number; right: number; bottom: num
 export function introGlide(open: boolean) {
   const z = globeZoomFor(open);
   if (!open && z != null) closedZoom = sizeZoom(z);             // this size becomes the zoom-out limit
+  if (open) rememberOpenZoom(z);
   glideTo(appPadding(), reducedMotion() ? 0 : 2400, z);
 }
 
@@ -534,8 +553,9 @@ export function panelChanged(open: boolean) {
     if (pinMode) setPinMode(false);
     if (!reducedMotion()) spinning = true;        // closed panel: the globe always spins
   }
-  glideTo(appPadding(), reducedMotion() ? 0 : open ? 1200 : 1000,
-          showingWholeGlobe() ? (open ? globeZoomFor(true) : closedZoomNow()) : null);
+  const z = !showingWholeGlobe() ? null : open ? globeZoomFor(true) : closedZoomNow();
+  if (open) rememberOpenZoom(z);                // beside the panel, this size becomes the zoom-out limit
+  glideTo(appPadding(), reducedMotion() ? 0 : open ? 1200 : 1000, z);
 }
 // The closed-panel globe size, measured now (it also refreshes the zoom-out limit, e.g. after a window resize).
 function closedZoomNow() {

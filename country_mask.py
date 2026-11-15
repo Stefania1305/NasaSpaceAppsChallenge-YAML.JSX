@@ -17,8 +17,14 @@ COUNTRIES_FILE = Path(__file__).resolve().parent / "frontend" / "public" / "coun
 BAND = 0.25          # degrees of latitude per band
 
 
-@lru_cache(maxsize=1)
 def _countries() -> dict:
+    # Keyed on the file's modification time: when countries.geojson is updated (e.g. a country's territories are
+    # split differently) the server picks it up straight away, so its territory numbers always match the app's.
+    return _load_countries(COUNTRIES_FILE.stat().st_mtime_ns)
+
+
+@lru_cache(maxsize=1)
+def _load_countries(_mtime: int) -> dict:
     data = json.loads(COUNTRIES_FILE.read_text(encoding="utf-8"))
     return {f["properties"]["id"]: f for f in data["features"]}
 
@@ -64,6 +70,10 @@ class CountryMask:
         return inside
 
 
-@lru_cache(maxsize=64)
 def country_mask(country_id: int, part: int | None = None) -> CountryMask:
+    return _mask(country_id, part, COUNTRIES_FILE.stat().st_mtime_ns)
+
+
+@lru_cache(maxsize=64)
+def _mask(country_id: int, part: int | None, _mtime: int) -> CountryMask:
     return CountryMask(country_id, part)

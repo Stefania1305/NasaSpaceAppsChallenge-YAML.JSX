@@ -7,8 +7,8 @@ import { edgeFade, windField } from './weatherHeat';
 // ground (longitude/latitude), and every frame the whole trail is projected to the screen and redrawn. So the
 // streaks keep flowing without a break while you zoom or pan, and stay attached to the map as it moves.
 
-const COUNT = 600;            // particles
-const TRAIL = 12;             // positions remembered per particle (the streak's length)
+const COUNT = 300;            // particles (kept sparse so the map underneath stays readable)
+const TRAIL = 16;             // positions remembered per particle (the streak's length)
 const LEVELS = 6;             // opacity steps used to batch the drawing into a few strokes per frame
 
 type P = { pts: [number, number][]; age: number; life: number };
@@ -63,7 +63,7 @@ export class WindFlow {
     return edgeFade((lon - W) / (E - W), (lat - S) / (N - S), .14);
   }
   // How far a particle moves per frame for a given wind: a fixed share of the zone, so it reads at any zoom.
-  private scale() { const [W, S, E, N] = this.bbox; return Math.max(E - W, N - S) / 9000; }
+  private scale() { const [W, S, E, N] = this.bbox; return Math.max(E - W, N - S) / 12500; }
 
   // Show the wind for one forecast day (null hides it), optionally limited to a country (`inside`).
   show(w: Weather | null, day = 0, inside: ((lon: number, lat: number) => boolean) | null = null) {

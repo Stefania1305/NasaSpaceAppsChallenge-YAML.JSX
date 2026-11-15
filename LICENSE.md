@@ -1,6 +1,6 @@
 # License
 
-Copyright (c) 2026 **YAML.JSX**: Bogdan Diaconiță, Cezar Sava, Ștefania Roman, Adelin Olteanu, Valentin Floricescu.
+Copyright (c) 2026 **YAML.JSX**: Bogdan Diaconiță, Cezar Sava, Ștefania-Alexandra Roman, Adelin Olteanu, Valentin Floricescu.
 
 Fire Pattern Predictor (the source code, the trained models in `models/`, the documentation and the frontend) is
 **triple-licensed**. You may use it under the terms of **any one** of these licenses, at your choice:

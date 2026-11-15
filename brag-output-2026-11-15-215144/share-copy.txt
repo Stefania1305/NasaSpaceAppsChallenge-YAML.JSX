@@ -1,0 +1,1 @@
+Click a country, and Fire Pattern Predictor runs 5 days of NASA satellite fire data through a fire-tracking pipeline and an AI model fed with the hourly weather forecast, then shows where every fire is likely to spread over the next 3 days. In our backtest it called 68% of fire outcomes right, against 39% for "every fire keeps burning".

@@ -1,0 +1,458 @@
+import { createHotContext as __vite__createHotContext } from "/app/@vite/client";import.meta.hot = __vite__createHotContext("/src/components/Charts.tsx");import __vite__cjsImport0_react_jsxDevRuntime from "/app/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=c264f4e3"; const Fragment = __vite__cjsImport0_react_jsxDevRuntime["Fragment"]; const jsxDEV = __vite__cjsImport0_react_jsxDevRuntime["jsxDEV"];
+import RefreshRuntime from "/app/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
+let prevRefreshReg;
+let prevRefreshSig;
+if (import.meta.hot && !inWebWorker) {
+  if (!window.__vite_plugin_react_preamble_installed__) {
+    throw new Error("@vitejs/plugin-react can't detect preamble. Something is wrong. See https://github.com/vitejs/vite-plugin-react/pull/11#discussion_r430879201");
+  }
+  prevRefreshReg = window.$RefreshReg$;
+  prevRefreshSig = window.$RefreshSig$;
+  window.$RefreshReg$ = (type, id) => {
+    RefreshRuntime.register(type, "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx " + id);
+  };
+  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
+}
+import { num, pct, shortDate } from "/app/src/format.ts?t=1794767921834";
+const FIRE = "#ea580c";
+export const RISK_BANDS = [
+  { from: 0.1, to: 0.25, color: "#fde68a", label: "10–25%" },
+  { from: 0.25, to: 0.4, color: "#fbbf24", label: "25–40%" },
+  { from: 0.4, to: 0.6, color: "#f97316", label: "40–60%" },
+  { from: 0.6, to: 0.85, color: "#dc2626", label: "60–85%" },
+  { from: 0.85, to: 1.01, color: "#7f1d1d", label: "85%+" }
+];
+const Tip = ({ children }) => /* @__PURE__ */ jsxDEV("span", { className: "tip", role: "tooltip", children }, void 0, false, {
+  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+  lineNumber: 18,
+  columnNumber: 55
+}, this);
+_c = Tip;
+export function Timeline({
+  observed,
+  start,
+  forecast,
+  day,
+  onPick
+}) {
+  const fc = forecast.map((f) => ({ ...f, total: f.expected_cells + (f.expected_new_elsewhere ?? 0) }));
+  const max = Math.max(1, ...observed, ...fc.map((f) => f.total));
+  const date = (i) => new Date(Date.parse(start + "T00:00:00Z") + i * 864e5).toISOString().slice(0, 10);
+  const label = "Burning cells per day. Observed: " + observed.map((v, i) => `${shortDate(date(i))} ${num(v)}`).join(", ") + ". Forecast: " + fc.map((f) => `${shortDate(f.date)} about ${num(Math.round(f.total))}`).join(", ") + ".";
+  const h = (v) => `${Math.max(2, v / max * 100)}%`;
+  return /* @__PURE__ */ jsxDEV("figure", { className: "chart", children: [
+    /* @__PURE__ */ jsxDEV("div", { className: "legend-row", "aria-hidden": "true", children: [
+      /* @__PURE__ */ jsxDEV("span", { children: [
+        /* @__PURE__ */ jsxDEV("i", { className: "sw obs" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 38,
+          columnNumber: 15
+        }, this),
+        "Observed"
+      ] }, void 0, true, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+        lineNumber: 38,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("span", { children: [
+        /* @__PURE__ */ jsxDEV("i", { className: "sw fc" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 39,
+          columnNumber: 15
+        }, this),
+        "Forecast"
+      ] }, void 0, true, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+        lineNumber: 39,
+        columnNumber: 9
+      }, this)
+    ] }, void 0, true, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+      lineNumber: 37,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "cols timeline", role: "img", "aria-label": label, children: [
+      observed.map(
+        (v, i) => /* @__PURE__ */ jsxDEV("div", { className: "col", tabIndex: 0, children: [
+          /* @__PURE__ */ jsxDEV("div", { className: "colbar-wrap", children: [
+            i === observed.length - 1 && /* @__PURE__ */ jsxDEV("span", { className: "colcap", style: { bottom: h(v) }, children: num(v) }, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+              lineNumber: 45,
+              columnNumber: 45
+            }, this),
+            /* @__PURE__ */ jsxDEV("div", { className: "colbar", style: { height: h(v) } }, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+              lineNumber: 46,
+              columnNumber: 15
+            }, this)
+          ] }, void 0, true, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 44,
+            columnNumber: 13
+          }, this),
+          /* @__PURE__ */ jsxDEV("span", { className: "coldate", children: (/* @__PURE__ */ new Date(date(i) + "T00:00:00Z")).getUTCDate() }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 48,
+            columnNumber: 13
+          }, this),
+          /* @__PURE__ */ jsxDEV(Tip, { children: [
+            /* @__PURE__ */ jsxDEV("b", { children: num(v) }, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+              lineNumber: 49,
+              columnNumber: 18
+            }, this),
+            " burning cells",
+            /* @__PURE__ */ jsxDEV("br", {}, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+              lineNumber: 49,
+              columnNumber: 47
+            }, this),
+            shortDate(date(i)),
+            " · observed"
+          ] }, void 0, true, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 49,
+            columnNumber: 13
+          }, this)
+        ] }, "o" + i, true, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 43,
+          columnNumber: 9
+        }, this)
+      ),
+      /* @__PURE__ */ jsxDEV("div", { className: "today", "aria-hidden": "true", children: /* @__PURE__ */ jsxDEV("span", { children: "today" }, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+        lineNumber: 52,
+        columnNumber: 51
+      }, this) }, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+        lineNumber: 52,
+        columnNumber: 9
+      }, this),
+      fc.map(
+        (f, i) => /* @__PURE__ */ jsxDEV(
+          "button",
+          {
+            type: "button",
+            className: `col fcol${i === day ? " sel" : ""}`,
+            onClick: () => onPick(i),
+            "aria-pressed": i === day,
+            children: [
+              /* @__PURE__ */ jsxDEV("div", { className: "colbar-wrap", children: [
+                i === day && /* @__PURE__ */ jsxDEV("span", { className: "colcap", style: { bottom: h(f.total) }, children: [
+                  "~",
+                  num(Math.round(f.total))
+                ] }, void 0, true, {
+                  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                  lineNumber: 57,
+                  columnNumber: 29
+                }, this),
+                /* @__PURE__ */ jsxDEV("div", { className: "colbar hatch", style: { height: h(f.total) } }, void 0, false, {
+                  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                  lineNumber: 58,
+                  columnNumber: 15
+                }, this)
+              ] }, void 0, true, {
+                fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                lineNumber: 56,
+                columnNumber: 13
+              }, this),
+              /* @__PURE__ */ jsxDEV("span", { className: "coldate", children: [
+                "+",
+                i + 1,
+                "d"
+              ] }, void 0, true, {
+                fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                lineNumber: 60,
+                columnNumber: 13
+              }, this),
+              /* @__PURE__ */ jsxDEV(Tip, { children: [
+                /* @__PURE__ */ jsxDEV("b", { children: [
+                  "~",
+                  num(Math.round(f.total))
+                ] }, void 0, true, {
+                  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                  lineNumber: 61,
+                  columnNumber: 18
+                }, this),
+                " burning cells expected",
+                /* @__PURE__ */ jsxDEV("br", {}, void 0, false, {
+                  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                  lineNumber: 61,
+                  columnNumber: 75
+                }, this),
+                shortDate(f.date),
+                ": ~",
+                num(Math.round(f.expected_cells)),
+                " near current fires",
+                f.expected_new_elsewhere != null && /* @__PURE__ */ jsxDEV(Fragment, { children: [
+                  " + ~",
+                  num(Math.round(f.expected_new_elsewhere)),
+                  " elsewhere"
+                ] }, void 0, true, {
+                  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                  lineNumber: 63,
+                  columnNumber: 52
+                }, this)
+              ] }, void 0, true, {
+                fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+                lineNumber: 61,
+                columnNumber: 13
+              }, this)
+            ]
+          },
+          "f" + i,
+          true,
+          {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 54,
+            columnNumber: 9
+          },
+          this
+        )
+      )
+    ] }, void 0, true, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+      lineNumber: 41,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("figcaption", { className: "dim", children: [
+      "Days of ",
+      (/* @__PURE__ */ new Date(start + "T00:00:00Z")).toLocaleDateString("en-GB", { month: "long", timeZone: "UTC" }),
+      " · click a forecast day to show it on the map"
+    ] }, void 0, true, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+      lineNumber: 67,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, true, {
+    fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+    lineNumber: 36,
+    columnNumber: 5
+  }, this);
+}
+_c2 = Timeline;
+export function RiskHistogram({ probs }) {
+  const counts = RISK_BANDS.map((b) => probs.filter((p) => p >= b.from && p < b.to).length);
+  const max = Math.max(1, ...counts);
+  const total = counts.reduce((a, b) => a + b, 0);
+  const label = "Forecast spots by chance of fire: " + RISK_BANDS.map((b, i) => `${b.label} ${counts[i]}`).join(", ");
+  const top = counts.indexOf(max);
+  return /* @__PURE__ */ jsxDEV("figure", { className: "chart", children: [
+    /* @__PURE__ */ jsxDEV("div", { className: "cols hist", role: "img", "aria-label": label, children: RISK_BANDS.map(
+      (b, i) => /* @__PURE__ */ jsxDEV("div", { className: "col", tabIndex: 0, children: [
+        /* @__PURE__ */ jsxDEV("div", { className: "colbar-wrap track", children: [
+          i === top && counts[i] > 0 && /* @__PURE__ */ jsxDEV("span", { className: "colcap", style: { bottom: `${counts[i] / max * 100}%` }, children: num(counts[i]) }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 89,
+            columnNumber: 46
+          }, this),
+          /* @__PURE__ */ jsxDEV("div", { className: "colbar", style: { height: counts[i] ? `${Math.max(3, counts[i] / max * 100)}%` : 0, background: b.color } }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 90,
+            columnNumber: 15
+          }, this)
+        ] }, void 0, true, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 88,
+          columnNumber: 13
+        }, this),
+        /* @__PURE__ */ jsxDEV("span", { className: "coldate", children: b.label }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 92,
+          columnNumber: 13
+        }, this),
+        /* @__PURE__ */ jsxDEV(Tip, { children: [
+          /* @__PURE__ */ jsxDEV("b", { children: num(counts[i]) }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 93,
+            columnNumber: 18
+          }, this),
+          " spot",
+          counts[i] === 1 ? "" : "s",
+          " with a ",
+          b.label,
+          " chance",
+          total ? /* @__PURE__ */ jsxDEV(Fragment, { children: [
+            " (",
+            pct(counts[i] / total),
+            " of the map)"
+          ] }, void 0, true, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 94,
+            columnNumber: 24
+          }, this) : null
+        ] }, void 0, true, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 93,
+          columnNumber: 13
+        }, this)
+      ] }, b.label, true, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+        lineNumber: 87,
+        columnNumber: 9
+      }, this)
+    ) }, void 0, false, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+      lineNumber: 85,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("figcaption", { className: "dim", children: "Forecast spots by chance of fire · colours match the map zones" }, void 0, false, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+      lineNumber: 98,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, true, {
+    fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+    lineNumber: 84,
+    columnNumber: 5
+  }, this);
+}
+_c3 = RiskHistogram;
+export function Compass({ bearing, compass }) {
+  const has = bearing != null;
+  return /* @__PURE__ */ jsxDEV(
+    "svg",
+    {
+      className: "compass",
+      viewBox: "0 0 64 64",
+      width: "64",
+      height: "64",
+      role: "img",
+      "aria-label": has ? `Fire spreading towards the ${compass} (${bearing}°)` : "No consistent spread direction",
+      children: [
+        /* @__PURE__ */ jsxDEV("circle", { cx: "32", cy: "32", r: "27", className: "c-ring" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 109,
+          columnNumber: 7
+        }, this),
+        [0, 90, 180, 270].map(
+          (a) => /* @__PURE__ */ jsxDEV("line", { x1: "32", y1: "7", x2: "32", y2: "11", className: "c-tick", transform: `rotate(${a} 32 32)` }, a, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 111,
+            columnNumber: 7
+          }, this)
+        ),
+        /* @__PURE__ */ jsxDEV("text", { x: "32", y: "20", className: "c-n", children: "N" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 113,
+          columnNumber: 7
+        }, this),
+        has ? /* @__PURE__ */ jsxDEV("g", { transform: `rotate(${bearing} 32 32)`, children: [
+          /* @__PURE__ */ jsxDEV("path", { d: "M32 12 L37 30 L32 27 L27 30 Z", fill: FIRE }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 116,
+            columnNumber: 13
+          }, this),
+          /* @__PURE__ */ jsxDEV("line", { x1: "32", y1: "27", x2: "32", y2: "48", className: "c-tail" }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+            lineNumber: 117,
+            columnNumber: 13
+          }, this)
+        ] }, void 0, true, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 115,
+          columnNumber: 7
+        }, this) : /* @__PURE__ */ jsxDEV("circle", { cx: "32", cy: "32", r: "3.5", className: "c-dot" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 119,
+          columnNumber: 7
+        }, this)
+      ]
+    },
+    void 0,
+    true,
+    {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+      lineNumber: 107,
+      columnNumber: 5
+    },
+    this
+  );
+}
+_c4 = Compass;
+export const MiniBar = ({ p }) => /* @__PURE__ */ jsxDEV("span", { className: "minibar", "aria-hidden": "true", children: /* @__PURE__ */ jsxDEV("span", { style: { width: `${Math.min(100, p * 100)}%` } }, void 0, false, {
+  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+  lineNumber: 126,
+  columnNumber: 46
+}, this) }, void 0, false, {
+  fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+  lineNumber: 126,
+  columnNumber: 1
+}, this);
+_c5 = MiniBar;
+export function RankingGauge({ auc, label }) {
+  const k = Math.max(0, Math.min(1, (auc - 0.5) / 0.5));
+  const r = 30, len = Math.PI * r;
+  return /* @__PURE__ */ jsxDEV(
+    "svg",
+    {
+      className: "gauge",
+      viewBox: "0 0 80 48",
+      width: "104",
+      height: "62",
+      role: "img",
+      "aria-label": `Ranking score ${auc}, ${label}. 0.5 is guessing, 1 is perfect.`,
+      children: [
+        /* @__PURE__ */ jsxDEV("path", { d: "M10 42 A30 30 0 0 1 70 42", className: "g-track" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 137,
+          columnNumber: 7
+        }, this),
+        /* @__PURE__ */ jsxDEV("path", { d: "M10 42 A30 30 0 0 1 70 42", className: "g-fill", strokeDasharray: `${k * len} ${len}` }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 138,
+          columnNumber: 7
+        }, this),
+        /* @__PURE__ */ jsxDEV("text", { x: "40", y: "37", className: "g-val", children: auc.toFixed(2) }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 139,
+          columnNumber: 7
+        }, this),
+        /* @__PURE__ */ jsxDEV("text", { x: "10", y: "47.5", className: "g-end", children: "0.5" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 140,
+          columnNumber: 7
+        }, this),
+        /* @__PURE__ */ jsxDEV("text", { x: "70", y: "47.5", className: "g-end", children: "1" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+          lineNumber: 141,
+          columnNumber: 7
+        }, this)
+      ]
+    },
+    void 0,
+    true,
+    {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx",
+      lineNumber: 135,
+      columnNumber: 5
+    },
+    this
+  );
+}
+_c6 = RankingGauge;
+var _c, _c2, _c3, _c4, _c5, _c6;
+$RefreshReg$(_c, "Tip");
+$RefreshReg$(_c2, "Timeline");
+$RefreshReg$(_c3, "RiskHistogram");
+$RefreshReg$(_c4, "Compass");
+$RefreshReg$(_c5, "MiniBar");
+$RefreshReg$(_c6, "RankingGauge");
+if (import.meta.hot && !inWebWorker) {
+  window.$RefreshReg$ = prevRefreshReg;
+  window.$RefreshSig$ = prevRefreshSig;
+}
+if (import.meta.hot && !inWebWorker) {
+  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
+    RefreshRuntime.registerExportsForReactRefresh("B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/Charts.tsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+
+//# sourceMappingURL=data:application/json;base64,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QUFLO0FBQUEsTUFDbkUsY0FBWSxpQkFBaUJGLEdBQUcsS0FBSzFELEtBQUs7QUFBQSxNQUM3QztBQUFBLCtCQUFDLFVBQUssR0FBRSw2QkFBNEIsV0FBVSxhQUE5QztBQUFBO0FBQUE7QUFBQTtBQUFBLGVBQXVEO0FBQUEsUUFDdkQsdUJBQUMsVUFBSyxHQUFFLDZCQUE0QixXQUFVLFVBQVMsaUJBQWlCLEdBQUcyRCxJQUFJRSxHQUFHLElBQUlBLEdBQUcsTUFBekY7QUFBQTtBQUFBO0FBQUE7QUFBQSxlQUE0RjtBQUFBLFFBQzVGLHVCQUFDLFVBQUssR0FBRSxNQUFLLEdBQUUsTUFBSyxXQUFVLFNBQVNILGNBQUlLLFFBQVEsQ0FBQyxLQUFwRDtBQUFBO0FBQUE7QUFBQTtBQUFBLGVBQXNEO0FBQUEsUUFDdEQsdUJBQUMsVUFBSyxHQUFFLE1BQUssR0FBRSxRQUFPLFdBQVUsU0FBUSxtQkFBeEM7QUFBQTtBQUFBO0FBQUE7QUFBQSxlQUEyQztBQUFBLFFBQzNDLHVCQUFDLFVBQUssR0FBRSxNQUFLLEdBQUUsUUFBTyxXQUFVLFNBQVEsaUJBQXhDO0FBQUE7QUFBQTtBQUFBO0FBQUEsZUFBeUM7QUFBQTtBQUFBO0FBQUEsSUFOM0M7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBLEVBT0E7QUFFSjtBQUFDQyxNQWJlUDtBQUFZLElBQUF0RCxJQUFBZ0MsS0FBQVksS0FBQUssS0FBQUksS0FBQVE7QUFBQSxhQUFBN0QsSUFBQTtBQUFBLGFBQUFnQyxLQUFBO0FBQUEsYUFBQVksS0FBQTtBQUFBLGFBQUFLLEtBQUE7QUFBQSxhQUFBSSxLQUFBO0FBQUEsYUFBQVEsS0FBQSIsIm5hbWVzIjpbIm51bSIsInBjdCIsInNob3J0RGF0ZSIsIkZJUkUiLCJSSVNLX0JBTkRTIiwiZnJvbSIsInRvIiwiY29sb3IiLCJsYWJlbCIsIlRpcCIsImNoaWxkcmVuIiwiX2MiLCJUaW1lbGluZSIsIm9ic2VydmVkIiwic3RhcnQiLCJmb3JlY2FzdCIsImRheSIsIm9uUGljayIsImZjIiwibWFwIiwiZiIsInRvdGFsIiwiZXhwZWN0ZWRfY2VsbHMiLCJleHBlY3RlZF9uZXdfZWxzZXdoZXJlIiwibWF4IiwiTWF0aCIsImRhdGUiLCJpIiwiRGF0ZSIsInBhcnNlIiwidG9JU09TdHJpbmciLCJzbGljZSIsInYiLCJqb2luIiwicm91bmQiLCJoIiwibGVuZ3RoIiwiYm90dG9tIiwiaGVpZ2h0IiwiZ2V0VVRDRGF0ZSIsInRvTG9jYWxlRGF0ZVN0cmluZyIsIm1vbnRoIiwidGltZVpvbmUiLCJfYzIiLCJSaXNrSGlzdG9ncmFtIiwicHJvYnMiLCJjb3VudHMiLCJiIiwiZmlsdGVyIiwicCIsInJlZHVjZSIsImEiLCJ0b3AiLCJpbmRleE9mIiwiYmFja2dyb3VuZCIsIl9jMyIsIkNvbXBhc3MiLCJiZWFyaW5nIiwiY29tcGFzcyIsImhhcyIsIl9jNCIsIk1pbmlCYXIiLCJ3aWR0aCIsIm1pbiIsIl9jNSIsIlJhbmtpbmdHYXVnZSIsImF1YyIsImsiLCJyIiwibGVuIiwiUEkiLCJ0b0ZpeGVkIiwiX2M2Il0sImlnbm9yZUxpc3QiOltdLCJzb3VyY2VzIjpbIkNoYXJ0cy50c3giXSwic291cmNlc0NvbnRlbnQiOlsiLy8gU21hbGwgY2hhcnRzIGZvciB0aGUgZm9yZWNhc3QgcGFuZWwuIFNoYXJlZCBydWxlcyAoc2VlIHRoZSBkYXRhdml6IGd1aWRlKTogdGhpbiBtYXJrcyBncm93aW5nIGZyb20gb25lXHJcbi8vIGhhaXJsaW5lIGJhc2VsaW5lLCA0cHggcm91bmRlZCBkYXRhIGVuZHMsIGxhYmVscyBzcGFyaW5nbHkgYW5kIGluIHRleHQgY29sb3VycyAobmV2ZXIgdGhlIGRhdGEgY29sb3VyKSxcclxuLy8gYSB0b29sdGlwIG9uIGV2ZXJ5IG1hcmsgKGhvdmVyIG9yIGtleWJvYXJkIGZvY3VzKSwgYW5kIHZhbHVlcyByZXBlYXRlZCBpbiB0aGUgYXJpYS1sYWJlbC5cclxuXHJcbmltcG9ydCB0eXBlIHsgUmVhY3ROb2RlIH0gZnJvbSAncmVhY3QnO1xyXG5pbXBvcnQgeyBudW0sIHBjdCwgc2hvcnREYXRlIH0gZnJvbSAnLi4vZm9ybWF0JztcclxuXHJcbmNvbnN0IEZJUkUgPSAnI2VhNTgwYyc7XHJcbi8vIFRoZSBmaXJlIGhlYXRtYXAgY29sb3VycyBieSBjaGFuY2UgYmFuZCAoc2FtZSByYW1wIGFzIHJpc2tIZWF0LnRzKS5cclxuZXhwb3J0IGNvbnN0IFJJU0tfQkFORFMgPSBbXHJcbiAgeyBmcm9tOiAuMTAsIHRvOiAuMjUsIGNvbG9yOiAnI2ZkZTY4YScsIGxhYmVsOiAnMTDigJMyNSUnIH0sXHJcbiAgeyBmcm9tOiAuMjUsIHRvOiAuNDAsIGNvbG9yOiAnI2ZiYmYyNCcsIGxhYmVsOiAnMjXigJM0MCUnIH0sXHJcbiAgeyBmcm9tOiAuNDAsIHRvOiAuNjAsIGNvbG9yOiAnI2Y5NzMxNicsIGxhYmVsOiAnNDDigJM2MCUnIH0sXHJcbiAgeyBmcm9tOiAuNjAsIHRvOiAuODUsIGNvbG9yOiAnI2RjMjYyNicsIGxhYmVsOiAnNjDigJM4NSUnIH0sXHJcbiAgeyBmcm9tOiAuODUsIHRvOiAxLjAxLCBjb2xvcjogJyM3ZjFkMWQnLCBsYWJlbDogJzg1JSsnIH0sXHJcbl07XHJcblxyXG5jb25zdCBUaXAgPSAoeyBjaGlsZHJlbiB9OiB7IGNoaWxkcmVuOiBSZWFjdE5vZGUgfSkgPT4gPHNwYW4gY2xhc3NOYW1lPVwidGlwXCIgcm9sZT1cInRvb2x0aXBcIj57Y2hpbGRyZW59PC9zcGFuPjtcclxuXHJcbi8vIC0tLS0tLS0tLS0tLS0tLS0gUGFzdCArIGZvcmVjYXN0IHRpbWVsaW5lIC0tLS0tLS0tLS0tLS0tLS1cclxuLy8gT2JzZXJ2ZWQgYnVybmluZyBjZWxscyBwZXIgZGF5IChzb2xpZCkgZm9sbG93ZWQgYnkgdGhlIGZvcmVjYXN0IGRheXMgKHN0cmlwZWQgdGV4dHVyZSwgc2FtZSBodWUpLFxyXG4vLyBzZXBhcmF0ZWQgYnkgYSBcInRvZGF5XCIgZGl2aWRlci4gVGhlIHNlbGVjdGVkIGZvcmVjYXN0IGRheSBpcyBoaWdobGlnaHRlZDsgY2xpY2tpbmcgYSBmb3JlY2FzdCBjb2x1bW5cclxuLy8gc2VsZWN0cyB0aGF0IGRheS4gTGFiZWxzOiB0aGUgbGFzdCBvYnNlcnZlZCB2YWx1ZSBhbmQgdGhlIHNlbGVjdGVkIGZvcmVjYXN0IHZhbHVlIG9ubHkuXHJcbmV4cG9ydCBmdW5jdGlvbiBUaW1lbGluZSh7IG9ic2VydmVkLCBzdGFydCwgZm9yZWNhc3QsIGRheSwgb25QaWNrIH06IHtcclxuICBvYnNlcnZlZDogbnVtYmVyW107IHN0YXJ0OiBzdHJpbmc7XHJcbiAgZm9yZWNhc3Q6IHsgZGF0ZTogc3RyaW5nOyBleHBlY3RlZF9jZWxsczogbnVtYmVyOyBleHBlY3RlZF9uZXdfZWxzZXdoZXJlOiBudW1iZXIgfCBudWxsIH1bXTtcclxuICBkYXk6IG51bWJlcjsgb25QaWNrOiAoaTogbnVtYmVyKSA9PiB2b2lkO1xyXG59KSB7XHJcbiAgY29uc3QgZmMgPSBmb3JlY2FzdC5tYXAoZiA9PiAoeyAuLi5mLCB0b3RhbDogZi5leHBlY3RlZF9jZWxscyArIChmLmV4cGVjdGVkX25ld19lbHNld2hlcmUgPz8gMCkgfSkpO1xyXG4gIGNvbnN0IG1heCA9IE1hdGgubWF4KDEsIC4uLm9ic2VydmVkLCAuLi5mYy5tYXAoZiA9PiBmLnRvdGFsKSk7XHJcbiAgY29uc3QgZGF0ZSA9IChpOiBudW1iZXIpID0+IG5ldyBEYXRlKERhdGUucGFyc2Uoc3RhcnQgKyAnVDAwOjAwOjAwWicpICsgaSAqIDg2NGU1KS50b0lTT1N0cmluZygpLnNsaWNlKDAsIDEwKTtcclxuICBjb25zdCBsYWJlbCA9ICdCdXJuaW5nIGNlbGxzIHBlciBkYXkuIE9ic2VydmVkOiAnICsgb2JzZXJ2ZWQubWFwKCh2LCBpKSA9PiBgJHtzaG9ydERhdGUoZGF0ZShpKSl9ICR7bnVtKHYpfWApLmpvaW4oJywgJykgK1xyXG4gICAgJy4gRm9yZWNhc3Q6ICcgKyBmYy5tYXAoZiA9PiBgJHtzaG9ydERhdGUoZi5kYXRlKX0gYWJvdXQgJHtudW0oTWF0aC5yb3VuZChmLnRvdGFsKSl9YCkuam9pbignLCAnKSArICcuJztcclxuICBjb25zdCBoID0gKHY6IG51bWJlcikgPT4gYCR7TWF0aC5tYXgoMiwgKHYgLyBtYXgpICogMTAwKX0lYDtcclxuICByZXR1cm4gKFxyXG4gICAgPGZpZ3VyZSBjbGFzc05hbWU9XCJjaGFydFwiPlxyXG4gICAgICA8ZGl2IGNsYXNzTmFtZT1cImxlZ2VuZC1yb3dcIiBhcmlhLWhpZGRlbj1cInRydWVcIj5cclxuICAgICAgICA8c3Bhbj48aSBjbGFzc05hbWU9XCJzdyBvYnNcIiAvPk9ic2VydmVkPC9zcGFuPlxyXG4gICAgICAgIDxzcGFuPjxpIGNsYXNzTmFtZT1cInN3IGZjXCIgLz5Gb3JlY2FzdDwvc3Bhbj5cclxuICAgICAgPC9kaXY+XHJcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwiY29scyB0aW1lbGluZVwiIHJvbGU9XCJpbWdcIiBhcmlhLWxhYmVsPXtsYWJlbH0+XHJcbiAgICAgICAge29ic2VydmVkLm1hcCgodiwgaSkgPT4gKFxyXG4gICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJjb2xcIiBrZXk9eydvJyArIGl9IHRhYkluZGV4PXswfT5cclxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJjb2xiYXItd3JhcFwiPlxyXG4gICAgICAgICAgICAgIHtpID09PSBvYnNlcnZlZC5sZW5ndGggLSAxICYmIDxzcGFuIGNsYXNzTmFtZT1cImNvbGNhcFwiIHN0eWxlPXt7IGJvdHRvbTogaCh2KSB9fT57bnVtKHYpfTwvc3Bhbj59XHJcbiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJjb2xiYXJcIiBzdHlsZT17eyBoZWlnaHQ6IGgodikgfX0gLz5cclxuICAgICAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT1cImNvbGRhdGVcIj57bmV3IERhdGUoZGF0ZShpKSArICdUMDA6MDA6MDBaJykuZ2V0VVRDRGF0ZSgpfTwvc3Bhbj5cclxuICAgICAgICAgICAgPFRpcD48Yj57bnVtKHYpfTwvYj4gYnVybmluZyBjZWxsczxiciAvPntzaG9ydERhdGUoZGF0ZShpKSl9IMK3IG9ic2VydmVkPC9UaXA+XHJcbiAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICApKX1cclxuICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInRvZGF5XCIgYXJpYS1oaWRkZW49XCJ0cnVlXCI+PHNwYW4+dG9kYXk8L3NwYW4+PC9kaXY+XHJcbiAgICAgICAge2ZjLm1hcCgoZiwgaSkgPT4gKFxyXG4gICAgICAgICAgPGJ1dHRvbiB0eXBlPVwiYnV0dG9uXCIgY2xhc3NOYW1lPXtgY29sIGZjb2wke2kgPT09IGRheSA/ICcgc2VsJyA6ICcnfWB9IGtleT17J2YnICsgaX0gb25DbGljaz17KCkgPT4gb25QaWNrKGkpfVxyXG4gICAgICAgICAgICAgICAgICBhcmlhLXByZXNzZWQ9e2kgPT09IGRheX0+XHJcbiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiY29sYmFyLXdyYXBcIj5cclxuICAgICAgICAgICAgICB7aSA9PT0gZGF5ICYmIDxzcGFuIGNsYXNzTmFtZT1cImNvbGNhcFwiIHN0eWxlPXt7IGJvdHRvbTogaChmLnRvdGFsKSB9fT5+e251bShNYXRoLnJvdW5kKGYudG90YWwpKX08L3NwYW4+fVxyXG4gICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiY29sYmFyIGhhdGNoXCIgc3R5bGU9e3sgaGVpZ2h0OiBoKGYudG90YWwpIH19IC8+XHJcbiAgICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9XCJjb2xkYXRlXCI+K3tpICsgMX1kPC9zcGFuPlxyXG4gICAgICAgICAgICA8VGlwPjxiPn57bnVtKE1hdGgucm91bmQoZi50b3RhbCkpfTwvYj4gYnVybmluZyBjZWxscyBleHBlY3RlZDxiciAvPlxyXG4gICAgICAgICAgICAgIHtzaG9ydERhdGUoZi5kYXRlKX06IH57bnVtKE1hdGgucm91bmQoZi5leHBlY3RlZF9jZWxscykpfSBuZWFyIGN1cnJlbnQgZmlyZXNcclxuICAgICAgICAgICAgICB7Zi5leHBlY3RlZF9uZXdfZWxzZXdoZXJlICE9IG51bGwgJiYgPD4gKyB+e251bShNYXRoLnJvdW5kKGYuZXhwZWN0ZWRfbmV3X2Vsc2V3aGVyZSkpfSBlbHNld2hlcmU8Lz59PC9UaXA+XHJcbiAgICAgICAgICA8L2J1dHRvbj5cclxuICAgICAgICApKX1cclxuICAgICAgPC9kaXY+XHJcbiAgICAgIDxmaWdjYXB0aW9uIGNsYXNzTmFtZT1cImRpbVwiPlxyXG4gICAgICAgIERheXMgb2Yge25ldyBEYXRlKHN0YXJ0ICsgJ1QwMDowMDowMFonKS50b0xvY2FsZURhdGVTdHJpbmcoJ2VuLUdCJywgeyBtb250aDogJ2xvbmcnLCB0aW1lWm9uZTogJ1VUQycgfSl9IMK3IGNsaWNrIGEgZm9yZWNhc3QgZGF5IHRvIHNob3cgaXQgb24gdGhlIG1hcFxyXG4gICAgICA8L2ZpZ2NhcHRpb24+XHJcbiAgICA8L2ZpZ3VyZT5cclxuICApO1xyXG59XHJcblxyXG4vLyAtLS0tLS0tLS0tLS0tLS0tIEhvdyB0aGUgZm9yZWNhc3Qgc3BvdHMgc3BsaXQgYnkgY2hhbmNlIC0tLS0tLS0tLS0tLS0tLS1cclxuLy8gQSBoaXN0b2dyYW0gb2YgZm9yZWNhc3QgZ3JpZCBzcG90cyBwZXIgY2hhbmNlIGJhbmQsIGNvbG91cmVkIGV4YWN0bHkgbGlrZSB0aGUgcmlzayB6b25lcyBvbiB0aGUgbWFwLCBzbyBpdFxyXG4vLyBkb3VibGVzIGFzIHRoZWlyIGtleS4gRWFjaCBiYXIgc2l0cyBvbiBhIGZhaW50IGZ1bGwtaGVpZ2h0IHRyYWNrIHNvIGV2ZW4gdGhlIGRhcmtlc3QgcmVkIHN0YXlzIHZpc2libGUuXHJcbmV4cG9ydCBmdW5jdGlvbiBSaXNrSGlzdG9ncmFtKHsgcHJvYnMgfTogeyBwcm9iczogbnVtYmVyW10gfSkge1xyXG4gIGNvbnN0IGNvdW50cyA9IFJJU0tfQkFORFMubWFwKGIgPT4gcHJvYnMuZmlsdGVyKHAgPT4gcCA+PSBiLmZyb20gJiYgcCA8IGIudG8pLmxlbmd0aCk7XHJcbiAgY29uc3QgbWF4ID0gTWF0aC5tYXgoMSwgLi4uY291bnRzKTtcclxuICBjb25zdCB0b3RhbCA9IGNvdW50cy5yZWR1Y2UoKGEsIGIpID0+IGEgKyBiLCAwKTtcclxuICBjb25zdCBsYWJlbCA9ICdGb3JlY2FzdCBzcG90cyBieSBjaGFuY2Ugb2YgZmlyZTogJyArIFJJU0tfQkFORFMubWFwKChiLCBpKSA9PiBgJHtiLmxhYmVsfSAke2NvdW50c1tpXX1gKS5qb2luKCcsICcpO1xyXG4gIGNvbnN0IHRvcCA9IGNvdW50cy5pbmRleE9mKG1heCk7XHJcbiAgcmV0dXJuIChcclxuICAgIDxmaWd1cmUgY2xhc3NOYW1lPVwiY2hhcnRcIj5cclxuICAgICAgPGRpdiBjbGFzc05hbWU9XCJjb2xzIGhpc3RcIiByb2xlPVwiaW1nXCIgYXJpYS1sYWJlbD17bGFiZWx9PlxyXG4gICAgICAgIHtSSVNLX0JBTkRTLm1hcCgoYiwgaSkgPT4gKFxyXG4gICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJjb2xcIiBrZXk9e2IubGFiZWx9IHRhYkluZGV4PXswfT5cclxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJjb2xiYXItd3JhcCB0cmFja1wiPlxyXG4gICAgICAgICAgICAgIHtpID09PSB0b3AgJiYgY291bnRzW2ldID4gMCAmJiA8c3BhbiBjbGFzc05hbWU9XCJjb2xjYXBcIiBzdHlsZT17eyBib3R0b206IGAkeyhjb3VudHNbaV0gLyBtYXgpICogMTAwfSVgIH19PntudW0oY291bnRzW2ldKX08L3NwYW4+fVxyXG4gICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiY29sYmFyXCIgc3R5bGU9e3sgaGVpZ2h0OiBjb3VudHNbaV0gPyBgJHtNYXRoLm1heCgzLCAoY291bnRzW2ldIC8gbWF4KSAqIDEwMCl9JWAgOiAwLCBiYWNrZ3JvdW5kOiBiLmNvbG9yIH19IC8+XHJcbiAgICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9XCJjb2xkYXRlXCI+e2IubGFiZWx9PC9zcGFuPlxyXG4gICAgICAgICAgICA8VGlwPjxiPntudW0oY291bnRzW2ldKX08L2I+IHNwb3R7Y291bnRzW2ldID09PSAxID8gJycgOiAncyd9IHdpdGggYSB7Yi5sYWJlbH0gY2hhbmNlXHJcbiAgICAgICAgICAgICAge3RvdGFsID8gPD4gKHtwY3QoY291bnRzW2ldIC8gdG90YWwpfSBvZiB0aGUgbWFwKTwvPiA6IG51bGx9PC9UaXA+XHJcbiAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICApKX1cclxuICAgICAgPC9kaXY+XHJcbiAgICAgIDxmaWdjYXB0aW9uIGNsYXNzTmFtZT1cImRpbVwiPkZvcmVjYXN0IHNwb3RzIGJ5IGNoYW5jZSBvZiBmaXJlIMK3IGNvbG91cnMgbWF0Y2ggdGhlIG1hcCB6b25lczwvZmlnY2FwdGlvbj5cclxuICAgIDwvZmlndXJlPlxyXG4gICk7XHJcbn1cclxuXHJcbi8vIC0tLS0tLS0tLS0tLS0tLS0gU3ByZWFkIGNvbXBhc3MgLS0tLS0tLS0tLS0tLS0tLVxyXG5leHBvcnQgZnVuY3Rpb24gQ29tcGFzcyh7IGJlYXJpbmcsIGNvbXBhc3MgfTogeyBiZWFyaW5nOiBudW1iZXIgfCBudWxsOyBjb21wYXNzOiBzdHJpbmcgfCBudWxsIH0pIHtcclxuICBjb25zdCBoYXMgPSBiZWFyaW5nICE9IG51bGw7XHJcbiAgcmV0dXJuIChcclxuICAgIDxzdmcgY2xhc3NOYW1lPVwiY29tcGFzc1wiIHZpZXdCb3g9XCIwIDAgNjQgNjRcIiB3aWR0aD1cIjY0XCIgaGVpZ2h0PVwiNjRcIiByb2xlPVwiaW1nXCJcclxuICAgICAgICAgYXJpYS1sYWJlbD17aGFzID8gYEZpcmUgc3ByZWFkaW5nIHRvd2FyZHMgdGhlICR7Y29tcGFzc30gKCR7YmVhcmluZ33CsClgIDogJ05vIGNvbnNpc3RlbnQgc3ByZWFkIGRpcmVjdGlvbid9PlxyXG4gICAgICA8Y2lyY2xlIGN4PVwiMzJcIiBjeT1cIjMyXCIgcj1cIjI3XCIgY2xhc3NOYW1lPVwiYy1yaW5nXCIgLz5cclxuICAgICAge1swLCA5MCwgMTgwLCAyNzBdLm1hcChhID0+IChcclxuICAgICAgICA8bGluZSBrZXk9e2F9IHgxPVwiMzJcIiB5MT1cIjdcIiB4Mj1cIjMyXCIgeTI9XCIxMVwiIGNsYXNzTmFtZT1cImMtdGlja1wiIHRyYW5zZm9ybT17YHJvdGF0ZSgke2F9IDMyIDMyKWB9IC8+XHJcbiAgICAgICkpfVxyXG4gICAgICA8dGV4dCB4PVwiMzJcIiB5PVwiMjBcIiBjbGFzc05hbWU9XCJjLW5cIj5OPC90ZXh0PlxyXG4gICAgICB7aGFzXHJcbiAgICAgICAgPyA8ZyB0cmFuc2Zvcm09e2Byb3RhdGUoJHtiZWFyaW5nfSAzMiAzMilgfT5cclxuICAgICAgICAgICAgPHBhdGggZD1cIk0zMiAxMiBMMzcgMzAgTDMyIDI3IEwyNyAzMCBaXCIgZmlsbD17RklSRX0gLz5cclxuICAgICAgICAgICAgPGxpbmUgeDE9XCIzMlwiIHkxPVwiMjdcIiB4Mj1cIjMyXCIgeTI9XCI0OFwiIGNsYXNzTmFtZT1cImMtdGFpbFwiIC8+XHJcbiAgICAgICAgICA8L2c+XHJcbiAgICAgICAgOiA8Y2lyY2xlIGN4PVwiMzJcIiBjeT1cIjMyXCIgcj1cIjMuNVwiIGNsYXNzTmFtZT1cImMtZG90XCIgLz59XHJcbiAgICA8L3N2Zz5cclxuICApO1xyXG59XHJcblxyXG4vLyAtLS0tLS0tLS0tLS0tLS0tIFNtYWxsIHByb2JhYmlsaXR5IGJhciAoaG90c3BvdCByb3dzKSAtLS0tLS0tLS0tLS0tLS0tXHJcbmV4cG9ydCBjb25zdCBNaW5pQmFyID0gKHsgcCB9OiB7IHA6IG51bWJlciB9KSA9PiAoXHJcbiAgPHNwYW4gY2xhc3NOYW1lPVwibWluaWJhclwiIGFyaWEtaGlkZGVuPVwidHJ1ZVwiPjxzcGFuIHN0eWxlPXt7IHdpZHRoOiBgJHtNYXRoLm1pbigxMDAsIHAgKiAxMDApfSVgIH19IC8+PC9zcGFuPlxyXG4pO1xyXG5cclxuLy8gLS0tLS0tLS0tLS0tLS0tLSBSYW5raW5nIGdhdWdlIChBVUM6IDAuNSA9IGd1ZXNzaW5nIOKGkiAxID0gcGVyZmVjdCkgLS0tLS0tLS0tLS0tLS0tLVxyXG4vLyBBIHNlbWljaXJjbGUgbWV0ZXI6IHRoZSBmaXJlLW9yYW5nZSBmaWxsIHNob3dzIHRoZSBzY29yZSBvbiBhIGxpZ2h0ZXIgdHJhY2sgb2YgdGhlIHNhbWUgYXJjLlxyXG5leHBvcnQgZnVuY3Rpb24gUmFua2luZ0dhdWdlKHsgYXVjLCBsYWJlbCB9OiB7IGF1YzogbnVtYmVyOyBsYWJlbDogc3RyaW5nIH0pIHtcclxuICBjb25zdCBrID0gTWF0aC5tYXgoMCwgTWF0aC5taW4oMSwgKGF1YyAtIC41KSAvIC41KSk7XHJcbiAgY29uc3QgciA9IDMwLCBsZW4gPSBNYXRoLlBJICogcjtcclxuICByZXR1cm4gKFxyXG4gICAgPHN2ZyBjbGFzc05hbWU9XCJnYXVnZVwiIHZpZXdCb3g9XCIwIDAgODAgNDhcIiB3aWR0aD1cIjEwNFwiIGhlaWdodD1cIjYyXCIgcm9sZT1cImltZ1wiXHJcbiAgICAgICAgIGFyaWEtbGFiZWw9e2BSYW5raW5nIHNjb3JlICR7YXVjfSwgJHtsYWJlbH0uIDAuNSBpcyBndWVzc2luZywgMSBpcyBwZXJmZWN0LmB9PlxyXG4gICAgICA8cGF0aCBkPVwiTTEwIDQyIEEzMCAzMCAwIDAgMSA3MCA0MlwiIGNsYXNzTmFtZT1cImctdHJhY2tcIiAvPlxyXG4gICAgICA8cGF0aCBkPVwiTTEwIDQyIEEzMCAzMCAwIDAgMSA3MCA0MlwiIGNsYXNzTmFtZT1cImctZmlsbFwiIHN0cm9rZURhc2hhcnJheT17YCR7ayAqIGxlbn0gJHtsZW59YH0gLz5cclxuICAgICAgPHRleHQgeD1cIjQwXCIgeT1cIjM3XCIgY2xhc3NOYW1lPVwiZy12YWxcIj57YXVjLnRvRml4ZWQoMil9PC90ZXh0PlxyXG4gICAgICA8dGV4dCB4PVwiMTBcIiB5PVwiNDcuNVwiIGNsYXNzTmFtZT1cImctZW5kXCI+MC41PC90ZXh0PlxyXG4gICAgICA8dGV4dCB4PVwiNzBcIiB5PVwiNDcuNVwiIGNsYXNzTmFtZT1cImctZW5kXCI+MTwvdGV4dD5cclxuICAgIDwvc3ZnPlxyXG4gICk7XHJcbn1cclxuIl0sImZpbGUiOiJCOi9IYWNrYXRob24gMTQuMTEuMjYvTmFzYS1tYWluL05hc2EtbWFpbi9mcm9udGVuZC9zcmMvY29tcG9uZW50cy9DaGFydHMudHN4In0=

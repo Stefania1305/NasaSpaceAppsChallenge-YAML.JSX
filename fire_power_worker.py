@@ -272,7 +272,9 @@ def print_summary(res: dict) -> None:
     print("Peak intensity: " + ", ".join(f"{k} {v:,}" for k, v in s["peak_class"].items()))
     print("FRP trend (fires with 2+ passes of one sensor family): " + ", ".join(f"{k} {v:,}" for k, v in s["trend"].items()))
     print("Trend quality: " + ", ".join(f"{k} {v:,}" for k, v in s["trend_quality"].items()) +
-          f"; median trend of good ones {s['trend_good_median_pct_h']:+.1f} %/h")
+          # None when no fire has a good trend (e.g. a small zone): print a dash instead of failing
+          "; median trend of good ones " + (f"{s['trend_good_median_pct_h']:+.1f} %/h"
+                                            if s.get("trend_good_median_pct_h") is not None else "—"))
     print(f"Partial views left out of trends: {s['partial_view_passes']:,} passes")
     print(f"Total fire radiative energy {s['total_fre_tj']:,} TJ, biomass burned {s['total_biomass_burned_kt']:,} kt "
           "(between first and last pass only)")

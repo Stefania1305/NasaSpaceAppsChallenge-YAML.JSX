@@ -341,7 +341,8 @@ def build(run_dir: Path) -> dict:
     fields["derived_from"] = fields.name.map(lambda n: "+".join(f["derived_from"].get(n, [])))
     fields["description"] = fields.name.map(lambda n: f["descriptions"].get(n, ""))
     W.nodes("Field", W.key("field", fields.name), fields)
-    rel = pd.DataFrame(corr["relations"])
+    # explicit columns: on a small dataset correlation.py can find no relations at all (an empty list)
+    rel = pd.DataFrame(corr["relations"], columns=["scope", "a", "b", "measure", "value", "n", "strength", "by_construction"])
     W.rels("CORRELATES", "Field", W.key("field", rel.a), "Field", W.key("field", rel.b),
            rel[["measure", "value", "scope", "n", "strength", "by_construction"]])
 
@@ -349,7 +350,8 @@ def build(run_dir: Path) -> dict:
     W.nodes("ExactRule", W.key("rule", ex.index.to_series()), ex)
     inv = ex.assign(field=ex.relation.map(lambda t: [n for n in names if re.search(rf"\b{re.escape(n)}\b", t)])).explode("field").dropna(subset=["field"])
     W.rels("INVOLVES", "ExactRule", W.key("rule", inv.index.to_series()), "Field", W.key("field", inv.field), file_key="INVOLVES_ExactRule")
-    lr = pd.DataFrame(corr["link_relations"])
+    lr = pd.DataFrame(corr["link_relations"],   # explicit columns: empty on a small dataset
+                      columns=["kind", "pair", "field", "measure", "value", "n", "strength", "by_construction"])
     kinds = pd.DataFrame({"kind": sorted(lr.kind.unique())})
     kinds["links"] = kinds.kind.map(links.kind.value_counts()).fillna(0).astype(int)
     W.nodes("LinkKind", W.key("linkkind", kinds.kind), kinds)

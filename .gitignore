@@ -2,3 +2,5 @@
 __pycache__/
 data/
 artifacts/
+node_modules/
+brag-output/

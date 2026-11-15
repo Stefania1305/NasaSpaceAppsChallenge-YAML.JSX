@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fire Pattern Predictor launch</title>
+<style>
+  @font-face { font-family:'Plex'; src:url(fonts/ibm-plex-sans-latin-wght-normal.woff2) format('woff2'); font-weight:100 700; }
+  @font-face { font-family:'PlexMono'; src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2'); font-weight:500; }
+  :root { --bg:#07090c; --ink:#f5f5f4; --dim:rgba(231,229,228,.7); --faint:rgba(231,229,228,.5); --line:rgba(231,229,228,.14);
+          --hot:#fb923c; --hot2:#ea580c; --hothi:#fdba74; --panel:rgba(16,18,22,.92); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:1920px; height:1080px; overflow:hidden; background:var(--bg); color:var(--ink);
+               font-family:'Plex', sans-serif; -webkit-font-smoothing:antialiased; }
+  .mono { font-family:'PlexMono', monospace; font-variant-numeric:tabular-nums; }
+  .abs { position:absolute; }
+
+  /* ground: fire-coloured orbs and rising embers */
+  #ground { position:absolute; inset:0; overflow:hidden; }
+  .orb { position:absolute; border-radius:50%; filter:blur(90px); }
+  .ember { position:absolute; width:4px; height:4px; border-radius:50%; background:#fdba74; box-shadow:0 0 8px 2px rgba(251,146,60,.6); }
+
+  .scene { position:absolute; inset:0; opacity:0; visibility:hidden; }
+
+  /* captions */
+  .cap { position:absolute; left:0; right:0; top:44px; text-align:center; font-size:50px; font-weight:700; letter-spacing:-.03em; line-height:1.1; }
+  .cap i { font-style:normal; color:var(--hot); }
+  .cap small { display:block; margin-top:10px; font-size:24px; font-weight:500; letter-spacing:0; color:var(--dim); }
+
+  /* the floating app window */
+  .win { position:absolute; left:240px; top:118px; width:1440px; border-radius:18px; overflow:hidden; background:#0c0e12;
+         border:1px solid rgba(255,255,255,.12); box-shadow:0 50px 120px rgba(0,0,0,.65), 0 0 0 1px rgba(0,0,0,.4); }
+  .bar { height:34px; display:flex; align-items:center; gap:8px; padding:0 16px; background:#14161b; border-bottom:1px solid rgba(255,255,255,.07); }
+  .bar span { width:12px; height:12px; border-radius:50%; background:#3a3d44; }
+  .bar b { margin-left:auto; margin-right:auto; transform:translateX(-30px); font-size:14px; font-weight:500; color:var(--faint); }
+  .body { position:relative; width:1440px; height:810px; overflow:hidden; }
+  .scaler { position:absolute; left:0; top:0; width:1920px; height:1080px; transform:scale(.75); transform-origin:0 0; }
+  .cam { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0; }
+  .cam img { position:absolute; left:0; top:0; width:1920px; height:1080px; display:block; }
+  .view { position:absolute; inset:0; }
+
+  /* the tour's dock */
+  #dock { position:absolute; left:50%; top:978px; transform:translateX(-50%); display:flex; gap:20px; padding:12px 18px; border-radius:24px;
+          background:rgba(20,22,27,.85); border:1px solid rgba(255,255,255,.1); box-shadow:0 18px 50px rgba(0,0,0,.5); }
+  #dock div { width:58px; height:58px; border-radius:16px; display:grid; place-items:center; background:rgba(255,255,255,.06); color:#d6d3d1; }
+  #dock div.on { background:linear-gradient(180deg, #fb923c, #ea580c); color:#1c1917; box-shadow:0 0 24px rgba(251,146,60,.5); }
+  #dock svg { width:28px; height:28px; }
+
+  .daychip { position:absolute; left:28px; top:24px; padding:10px 18px; border-radius:12px; background:rgba(7,9,12,.85);
+             border:1px solid var(--line); font-size:26px; font-weight:600; }
+  .daychip em { font-style:normal; color:var(--hot); }
+
+  /* architecture */
+  #arch .lab { position:absolute; font-size:16px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); }
+  .box { position:absolute; border-radius:16px; background:var(--panel); border:1px solid var(--line); box-shadow:0 24px 60px rgba(0,0,0,.5); padding:22px 24px; }
+  .box h3 { font-size:24px; font-weight:700; letter-spacing:-.01em; }
+  .box p { margin-top:6px; font-size:17px; color:var(--dim); line-height:1.35; }
+  .chip { display:block; margin-top:10px; padding:9px 14px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--line);
+          font-size:18px; font-weight:600; }
+  .chip small { font-weight:400; color:var(--faint); margin-left:6px; }
+  .stage { position:relative; display:flex; align-items:center; gap:14px; padding:10px 0 10px 4px; font-size:21px; font-weight:600; color:var(--faint); }
+  .stage .d { width:16px; height:16px; border-radius:50%; border:2px solid var(--faint); flex:none; }
+  .stage.on { color:var(--ink); }
+  .stage.on .d { border-color:var(--hot); background:var(--hot); box-shadow:0 0 0 6px rgba(251,146,60,.18); }
+  .mline { margin-top:12px; padding:10px 14px; border-radius:10px; background:rgba(251,146,60,.08); border:1px solid rgba(251,146,60,.25); font-size:18px; }
+  .mline b { color:var(--hothi); }
+  .out li { list-style:none; margin-top:10px; font-size:19px; display:flex; gap:10px; align-items:center; }
+  .out li::before { content:""; width:10px; height:10px; border-radius:3px; background:var(--hot); }
+  svg.wires { position:absolute; inset:0; overflow:visible; }
+
+  /* proof + outro */
+  #big { position:absolute; left:0; right:0; top:250px; text-align:center; font-size:280px; font-weight:700; letter-spacing:-.06em; line-height:1;
+         background:linear-gradient(180deg, #fdba74, #ea580c); -webkit-background-clip:text; color:transparent; }
+  #bigline { position:absolute; left:0; right:0; top:580px; text-align:center; font-size:52px; font-weight:700; letter-spacing:-.03em; }
+  #bigsub { position:absolute; left:0; right:0; top:676px; text-align:center; font-size:24px; color:var(--dim); }
+  #outro { position:absolute; left:0; right:0; top:250px; text-align:center; }
+  #outro svg { color:var(--hot); }
+  #outro h1 { margin-top:18px; font-size:120px; line-height:1; font-weight:700; letter-spacing:-.045em; }
+  #outro p { margin-top:24px; font-size:44px; font-weight:500; color:var(--dim); }
+  #outro p i { font-style:normal; color:var(--hot); }
+  #cta { display:inline-block; margin-top:44px; padding:24px 44px; border-radius:16px; font-size:30px; font-weight:600; color:#1c1917;
+         background:linear-gradient(180deg, #fdba74, #fb923c); box-shadow:0 20px 50px rgba(234,88,12,.45); }
+  #outro .src { margin-top:40px; font-size:18px; letter-spacing:.08em; color:var(--faint); }
+
+  #hook { position:absolute; left:0; right:0; top:420px; text-align:center; font-size:112px; font-weight:700; letter-spacing:-.045em; line-height:1.05; }
+  #hook .w { display:inline-block; margin:0 .14em; opacity:0; }
+  #hook .hot { color:var(--hot); }
+
+  #cursor { position:absolute; left:0; top:0; width:40px; height:40px; opacity:0; z-index:40; filter:drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+  #ring { position:absolute; width:20px; height:20px; border-radius:50%; border:3px solid var(--hot); opacity:0; z-index:39; }
+  #wm { position:absolute; right:22px; bottom:16px; z-index:50; font-size:17px; font-weight:500; letter-spacing:.02em; color:rgba(245,245,244,.62);
+        padding:5px 10px; border-radius:8px; background:rgba(7,9,12,.45); }
+</style>
+</head>
+<body>
+<div id="ground"></div>
+
+<!-- 1 hook -->
+<div class="scene" id="s1">
+  <div id="hook"><span class="w">Where</span><span class="w">will</span><span class="w">this</span><span class="w hot">fire</span><span class="w hot">spread</span><span class="w">next?</span></div>
+</div>
+
+<!-- 2+3+5 the app window (reveal, country, tour) -->
+<div class="scene" id="sw">
+  <div class="cap" id="cap"></div>
+  <div class="win" id="win">
+    <div class="bar"><span></span><span></span><span></span><b>Fire Pattern Predictor</b></div>
+    <div class="body">
+      <div class="view" id="v-splash"><div class="scaler"><div class="cam"><img src="shots/splash.png"></div></div></div>
+      <div class="view" id="v-country"><div class="scaler"><div class="cam"><img src="shots/country_hover.png"><img id="czone" src="shots/country_zone.png"></div></div></div>
+      <div class="view" id="v-spread"><div class="scaler"><div class="cam"><img src="shots/spread0.png"><img class="sp" src="shots/spread1.png"><img class="sp" src="shots/spread2.png"><img class="sp" src="shots/spread3.png"></div></div>
+        <div class="daychip" id="daychip"></div></div>
+      <div class="view" id="v-hum"><div class="scaler"><div class="cam"><img src="shots/humidity.png"></div></div></div>
+      <div class="view" id="v-wind"><div class="scaler"><div class="cam"><img src="shots/wind.png"><img id="windb" src="shots/wind_b.png"></div></div></div>
+      <div class="view" id="v-fire"><div class="scaler"><div class="cam"><img src="shots/firecard_pre.png"><img id="fcard" src="shots/firecard.png"></div></div></div>
+      <div class="view" id="v-side" style="background:radial-gradient(circle at 50% 40%, #1a1410, #0c0e12 70%)">
+        <img class="pn" src="shots/panel_about.png" style="position:absolute; width:331px; height:778px; border-radius:14px">
+        <img class="pn" src="shots/panel_overview.png" style="position:absolute; width:331px; height:778px; border-radius:14px">
+        <img class="pn" src="shots/panel_pred.png" style="position:absolute; width:331px; height:778px; border-radius:14px">
+      </div>
+    </div>
+  </div>
+  <div id="dock">
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.4 3.7-8 .5 2 1.6 3 2.6 3.4.1-2.6 1.2-4.9 3-6.7.2 3.4 3.7 5.7 3.7 10.1 0 4-2.6 7.4-6.5 7.4z"/></svg></div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/></svg></div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/></svg></div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+  </div>
+</div>
+
+<!-- 4 architecture -->
+<div class="scene" id="arch">
+  <div class="cap" id="archcap" style="top:70px">5 days of satellite data in. <i>A 3-day forecast out.</i><small>How the AI backend works</small></div>
+  <svg class="wires" id="wires" width="1920" height="1080"></svg>
+  <div class="box a" id="b-sat" style="left:110px; top:330px; width:330px">
+    <h3>NASA FIRMS</h3><p>Fire pixels from 5 satellites</p>
+    <span class="chip">MODIS <small>Terra · Aqua</small></span><span class="chip">VIIRS <small>S-NPP · NOAA-20 · 21</small></span><span class="chip">Landsat <small>8 · 9</small></span>
+  </div>
+  <div class="box a" id="b-pipe" style="left:560px; top:280px; width:380px">
+    <h3>Fire pipeline</h3><p>Merges sensors, tracks every fire</p>
+    <div id="stages" style="margin-top:8px"></div>
+  </div>
+  <div class="box a" id="b-wx" style="left:1060px; top:236px; width:380px; padding:16px 22px">
+    <h3 style="font-size:21px">Open-Meteo weather</h3><p>Hourly forecast: wind, humidity, heat</p>
+  </div>
+  <div class="box a" id="b-ai" style="left:1060px; top:420px; width:380px; border-color:rgba(251,146,60,.45)">
+    <h3>AI model <span class="mono" style="color:var(--hot); font-size:20px">v3</span></h3>
+    <div class="mline"><b>Survival</b> · will it burn out?</div>
+    <div class="mline"><b>Two-part growth</b> · how much new area?</div>
+    <div class="mline"><b>Sequence network</b> · reads each fire's history</div>
+  </div>
+  <div class="box a" id="b-out" style="left:1550px; top:380px; width:290px">
+    <h3>Every fire, 3 days ahead</h3>
+    <ul class="out"><li>Spread map</li><li>Growth</li><li>Movement</li><li>Merges</li><li>Burn-out</li></ul>
+  </div>
+</div>
+
+<!-- 6 proof -->
+<div class="scene" id="proof">
+  <div id="big" class="mono" style="font-family:'Plex'">0%</div>
+  <div id="bigline">of fire outcomes called right</div>
+  <div id="bigsub" class="mono">backtest · 1,503 real fire-days · "every fire keeps burning" scores 39%</div>
+</div>
+
+<!-- 7 outro -->
+<div class="scene" id="s7">
+  <div id="outro">
+    <svg viewBox="0 0 24 24" width="88" height="88" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20.75c-3.75 0-6.25-2.55-6.25-6 0-3.3 2.3-5.25 3.55-7.75.5 1.9 1.55 2.9 2.5 3.3.1-2.5 1.15-4.7 2.9-6.45.2 3.25 3.55 5.5 3.55 9.75 0 3.85-2.5 7.15-6.25 7.15z"/>
+      <path d="M12 20.75c-1.5 0-2.55-1.05-2.55-2.55 0-1.5 1.1-2.35 1.95-3.45.45 1.05 1.2 1.5 1.8 1.7.55.85 1.3 1.3 1.3 2.25 0 1.15-1.05 2.05-2.5 2.05z" fill="currentColor" stroke="none"/></svg>
+    <h1>Fire Pattern Predictor</h1>
+    <p>Pick a zone. See the <i>next 3 days.</i></p>
+    <div id="cta">Open the fire map →</div>
+    <div class="src mono">NASA FIRMS · MODIS · VIIRS · LANDSAT · OPEN-METEO</div>
+  </div>
+</div>
+
+<svg id="cursor" viewBox="0 0 24 24"><path d="M4 2.5 19.5 12l-6.6 1.6 3.9 7.2-2.7 1.4-3.9-7.2L5.2 19.6z" fill="#fff" stroke="#07090c" stroke-width="1.3" stroke-linejoin="round"/></svg>
+<div id="ring"></div>
+<div id="wm">AI generated video</div>
+
+<script>
+const T = 30;
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const easeOut = k => 1 - Math.pow(1 - clamp(k), 3);
+const easeIO = k => { k = clamp(k); return k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const WX = 240, WY = 152, WS = .75;          // window content origin on screen and its scale
+
+// scenes: [id, start, end]; each fades in after its cut and out just before the next (a dip through the ground)
+const S = [['s1', 0, 2.5], ['sw', 2.5, 8.5], ['arch', 8.5, 13.0], ['sw', 13.0, 24.0], ['proof', 24.0, 27.0], ['s7', 27.0, 30.0]];
+
+// ---- ground: orbs + embers (seeded, so every frame is a pure function of t)
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const ORBS = [['#ea580c', 820, 300, 260], ['#7c2d12', 980, 1500, 700], ['#f59e0b', 620, 1300, 180], ['#dc2626', 700, 400, 860]];
+ORBS.forEach(([c, s]) => { const d = document.createElement('div'); d.className = 'orb'; Object.assign(d.style, { width: s + 'px', height: s + 'px', background: c }); $('ground').appendChild(d); });
+const EMBERS = Array.from({ length: 46 }, () => ({ x: rnd() * 1920, sp: 40 + rnd() * 70, ph: rnd() * 1080, sw: rnd() * 6.28, sz: .5 + rnd() }));
+EMBERS.forEach(() => { const d = document.createElement('div'); d.className = 'ember'; $('ground').appendChild(d); });
+
+// ---- pipeline stages
+const STAGES = ['Correlation', 'Interpreter', 'Localisation + fire power', 'Epicenter', 'Fire expansion', 'Knowledge graph'];
+$('stages').innerHTML = STAGES.map(s => `<div class="stage"><span class="d"></span>${s}</div>`).join('');
+const ST0 = 9.75, STEP = 0.25;
+
+// camera: scale s with picture point (fx, fy) centred, clamped to the picture; returns picture -> screen
+function cam(el, s, fx, fy) {
+  const x = clamp(960 - fx * s, 1920 - 1920 * s, 0), y = clamp(540 - fy * s, 1080 - 1080 * s, 0);
+  el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+  return (px, py) => [WX + WS * (x + px * s), WY + WS * (y + py * s)];
+}
+const camOf = id => document.querySelector(`#${id} .cam`);
+
+// tour views: [view id, start, caption]
+const TOUR = [['v-spread', 13.0, 'Watch the fire <i>spread</i>, day by day'], ['v-hum', 15.5, '<i>Humidity</i>, straight from the forecast'],
+  ['v-wind', 17.5, '<i>Wind</i> streams the way it blows'], ['v-fire', 19.5, 'Click any fire for its <i>3-day forecast</i>'],
+  ['v-side', 22.0, 'Every number, <i>charted</i> in the sidebar']];
+const TOUR_END = 24.0;
+const DOCK = i => [960 + (i - 2) * 78, 978 + 41];        // dock icon centre on screen
+
+let pointer = null;   // [x, y, pressK, visible]
+function press(t, at) { return t >= at && t < at + 0.3 ? (t - at) / 0.3 : 0; }
+
+function setCap(html, a, b, t) {
+  const c = $('cap');
+  if (c.dataset.h !== html) { c.innerHTML = html; c.dataset.h = html; }
+  const k = easeOut(prog(t, a + 0.1, a + 0.45)) * (1 - prog(t, b - 0.15, b));
+  c.style.opacity = k; c.style.transform = `translateY(${(1 - k) * 18}px)`;
+}
+
+function render(t) {
+  pointer = null;
+  // ground
+  ORBS.forEach(([c, s, x0, y0], i) => {
+    const el = $('ground').children[i];
+    el.style.left = `${x0 - s / 2 + Math.sin(t * .35 + i * 1.7) * 120}px`; el.style.top = `${y0 - s / 2 + Math.cos(t * .28 + i) * 80}px`;
+    el.style.opacity = (t >= 2.5 && t < 8.5) || (t >= 13 && t < 24) ? .32 : .55;
+  });
+  EMBERS.forEach((e, i) => {
+    const el = $('ground').children[ORBS.length + i];
+    const y = 1100 - ((e.ph + t * e.sp) % 1180);
+    el.style.transform = `translate(${e.x + Math.sin(t * 1.3 + e.sw) * 18}px, ${y}px) scale(${e.sz})`;
+    el.style.opacity = clamp((1100 - y) / 300) * clamp(y / 400) * .85;
+  });
+
+  // scenes
+  const vis = {};
+  for (const [id, a, b] of S) {
+    if (t < a || t >= b) continue;
+    let o = 1;
+    if (a > 0) o *= easeOut(prog(t, a, a + 0.22));
+    if (b < T) o *= 1 - prog(t, b - 0.14, b);
+    vis[id] = o;
+  }
+  for (const id of ['s1', 'sw', 'arch', 'proof', 's7']) { const el = $(id); const o = vis[id] ?? 0; el.style.opacity = o; el.style.visibility = o > 0 ? 'visible' : 'hidden'; }
+
+  // 1 hook
+  if (t < 2.5) {
+    document.querySelectorAll('#hook .w').forEach((w, i) => {
+      const k = easeOut(prog(t, 0.1 + i * 0.12, 0.45 + i * 0.12));
+      w.style.opacity = k; w.style.transform = `translateY(${(1 - k) * 40}px) scale(${lerp(1.08, 1, k)})`; w.style.filter = `blur(${(1 - k) * 10}px)`;
+    });
+    $('hook').style.transform = `scale(${lerp(1, 1.04, t / 2.5)})`;
+  }
+
+  // the window scene (reveal, country, tour)
+  if (vis.sw) {
+    const views = ['v-splash', 'v-country', ...TOUR.map(v => v[0])];
+    const win = $('win');
+    const tour = t >= 13;
+    // which view is showing, with a horizontal slide on tour switches
+    views.forEach(v => $(v).style.visibility = 'hidden');
+    const show = (v, off) => { const el = $(v); el.style.visibility = 'visible'; el.style.transform = `translateX(${off * 1440}px)`; el.style.opacity = 1 - Math.abs(off) * .5; };
+    if (!tour) {
+      // the window rises in at 2.5
+      const k = easeOut(prog(t, 2.5, 3.1));
+      win.style.transform = `translateY(${(1 - k) * 90}px) scale(${lerp(.94, 1, k)})`;
+      if (t < 5.0) show('v-splash', 0);
+      else {
+        const k2 = easeIO(prog(t, 5.0, 5.45));
+        show('v-splash', -k2); show('v-country', 1 - k2);
+      }
+      $('dock').style.opacity = 0;
+    } else {
+      win.style.transform = 'none';
+      const kd = easeOut(prog(t, 12.6 + 0.4, 13.3));
+      $('dock').style.opacity = kd; $('dock').style.transform = `translateX(-50%) translateY(${(1 - kd) * 40}px)`;
+      TOUR.forEach(([v, a], i) => {
+        const b = TOUR[i + 1]?.[1] ?? TOUR_END;
+        const kin = i === 0 ? 1 : easeIO(prog(t, a, a + 0.45)), kout = easeIO(prog(t, b, b + 0.45));
+        if (t >= a && t < b) show(v, 1 - kin);
+        if (t >= b && t < b + 0.45 && i < TOUR.length - 1) show(v, -kout);
+      });
+      const cur = TOUR.reduce((c, v, i) => (t >= v[1] ? i : c), 0);
+      [...$('dock').children].forEach((d, i) => d.classList.toggle('on', i === cur));
+    }
+
+    // 2 reveal: splash push-in, cursor clicks "Open the fire map" at 4.5
+    if (t < 5.45) {
+      const map = cam(camOf('v-splash'), lerp(1.0, 1.05, easeIO(prog(t, 2.5, 5.0))), 700, 600);
+      const [bx, by] = map(184, 730);
+      const m = easeIO(prog(t, 3.5, 4.35));
+      pointer = [lerp(1100, bx, m), lerp(1000, by, m), press(t, 4.5), t >= 3.4 && t < 4.95];
+      setCap('', 0, 1, t); $('cap').style.opacity = 0;
+    }
+    // 3 country: hover Paraguay, click at 6.5, the zone card reads Paraguay
+    if (t >= 5.0 && t < 8.5) {
+      const z = t >= 6.62;
+      $('czone').style.opacity = z ? easeOut(prog(t, 6.62, 6.85)) : 0;
+      const k = easeIO(prog(t, 6.9, 8.2));
+      const map = z ? cam(camOf('v-country'), lerp(1.08, 1.32, k), lerp(900, 300, k), lerp(540, 420, k)) : cam(camOf('v-country'), lerp(1.0, 1.08, easeIO(prog(t, 5.0, 6.6))), 900, 540);
+      const [px, py] = map(1180, 540);
+      const m = easeIO(prog(t, 5.5, 6.35));
+      pointer = [lerp(1400, px, m), lerp(900, py, m), press(t, 6.5), t >= 5.3 && t < 7.0];
+      setCap('Pick a <i>country</i>, or draw, pin or type a zone', 5.0, 8.5, t);
+    }
+    // 5 tour
+    if (tour) {
+      const cur = TOUR.findLastIndex(v => t >= v[1]);
+      const [v, a, cap] = TOUR[cur]; const b = TOUR[cur + 1]?.[1] ?? TOUR_END;
+      setCap(cap, a, b, t);
+      // the cursor clicks each dock icon on the cut (the first at 13.0 as the dock arrives)
+      const nxt = TOUR.findIndex(x => x[1] > t);
+      // spread: day 0 -> +1 -> +2 -> +3 on the beat
+      const sp = t < 13.5 ? 0 : t < 14.0 ? 1 : t < 14.5 ? 2 : 3;
+      document.querySelectorAll('#v-spread .sp').forEach((im, i) => im.style.opacity = i + 1 <= sp ? (i + 1 === sp ? easeOut(prog(t, [13.5, 14.0, 14.5][i], [13.5, 14.0, 14.5][i] + 0.15)) : 1) : 0);
+      const days = [['14 Nov', 'seen'], ['15 Nov', '+1 day'], ['16 Nov', '+2 days'], ['17 Nov', '+3 days']];
+      $('daychip').innerHTML = `${days[sp][0]} · <em>${days[sp][1]}</em>`;
+      cam(camOf('v-spread'), lerp(1.12, 1.2, prog(t, 13, 15.5)), 1130, 520);
+      cam(camOf('v-hum'), lerp(1.04, 1.12, prog(t, 15.5, 17.5)), 1050, 560);
+      cam(camOf('v-wind'), lerp(1.04, 1.12, prog(t, 17.5, 19.5)), 1050, 560);
+      $('windb').style.opacity = 0.5 + 0.5 * Math.sin(t * Math.PI * 4);
+      const fmap = cam(camOf('v-fire'), lerp(1.18, 1.26, prog(t, 19.5, 22)), 1190, 640);
+      $('fcard').style.opacity = easeOut(prog(t, 20.55, 20.75));
+      // sidebar: three panels rise in one by one and drift up
+      document.querySelectorAll('#v-side .pn').forEach((im, i) => {
+        const k = easeOut(prog(t, 22.1 + i * 0.18, 22.6 + i * 0.18));
+        im.style.left = `${720 - 3 * 331 / 2 - 30 + i * (331 + 30)}px`;
+        im.style.top = `${16 + (1 - k) * 120 - prog(t, 22, 24) * 30}px`;
+        im.style.opacity = k;
+        im.style.boxShadow = '0 24px 60px rgba(0,0,0,.6)';
+      });
+      // pointer: a keyframed path between the dock icons and the fire; clicks on the cuts (and on the fire at 20.5)
+      const F = fmap(1181, 440);
+      const KEYS = [[12.6, [1320, 1090]], [12.95, DOCK(0)], [15.0, DOCK(0)], [15.42, DOCK(1)], [17.0, DOCK(1)], [17.42, DOCK(2)],
+                    [19.0, DOCK(2)], [19.42, DOCK(3)], [19.75, DOCK(3)], [20.42, F], [21.2, F], [21.92, DOCK(4)], [23.0, DOCK(4)]];
+      let pos = KEYS[KEYS.length - 1][1];
+      for (let i = 0; i < KEYS.length - 1; i++) {
+        const [ta, pa] = KEYS[i], [tb, pb] = KEYS[i + 1];
+        if (t >= ta && t < tb) { const k = easeIO((t - ta) / (tb - ta)); pos = [lerp(pa[0], pb[0], k), lerp(pa[1], pb[1], k)]; break; }
+      }
+      const pk = [13.0, 15.5, 17.5, 19.5, 20.5, 22.0].map(c => press(t, c)).find(x => x > 0) ?? 0;
+      pointer = [pos[0], pos[1], pk, t >= 12.6 && t < 22.9];
+    }
+  }
+
+  // 4 architecture
+  if (vis.arch) {
+    const capK = easeOut(prog(t, 8.7, 9.1));
+    $('archcap').style.opacity = capK; $('archcap').style.transform = `translateY(${(1 - capK) * 18}px)`;
+    const appear = { 'b-sat': 9.1, 'b-pipe': 9.45, 'b-wx': 11.25, 'b-ai': 11.5, 'b-out': 12.0 };
+    for (const [id, at] of Object.entries(appear)) {
+      const k = easeOut(prog(t, at, at + 0.35));
+      $(id).style.opacity = k; $(id).style.transform = `translateY(${(1 - k) * 28}px)`;
+    }
+    document.querySelectorAll('#stages .stage').forEach((s, i) => s.classList.toggle('on', t >= ST0 + i * STEP));
+    // wires with pulses: sat -> pipe -> ai -> out, wx -> ai
+    const W = [[440, 470, 560, 470, 9.45], [940, 470, 1060, 540, 11.5], [1250, 330, 1250, 420, 11.5], [1440, 540, 1550, 540, 12.0]];
+    $('wires').innerHTML = W.map(([x1, y1, x2, y2, at]) => {
+      const k = easeOut(prog(t, at - 0.1, at + 0.3));
+      if (k <= 0) return '';
+      const xe = lerp(x1, x2, k), ye = lerp(y1, y2, k), ph = ((t * 1.6) % 1);
+      return `<line x1="${x1}" y1="${y1}" x2="${xe}" y2="${ye}" stroke="rgba(251,146,60,.5)" stroke-width="2.5" stroke-dasharray="6 6"/>` +
+             (k >= 1 ? `<circle cx="${lerp(x1, x2, ph)}" cy="${lerp(y1, y2, ph)}" r="6" fill="#fdba74"/>` : '');
+    }).join('');
+  }
+
+  // 6 proof
+  if (vis.proof) {
+    const k = easeOut(prog(t, 24.15, 24.95));
+    $('big').textContent = `${Math.round(68 * k)}%`;
+    $('big').style.transform = `scale(${lerp(.9, 1, easeOut(prog(t, 24.0, 24.5)))})`;
+    const l = easeOut(prog(t, 24.3, 24.7)), s2 = easeOut(prog(t, 24.6, 25.0));
+    $('bigline').style.opacity = l; $('bigline').style.transform = `translateY(${(1 - l) * 22}px)`;
+    $('bigsub').style.opacity = s2;
+  }
+
+  // 7 outro: parts in turn, the CTA clicked at 29.0
+  if (vis.s7) {
+    ['#outro svg', '#outro h1', '#outro p', '#cta', '#outro .src'].forEach((sel, i) => {
+      const k = easeOut(prog(t, 27.15 + i * 0.14, 27.55 + i * 0.14));
+      const el = document.querySelector(sel); el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * 26}px)`;
+    });
+    const r = $('cta').getBoundingClientRect();
+    const pk = press(t, 29.0);
+    if (pk > 0) $('cta').style.transform = `scale(${1 - Math.sin(pk * Math.PI) * .05})`;
+    const m = easeIO(prog(t, 28.1, 28.9));
+    pointer = [lerp(1300, r.left + r.width * .62, m), lerp(1000, r.top + r.height * .6, m), pk, t >= 28.0];
+  }
+
+  // pointer + click ring
+  const cur = $('cursor'), ring = $('ring');
+  if (pointer && pointer[3]) {
+    const [x, y, pk] = pointer;
+    const sq = pk > 0 && pk < 1 ? 1 - Math.sin(pk * Math.PI) * .18 : 1;
+    cur.style.opacity = 1; cur.style.transform = `translate(${x - 6}px, ${y - 4}px) scale(${sq})`;
+    if (pk > 0 && pk < 1) {
+      const rr = lerp(14, 64, easeOut(pk));
+      Object.assign(ring.style, { opacity: 1 - pk, width: `${rr * 2}px`, height: `${rr * 2}px`, left: `${x - rr}px`, top: `${y - rr}px` });
+    } else ring.style.opacity = 0;
+  } else { cur.style.opacity = 0; ring.style.opacity = 0; }
+}
+
+window.__ready = Promise.all([document.fonts.load('700 40px Plex'), document.fonts.load('500 20px PlexMono'),
+  ...[...document.images].map(i => i.decode())]).then(() => document.fonts.ready).then(() => true);
+render(0);
+</script>
+</body>
+</html>

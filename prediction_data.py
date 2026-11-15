@@ -37,6 +37,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.spatial import cKDTree
 
 from firms import DATA_DIR
 from fire_runs import region_of
@@ -66,7 +67,15 @@ def read(kg: Path, name: str, cols=None) -> pd.DataFrame | None:
         with __import__("gzip").open(p, "rt", encoding="utf-8") as fh:
             head = fh.readline().strip().split(",")
         usecols = [h for h in head if ("id" if h.startswith("id:") else h.split(":")[0]) in cols]
-    return strip(pd.read_csv(p, usecols=usecols, low_memory=False))
+    # ids like "0.10" must stay text (as numbers they would read as 0.1 and stop matching)
+    text = {h: str for h in (usecols or []) if h.split(":")[0] in TEXT_COLS}
+    if usecols is None:
+        with __import__("gzip").open(p, "rt", encoding="utf-8") as fh:
+            text = {h: str for h in fh.readline().strip().split(",") if h.split(":")[0] in TEXT_COLS}
+    return strip(pd.read_csv(p, usecols=usecols, dtype=text, low_memory=False))
+
+
+TEXT_COLS = {"cluster_id", "sources", "clusters", "parents", "children"}
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +125,9 @@ def nearest_cell(cells: pd.DataFrame, lat: np.ndarray, lon: np.ndarray, max_deg:
 # Fire-days of one run
 # ---------------------------------------------------------------------------
 
-def fire_days(run_dir: Path, with_targets: bool = True) -> pd.DataFrame:
+def fire_days(run_dir: Path, with_targets: bool = True, keep_all: bool = False) -> pd.DataFrame:
+    """Daily state of every fire in a run. keep_all: every sighted fire-day, also the last H days of the run
+    (needed to link fires into chains before the targets are worked out)."""
     kg = run_dir / "kg"
     fs = read(kg, "nodes_FireState", ["fire_id", "time", "family", "pixels", "frp_sum_mw", "cumulative_fine_km2",
                                       "cumulative_footprint_km2", "clusters_alive", "clusters_seen", "front_distance_km"])
@@ -141,13 +152,15 @@ def fire_days(run_dir: Path, with_targets: bool = True) -> pd.DataFrame:
     inc = pd.read_csv(kg / "rels_IN_CLUSTER.csv.gz")
     inc.columns = ["det", "cl", "type"]
     inc["fire_id"] = inc.cl.str.rsplit("|", n=1).str[-1].str.split(".").str[0].astype(int)
-    det = det.merge(inc[["det", "fire_id"]], left_on="id", right_on="det")
+    inc["cluster_id"] = inc.cl.str.rsplit("|", n=1).str[-1]
+    det = det.merge(inc[["det", "fire_id", "cluster_id"]], left_on="id", right_on="det")
     det["day"] = pd.to_datetime(det.time, utc=True).dt.strftime("%Y-%m-%d")
     det["w"] = det.frp_mw.fillna(0).clip(lower=0) + 0.1
     det["wlat"], det["wlon"] = det.latitude * det.w, det.longitude * det.w
     c = det.groupby(["fire_id", "day"])[["wlat", "wlon", "w"]].sum()
     cen = pd.DataFrame({"clat": c.wlat / c.w, "clon": c.wlon / c.w}).reset_index()
     day = day.merge(cen, on=["fire_id", "day"], how="left")
+    day = day.merge(separate_parts(det, read(kg, "nodes_Cluster", ["cluster_id", "sources"])), on=["fire_id", "day"], how="left")
 
     # merges with separate neighbouring fires (lasting cluster merges whose parents had different source fires)
     merges = pd.DataFrame(columns=["fire_id", "day"])
@@ -201,6 +214,7 @@ def fire_days(run_dir: Path, with_targets: bool = True) -> pd.DataFrame:
         t[f"dx_l{lag}"] = (t.clon - lon_l) * KM_LON * np.cos(np.radians(t.lat0))
         t[f"dy_l{lag}"] = (t.clat - lat_l) * KM_LAT
     t["age_days"] = g.cumcount()
+    t = add_neighbours(t)
 
     # targets for d+1..d+3
     if with_targets:
@@ -217,9 +231,89 @@ def fire_days(run_dir: Path, with_targets: bool = True) -> pd.DataFrame:
             # past the fire's last day there are no rows: it no longer grows
             t[f"growth_{k}"] = t[f"growth_{k}"].fillna(0)
         horizon = (pd.to_datetime(t.day) + pd.Timedelta(days=H)).dt.strftime("%Y-%m-%d")
-        t = t[t.seen & (horizon <= t.run_last)]
+        t = t[t.seen] if keep_all else t[t.seen & (horizon <= t.run_last)]
     else:
         t = t[t.seen]
+    return t
+
+
+def separate_parts(det: pd.DataFrame, cl: pd.DataFrame | None) -> pd.DataFrame:
+    """Per fire and day: how many separate parts it has (groups of clusters that share no source fire, i.e. fires
+    that have not joined yet) and the smallest gap between pixels of two different parts (km). Merges of separate
+    fires happen between such parts."""
+    cols = ["fire_id", "day", "sep_parts", "sep_gap_km"]
+    if cl is None or det.empty:
+        return pd.DataFrame(columns=cols)
+    src = dict(zip(cl.cluster_id.astype(str), cl.sources.astype(str)))
+    rows = []
+    multi = det.groupby(["fire_id", "day"]).cluster_id.nunique()
+    one = multi[multi < 2]
+    rows += [(f, d, 1, np.nan) for (f, d) in one.index]
+    sub = det.set_index(["fire_id", "day"]).loc[multi[multi >= 2].index].reset_index() if (multi >= 2).any() else det.iloc[0:0]
+    for (f, d), g in sub.groupby(["fire_id", "day"]):
+        cids = g.cluster_id.unique()
+        parent = {c: c for c in cids}
+        def root(c):
+            while parent[c] != c:
+                parent[c] = parent[parent[c]]
+                c = parent[c]
+            return c
+        owner = {}
+        for c in cids:                                  # clusters sharing a source fire belong to the same part
+            for s_ in src.get(c, c).split("+"):
+                if s_ in owner:
+                    parent[root(c)] = root(owner[s_])
+                else:
+                    owner[s_] = c
+        lab = g.cluster_id.map(lambda c: root(c)).to_numpy()
+        parts = len(set(lab))
+        gap = np.nan
+        if parts >= 2:
+            lat0 = math.radians(g.latitude.mean())
+            xy = np.c_[g.longitude.to_numpy() * KM_LON * math.cos(lat0), g.latitude.to_numpy() * KM_LAT]
+            kq = min(len(g), 12)
+            dd, jj = cKDTree(xy).query(xy, k=kq)
+            diff = lab[jj] != lab[:, None]
+            cand = np.where(diff, dd, np.inf).min()
+            if not np.isfinite(cand):                     # no other part among the nearest pixels: compare part by part
+                cand = min(cKDTree(xy[lab == a]).query(xy[lab != a], k=1)[0].min() for a in set(lab))
+            gap = float(cand)
+        rows.append((f, d, parts, gap))
+    return pd.DataFrame(rows, columns=cols)
+
+
+NB_COLS = ["nb_dist_km", "nb_gap_km", "nb_fp", "nb_new_area", "nb_frp", "nb_n10", "nb_n25", "nb_bearing"]
+
+
+def add_neighbours(t: pd.DataFrame) -> pd.DataFrame:
+    """Nearest other fire seen on the same day: distance between centres, gap between their footprints (as circles),
+    its footprint, growth and power, how many fires are within 10 and 25 km, and the bearing towards it."""
+    for c in NB_COLS:
+        t[c] = np.nan
+    lat = t.clat.fillna(t.lat0).to_numpy()
+    lon = t.clon.fillna(t.lon0).to_numpy()
+    r = np.sqrt(t.fine_fp.fillna(0).to_numpy() / math.pi)
+    seen = t.seen.to_numpy()
+    R_EARTH = 6371.0
+    for day, idx in t[seen].groupby("day").indices.items():
+        rows = np.flatnonzero(seen)[idx]
+        if len(rows) < 2:
+            continue
+        la, lo = np.radians(lat[rows]), np.radians(lon[rows])
+        xyz = np.c_[np.cos(la) * np.cos(lo), np.cos(la) * np.sin(lo), np.sin(la)] * R_EARTH
+        kq = min(6, len(rows))
+        d, j = cKDTree(xyz).query(xyz, k=kq)
+        d, j = d[:, 1:], j[:, 1:]
+        nbr = rows[j[:, 0]]
+        t.iloc[rows, t.columns.get_loc("nb_dist_km")] = d[:, 0]
+        t.iloc[rows, t.columns.get_loc("nb_gap_km")] = np.maximum(0, d[:, 0] - r[rows] - r[nbr])
+        for src, dst in (("fine_fp", "nb_fp"), ("new_area", "nb_new_area"), ("frp", "nb_frp")):
+            t.iloc[rows, t.columns.get_loc(dst)] = t[src].to_numpy()[nbr]
+        t.iloc[rows, t.columns.get_loc("nb_n10")] = (d <= 10).sum(axis=1)
+        t.iloc[rows, t.columns.get_loc("nb_n25")] = (d <= 25).sum(axis=1)
+        dx = (lon[nbr] - lon[rows]) * KM_LON * np.cos(np.radians(lat[rows]))
+        dy = (lat[nbr] - lat[rows]) * KM_LAT
+        t.iloc[rows, t.columns.get_loc("nb_bearing")] = np.degrees(np.arctan2(dx, dy)) % 360
     return t
 
 
@@ -252,6 +346,11 @@ def add_place_and_weather(t: pd.DataFrame, run_dir: Path, weather_daily: pd.Data
         for k in range(0, H + 1):
             for c in WX:
                 t[f"w{k}_{c}"] = np.nan
+    if "nb_bearing" in t:
+        # wind component blowing from this fire towards its nearest neighbour (km/h; negative = away from it)
+        b = np.radians(t.nb_bearing.to_numpy())
+        for k in range(1, H + 1):
+            t[f"w{k}_wind_to_nb"] = t[f"w{k}_u_mean"].to_numpy() * np.sin(b) + t[f"w{k}_v_mean"].to_numpy() * np.cos(b)
     return t
 
 
@@ -263,9 +362,21 @@ def load_freq() -> pd.DataFrame | None:
     return f.rename(columns={"share_of_years": "risk_share", "mean_fire_days": "risk_days"})
 
 
+CHAINS = False          # link fires that vanish and reappear into chains (prediction_labels.py)
+
+
 def build_run(run_dir: str) -> pd.DataFrame:
     run_dir = Path(run_dir)
-    t = fire_days(run_dir)
+    if CHAINS:
+        from prediction_labels import relabel
+        t = fire_days(run_dir, keep_all=True)
+        if t.empty:
+            return t
+        t = relabel(t, with_targets=True)
+        horizon = (pd.to_datetime(t.day) + pd.Timedelta(days=H)).dt.strftime("%Y-%m-%d")
+        t = t[horizon <= t.run_last]
+    else:
+        t = fire_days(run_dir)
     if t.empty:
         return t
     kg = run_dir / "kg"
@@ -278,25 +389,68 @@ def build_run(run_dir: str) -> pd.DataFrame:
 FREQ = None
 
 
-def _init():
-    global FREQ
+def _init(chains=False):
+    global FREQ, CHAINS
     FREQ = load_freq()
+    CHAINS = chains
+
+
+HIST_COLS = [f"h{j}_{c}" for j in range(1, 5) for c in ("new_area", "frp", "sep_parts", "back")] +             ["area_trend3", "frp_trend3", "seen_last7"]
+
+
+def add_history(df: pd.DataFrame) -> pd.DataFrame:
+    """The fire's previous (up to) 4 fire-days as features: growth, power, separate parts and how many days back,
+    plus the mean growth of the last 3 fire-days, power against its 3-day mean, and fire-days seen in the last week."""
+    d = df.copy()
+    who = d.chain if "chain" in d else d.fire_id                 # a chain of fires that vanished and came back
+    key = d.run.astype(str) + "|" + who.astype(str)
+    order = np.lexsort((d.day.to_numpy(), key.to_numpy()))
+    s = d.iloc[order]
+    k = key.iloc[order].to_numpy()
+    day = pd.to_datetime(s.day).to_numpy()
+    out = {}
+    for j in range(1, 5):
+        same = np.zeros(len(s), bool)
+        same[j:] = k[j:] == k[:-j]
+        back = np.full(len(s), np.nan)
+        back[j:] = (day[j:] - day[:-j]).astype("timedelta64[D]").astype(float)
+        ok = same & (back <= 7)
+        for c in ("new_area", "frp", "sep_parts"):
+            v = np.full(len(s), np.nan)
+            src = s[c].to_numpy("float64")
+            v[j:] = src[:-j]
+            out[f"h{j}_{c}"] = np.where(ok, v, np.nan)
+        out[f"h{j}_back"] = np.where(ok, back, np.nan)
+    h = pd.DataFrame(out, index=s.index)
+    h["area_trend3"] = h[["h1_new_area", "h2_new_area", "h3_new_area"]].mean(axis=1)
+    h["frp_trend3"] = s.frp - h[["h1_frp", "h2_frp", "h3_frp"]].mean(axis=1)
+    h["seen_last7"] = h[[f"h{j}_back" for j in range(1, 5)]].notna().sum(axis=1)
+    for c in HIST_COLS:
+        d[c] = h[c].reindex(d.index)
+    return d
 
 
 def feature_columns(df: pd.DataFrame, weather: bool = True) -> list:
     base = ["fine_fp", "all_fp", "new_area", "new_area_l1", "new_area_l2", "frp", "frp_l1", "frp_peak", "pixels", "passes",
             "clusters_alive", "clusters_seen", "front", "age_days", "dx_l1", "dy_l1", "dx_l2", "dy_l2", "merges_so_far",
-            "lat0", "abs_lat", "doy_sin", "doy_cos", "region", "elevation_m", "risk_share", "risk_days"]
-    wx = [f"w{k}_{c}" for k in range(0, H + 1) for c in WX]
+            "lat0", "abs_lat", "doy_sin", "doy_cos", "region", "elevation_m", "risk_share", "risk_days",
+            "nb_dist_km", "nb_gap_km", "nb_fp", "nb_new_area", "nb_frp", "nb_n10", "nb_n25", "sep_parts", "sep_gap_km",
+            *HIST_COLS]
+    wx = [f"w{k}_{c}" for k in range(0, H + 1) for c in WX] + [f"w{k}_wind_to_nb" for k in range(1, H + 1)]
     return [c for c in base + (wx if weather else []) if c in df]
 
 
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--chains", action="store_true", help="link vanishing and reappearing fires into chains")
+    ap.add_argument("--out", default="fire_days.csv.gz")
+    args = ap.parse_args()
     t0 = time.time()
     runs = [r for r in sorted((DATA_DIR / "runs").glob("*")) if (r / "kg" / "nodes_WeatherHour.csv.gz").exists()]
     print(f"{len(runs)} runs with the weather part", flush=True)
     parts = []
-    with ProcessPoolExecutor(max_workers=8, initializer=_init) as pool:
+    with ProcessPoolExecutor(max_workers=8, initializer=_init, initargs=(args.chains,)) as pool:
         for r, df in zip(runs, pool.map(build_run, map(str, runs))):
             print(f"  {r.name}: {len(df):,} fire-days", flush=True)
             parts.append(df)
@@ -304,7 +458,7 @@ def main() -> None:
     data["year"] = data.day.str[:4].astype(int)
     data["split"] = np.where(data.year <= 2023, "train", np.where(data.year == 2024, "check", "test"))
     OUT.mkdir(parents=True, exist_ok=True)
-    data.to_csv(OUT / "fire_days.csv.gz", index=False)
+    data.to_csv(OUT / args.out, index=False)
     wx_cov = data["w1_tmax"].notna().mean()
     summary = {"rows": len(data), "fires": int(data.groupby(["run", "fire_id"]).ngroups),
                "split": {k: int(v) for k, v in data.split.value_counts().items()},
@@ -312,7 +466,11 @@ def main() -> None:
                "targets": {f"out_{k}": round(float(data[f"out_{k}"].mean()), 3) for k in range(1, H + 1)} |
                           {f"merge_{k}": round(float(data[f"merge_{k}"].mean()), 4) for k in range(1, H + 1)},
                "seconds": round(time.time() - t0, 1)}
-    (OUT / "fire_days_summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
+    if "chain" in data:
+        summary["chains"] = int(data.groupby(["run", "chain"]).ngroups)
+        summary["out_unknown_censored"] = {f"out_{k}": round(float(data[f"out_{k}"].isna().mean()), 3) for k in range(1, H + 1)}
+        summary["grew_0.1"] = {f"growth_{k}": round(float((data[f"growth_{k}"] >= 0.1).mean()), 3) for k in range(1, H + 1)}
+    (OUT / args.out.replace(".csv.gz", "_summary.json")).write_text(json.dumps(summary, indent=1), encoding="utf-8")
     print(json.dumps(summary, indent=1))
 
 

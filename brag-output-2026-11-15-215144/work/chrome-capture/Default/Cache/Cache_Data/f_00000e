@@ -1,0 +1,230 @@
+import { createHotContext as __vite__createHotContext } from "/app/@vite/client";import.meta.hot = __vite__createHotContext("/src/components/MapView.tsx");import __vite__cjsImport0_react_jsxDevRuntime from "/app/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=c264f4e3"; const jsxDEV = __vite__cjsImport0_react_jsxDevRuntime["jsxDEV"];
+import RefreshRuntime from "/app/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
+let prevRefreshReg;
+let prevRefreshSig;
+if (import.meta.hot && !inWebWorker) {
+  if (!window.__vite_plugin_react_preamble_installed__) {
+    throw new Error("@vitejs/plugin-react can't detect preamble. Something is wrong. See https://github.com/vitejs/vite-plugin-react/pull/11#discussion_r430879201");
+  }
+  prevRefreshReg = window.$RefreshReg$;
+  prevRefreshSig = window.$RefreshSig$;
+  window.$RefreshReg$ = (type, id) => {
+    RefreshRuntime.register(type, "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx " + id);
+  };
+  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
+}
+var _s = $RefreshSig$();
+import { useApp } from "/app/src/store.ts?t=1794771292631";
+import { TimelineBar } from "/app/src/components/TimelineBar.tsx?t=1794771292631";
+import { TerritoryBar } from "/app/src/components/TerritoryBar.tsx?t=1794771292631";
+import { MapHud } from "/app/src/components/MapHud.tsx?t=1794771292631";
+import { RISK_BANDS } from "/app/src/components/Charts.tsx?t=1794770695627";
+export function MapView() {
+  _s();
+  const firesShown = useApp((s) => s.firesShown);
+  const heat = useApp((s) => !!s.pipeline && !s.pipeline.realOnly);
+  const dot = (c, r) => ({ "--c": c, "--r": r });
+  return /* @__PURE__ */ jsxDEV("div", { className: "mapwrap", children: [
+    /* @__PURE__ */ jsxDEV("div", { className: "space", "aria-hidden": "true", children: [
+      /* @__PURE__ */ jsxDEV("div", { className: "nebula" }, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 17,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { className: "stars far" }, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 18,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { className: "stars near" }, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 19,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { className: "halo" }, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 20,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("canvas", { id: "embers" }, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 21,
+        columnNumber: 9
+      }, this)
+    ] }, void 0, true, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+      lineNumber: 16,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { id: "map" }, void 0, false, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+      lineNumber: 23,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { id: "maptip", className: "maptip", children: "Drag to draw the prediction zone · Esc to cancel" }, void 0, false, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+      lineNumber: 24,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV(TerritoryBar, {}, void 0, false, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+      lineNumber: 25,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV(MapHud, {}, void 0, false, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+      lineNumber: 26,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "mapcorner", children: [
+      /* @__PURE__ */ jsxDEV("div", { id: "legend", className: "legend", hidden: !firesShown, children: [
+        /* @__PURE__ */ jsxDEV("b", { children: "Fire detections" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+          lineNumber: 29,
+          columnNumber: 9
+        }, this),
+        /* @__PURE__ */ jsxDEV("small", { children: "Fire radiative power (FRP): how much heat the fire gives off" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+          lineNumber: 30,
+          columnNumber: 9
+        }, this),
+        /* @__PURE__ */ jsxDEV("ul", { children: [
+          /* @__PURE__ */ jsxDEV("li", { children: [
+            /* @__PURE__ */ jsxDEV("i", { style: dot("#facc15", "6px") }, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+              lineNumber: 32,
+              columnNumber: 15
+            }, this),
+            "Under 10 MW"
+          ] }, void 0, true, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+            lineNumber: 32,
+            columnNumber: 11
+          }, this),
+          /* @__PURE__ */ jsxDEV("li", { children: [
+            /* @__PURE__ */ jsxDEV("i", { style: dot("#f97316", "8px") }, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+              lineNumber: 33,
+              columnNumber: 15
+            }, this),
+            "10–50 MW"
+          ] }, void 0, true, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+            lineNumber: 33,
+            columnNumber: 11
+          }, this),
+          /* @__PURE__ */ jsxDEV("li", { children: [
+            /* @__PURE__ */ jsxDEV("i", { style: dot("#dc2626", "10px") }, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+              lineNumber: 34,
+              columnNumber: 15
+            }, this),
+            "50–200 MW"
+          ] }, void 0, true, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+            lineNumber: 34,
+            columnNumber: 11
+          }, this),
+          /* @__PURE__ */ jsxDEV("li", { children: [
+            /* @__PURE__ */ jsxDEV("i", { style: dot("#7f1d1d", "12px") }, void 0, false, {
+              fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+              lineNumber: 35,
+              columnNumber: 15
+            }, this),
+            "Over 200 MW"
+          ] }, void 0, true, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+            lineNumber: 35,
+            columnNumber: 11
+          }, this)
+        ] }, void 0, true, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+          lineNumber: 31,
+          columnNumber: 9
+        }, this)
+      ] }, void 0, true, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 28,
+        columnNumber: 7
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { className: "legend", hidden: !heat, children: [
+        /* @__PURE__ */ jsxDEV("b", { children: "Fire heatmap" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+          lineNumber: 39,
+          columnNumber: 9
+        }, this),
+        /* @__PURE__ */ jsxDEV("small", { children: "Observed fire, then the predicted chance of fire per cell" }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+          lineNumber: 40,
+          columnNumber: 9
+        }, this),
+        /* @__PURE__ */ jsxDEV("span", { "aria-hidden": "true", style: {
+          display: "block",
+          height: 6,
+          borderRadius: 3,
+          background: `linear-gradient(90deg, ${RISK_BANDS.map((b) => b.color).join(", ")})`
+        } }, void 0, false, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+          lineNumber: 41,
+          columnNumber: 9
+        }, this),
+        /* @__PURE__ */ jsxDEV("small", { style: { display: "flex", justifyContent: "space-between", margin: "4px 0 0" }, children: [
+          /* @__PURE__ */ jsxDEV("span", { children: "low" }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+            lineNumber: 43,
+            columnNumber: 96
+          }, this),
+          /* @__PURE__ */ jsxDEV("span", { children: "high" }, void 0, false, {
+            fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+            lineNumber: 43,
+            columnNumber: 112
+          }, this)
+        ] }, void 0, true, {
+          fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+          lineNumber: 43,
+          columnNumber: 9
+        }, this)
+      ] }, void 0, true, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 38,
+        columnNumber: 7
+      }, this),
+      /* @__PURE__ */ jsxDEV(TimelineBar, {}, void 0, false, {
+        fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+        lineNumber: 45,
+        columnNumber: 7
+      }, this)
+    ] }, void 0, true, {
+      fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+      lineNumber: 27,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, true, {
+    fileName: "B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx",
+    lineNumber: 15,
+    columnNumber: 5
+  }, this);
+}
+_s(MapView, "LgBecdZ9kLVoXcOp89vfTzRe+SA=", false, function() {
+  return [useApp, useApp];
+});
+_c = MapView;
+var _c;
+$RefreshReg$(_c, "MapView");
+if (import.meta.hot && !inWebWorker) {
+  window.$RefreshReg$ = prevRefreshReg;
+  window.$RefreshSig$ = prevRefreshSig;
+}
+if (import.meta.hot && !inWebWorker) {
+  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
+    RefreshRuntime.registerExportsForReactRefresh("B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("B:/Hackathon 14.11.26/Nasa-main/Nasa-main/frontend/src/components/MapView.tsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+
+//# sourceMappingURL=data:application/json;base64,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YW1lcyI6WyJDU1NQcm9wZXJ0aWVzIiwidXNlQXBwIiwiVGltZWxpbmVCYXIiLCJUZXJyaXRvcnlCYXIiLCJNYXBIdWQiLCJSSVNLX0JBTkRTIiwiTWFwVmlldyIsIl9zIiwiZmlyZXNTaG93biIsInMiLCJoZWF0IiwicGlwZWxpbmUiLCJyZWFsT25seSIsImRvdCIsImMiLCJyIiwiZGlzcGxheSIsImhlaWdodCIsImJvcmRlclJhZGl1cyIsImJhY2tncm91bmQiLCJtYXAiLCJiIiwiY29sb3IiLCJqb2luIiwianVzdGlmeUNvbnRlbnQiLCJtYXJnaW4iLCJfYyJdLCJpZ25vcmVMaXN0IjpbXSwic291cmNlcyI6WyJNYXBWaWV3LnRzeCJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgdHlwZSB7IENTU1Byb3BlcnRpZXMgfSBmcm9tICdyZWFjdCc7XHJcbmltcG9ydCB7IHVzZUFwcCB9IGZyb20gJy4uL3N0b3JlJztcclxuaW1wb3J0IHsgVGltZWxpbmVCYXIgfSBmcm9tICcuL1RpbWVsaW5lQmFyJztcclxuaW1wb3J0IHsgVGVycml0b3J5QmFyIH0gZnJvbSAnLi9UZXJyaXRvcnlCYXInO1xyXG5pbXBvcnQgeyBNYXBIdWQgfSBmcm9tICcuL01hcEh1ZCc7XHJcbmltcG9ydCB7IFJJU0tfQkFORFMgfSBmcm9tICcuL0NoYXJ0cyc7XHJcblxyXG4vLyBUaGUgbWFwIGFyZWE6IHRoZSBzcGFjZSBiYWNrZHJvcCAobmVidWxhLCBzdGFycywgaGFsbywgZW1iZXJzKSBiZWhpbmQgdGhlIE1hcExpYnJlIG1hcCwgdGhlIGRyYXdpbmcgdGlwLFxyXG4vLyBhbmQgaW4gdGhlIGJvdHRvbS1yaWdodCBjb3JuZXIgdGhlIGZpcmUgbGVnZW5kIHdpdGggdGhlIGZpcmUgdGltZWxpbmUgYmFyIHVuZGVyIGl0LiBUaGUgZW5naW5lIChzcmMvZW5naW5lLnRzKSBhdHRhY2hlcyB0byB0aGVzZSBlbGVtZW50cyBieSBpZC9jbGFzcy5cclxuZXhwb3J0IGZ1bmN0aW9uIE1hcFZpZXcoKSB7XHJcbiAgY29uc3QgZmlyZXNTaG93biA9IHVzZUFwcChzID0+IHMuZmlyZXNTaG93bik7XHJcbiAgY29uc3QgaGVhdCA9IHVzZUFwcChzID0+ICEhcy5waXBlbGluZSAmJiAhcy5waXBlbGluZS5yZWFsT25seSk7XHJcbiAgY29uc3QgZG90ID0gKGM6IHN0cmluZywgcjogc3RyaW5nKSA9PiAoeyAnLS1jJzogYywgJy0tcic6IHIgfSkgYXMgQ1NTUHJvcGVydGllcztcclxuICByZXR1cm4gKFxyXG4gICAgPGRpdiBjbGFzc05hbWU9XCJtYXB3cmFwXCI+XHJcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwic3BhY2VcIiBhcmlhLWhpZGRlbj1cInRydWVcIj5cclxuICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cIm5lYnVsYVwiIC8+XHJcbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzdGFycyBmYXJcIiAvPlxyXG4gICAgICAgIDxkaXYgY2xhc3NOYW1lPVwic3RhcnMgbmVhclwiIC8+XHJcbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJoYWxvXCIgLz5cclxuICAgICAgICA8Y2FudmFzIGlkPVwiZW1iZXJzXCIgLz5cclxuICAgICAgPC9kaXY+XHJcbiAgICAgIDxkaXYgaWQ9XCJtYXBcIiAvPlxyXG4gICAgICA8ZGl2IGlkPVwibWFwdGlwXCIgY2xhc3NOYW1lPVwibWFwdGlwXCI+RHJhZyB0byBkcmF3IHRoZSBwcmVkaWN0aW9uIHpvbmUgwrcgRXNjIHRvIGNhbmNlbDwvZGl2PlxyXG4gICAgICA8VGVycml0b3J5QmFyIC8+XHJcbiAgICAgIDxNYXBIdWQgLz5cclxuICAgICAgPGRpdiBjbGFzc05hbWU9XCJtYXBjb3JuZXJcIj5cclxuICAgICAgPGRpdiBpZD1cImxlZ2VuZFwiIGNsYXNzTmFtZT1cImxlZ2VuZFwiIGhpZGRlbj17IWZpcmVzU2hvd259PlxyXG4gICAgICAgIDxiPkZpcmUgZGV0ZWN0aW9uczwvYj5cclxuICAgICAgICA8c21hbGw+RmlyZSByYWRpYXRpdmUgcG93ZXIgKEZSUCk6IGhvdyBtdWNoIGhlYXQgdGhlIGZpcmUgZ2l2ZXMgb2ZmPC9zbWFsbD5cclxuICAgICAgICA8dWw+XHJcbiAgICAgICAgICA8bGk+PGkgc3R5bGU9e2RvdCgnI2ZhY2MxNScsICc2cHgnKX0gLz5VbmRlciAxMCBNVzwvbGk+XHJcbiAgICAgICAgICA8bGk+PGkgc3R5bGU9e2RvdCgnI2Y5NzMxNicsICc4cHgnKX0gLz4xMOKAkzUwIE1XPC9saT5cclxuICAgICAgICAgIDxsaT48aSBzdHlsZT17ZG90KCcjZGMyNjI2JywgJzEwcHgnKX0gLz41MOKAkzIwMCBNVzwvbGk+XHJcbiAgICAgICAgICA8bGk+PGkgc3R5bGU9e2RvdCgnIzdmMWQxZCcsICcxMnB4Jyl9IC8+T3ZlciAyMDAgTVc8L2xpPlxyXG4gICAgICAgIDwvdWw+XHJcbiAgICAgIDwvZGl2PlxuICAgICAgPGRpdiBjbGFzc05hbWU9XCJsZWdlbmRcIiBoaWRkZW49eyFoZWF0fT5cbiAgICAgICAgPGI+RmlyZSBoZWF0bWFwPC9iPlxuICAgICAgICA8c21hbGw+T2JzZXJ2ZWQgZmlyZSwgdGhlbiB0aGUgcHJlZGljdGVkIGNoYW5jZSBvZiBmaXJlIHBlciBjZWxsPC9zbWFsbD5cbiAgICAgICAgPHNwYW4gYXJpYS1oaWRkZW49XCJ0cnVlXCIgc3R5bGU9e3sgZGlzcGxheTogJ2Jsb2NrJywgaGVpZ2h0OiA2LCBib3JkZXJSYWRpdXM6IDMsXG4gICAgICAgICAgYmFja2dyb3VuZDogYGxpbmVhci1ncmFkaWVudCg5MGRlZywgJHtSSVNLX0JBTkRTLm1hcChiID0+IGIuY29sb3IpLmpvaW4oJywgJyl9KWAgfX0gLz5cbiAgICAgICAgPHNtYWxsIHN0eWxlPXt7IGRpc3BsYXk6ICdmbGV4JywganVzdGlmeUNvbnRlbnQ6ICdzcGFjZS1iZXR3ZWVuJywgbWFyZ2luOiAnNHB4IDAgMCcgfX0+PHNwYW4+bG93PC9zcGFuPjxzcGFuPmhpZ2g8L3NwYW4+PC9zbWFsbD5cbiAgICAgIDwvZGl2PlxyXG4gICAgICA8VGltZWxpbmVCYXIgLz5cclxuICAgICAgPC9kaXY+XHJcbiAgICA8L2Rpdj5cclxuICApO1xyXG59XHJcbiJdLCJmaWxlIjoiQjovSGFja2F0aG9uIDE0LjExLjI2L05hc2EtbWFpbi9OYXNhLW1haW4vZnJvbnRlbmQvc3JjL2NvbXBvbmVudHMvTWFwVmlldy50c3gifQ==

@@ -21,6 +21,7 @@ The first command downloads one day of worldwide MODIS and VIIRS detections from
 | Knowledge graph | Every result of every stage as Neo4j bulk-import CSV files |
 | Prediction engine | GPU-trained models (XGBoost with a survival model and a two-part growth model, plus a sequence network) blended into a 3-day forecast per fire, plus a calibrated burn-chance map |
 | Fire chains | Fires that vanish from the satellite data for up to 3 days and come back are treated as one continuing fire, so the models learn real extinctions |
+| Terrain and fuel | Elevation, slope and slope direction (Copernicus DEM) and land cover (ESA WorldCover) around every fire |
 | Merge dataset | Every observed merge, with the individual fires before it and the merged fire after it, their geometry and the weather |
 | Frontend | A React app with a 3D globe: pick a zone, load the detections, see the forecast and fire weather |
 
@@ -166,10 +167,12 @@ python archive_scan.py --start 2016-11-14 --end 2026-11-13
 python fire_runs.py --major 1000 --medium 1000
 python weather_fires.py
 python prediction_data.py --chains --out fire_days_v3.csv.gz
+python static_features.py terrain
+python static_features.py landcover
 python forecast_errors.py
-python prediction_v3.py --full --variant weather --out models_v3_full
-python prediction_v3.py --full --variant no_weather --out models_v3_full
-python prediction_seq.py --table fire_days_v3.csv.gz --bins out,merge,grow --full --epochs 16 --out models_seq_v3_full
+python prediction_v3.py --table fire_days_v4.csv.gz --full --variant weather --out models_v4_full
+python prediction_v3.py --table fire_days_v4.csv.gz --full --variant no_weather --out models_v4_full
+python prediction_seq.py --table fire_days_v4.csv.gz --bins out,merge,grow --full --epochs 16 --out models_seq_v4_full
 python prediction_spread.py fit
 ```
 
@@ -180,6 +183,7 @@ python prediction_spread.py fit
 | `weather_fires.py` | Adds weather to every batch and feeds it into the knowledge graph, within the Open-Meteo quota |
 | `prediction_data.py --chains` | Builds the training table: one row per fire per day, 333,452 fire-days from 188,559 fires linked into 144,229 chains, with targets for days +1 to +3 along each chain (`prediction_labels.py`) |
 | `forecast_errors.py` | Measures how wrong real weather forecasts were at about 200 cells: a pool of 4,590 error vectors used in training |
+| `static_features.py terrain` / `landcover` | Reads elevation, slope and slope direction (Copernicus DEM, at its 180 m overview) and land-cover shares within 1 and 5 km (ESA WorldCover, at its 40 m and 320 m overviews) for all 283,905 fire locations, over HTTP from AWS open data (about 18 minutes). The v4 table (`fire_days_v4.csv.gz`) is the v3 table plus these columns (`prediction_data.add_static`) |
 | `prediction_v3.py` | Trains the v3 tree models for one variant: survival model for extinction, two-part growth, fire power, movement and merging (25 models, about 28 minutes on the GPU with both variants in parallel). Without `--full` it trains on 2016–2023 for testing |
 | `prediction_seq.py` | Trains the sequence network (about 1 minute on the GPU) and saves it for numpy too; `--bins out,merge,grow` adds the chance-it-grows output |
 | `prediction_spread.py fit` | Calibrates the burn-chance map on 2024 and checks it on 2025–2026 |
@@ -264,11 +268,12 @@ v3 links such fires into chains (`prediction_labels.py`): fire B continues fire 
 
 | Model | What it is | Where | Status |
 |---|---|---|---|
-| **v3 blend** | v3 XGBoost and the v3 sequence network averaged for growth, chance it grows, fire power, movement and merging; extinction from the survival model | `prediction_engine.py` | **In production** |
-| v3 XGBoost | Survival model for extinction (`survival:aft`, censored when the data ends, calibrated per day ahead), two-part growth (chance it grows ≥ 0.1 km² + how much if it does), quantile models for fire power and movement, merge classifier. Trained on fire chains with forecast-like weather | `models/v3/weather`, `models/v3/no_weather` | In production |
-| v3 sequence network | A GRU over the chain's previous 4 fire-days plus dense layers, all outputs and days at once (including the chance it grows), trained with weather dropout and forecast noise. Trained with [PyTorch](https://pytorch.org/), run with numpy | `models/v3/seq` | In production |
-| Spread map | Logistic model turning distance and position around today's moved and spread-out pixels into a burn chance per 1 km cell | `models/v3/spread.json` | In production |
-| v2 blend | XGBoost (118 features) and sequence network trained on the uncorrected labels | `models/v2` | Superseded, kept for comparison |
+| **v4 blend** | v4 XGBoost and the v4 sequence network averaged for growth, chance it grows, fire power, movement and merging; extinction from the survival model | `prediction_engine.py` | **In production** |
+| v4 XGBoost | Survival model for extinction (`survival:aft`, censored when the data ends, calibrated per day ahead), two-part growth (chance it grows ≥ 0.1 km² + how much if it does), quantile models for fire power and movement, merge classifier. Trained on fire chains with forecast-like weather, plus terrain and land cover (149 features with weather, 86 without) | `models/v4/weather`, `models/v4/no_weather` | In production |
+| v4 sequence network | A GRU over the chain's previous 4 fire-days plus dense layers, all outputs and days at once (including the chance it grows), trained with weather dropout and forecast noise. Trained with [PyTorch](https://pytorch.org/), run with numpy | `models/v4/seq` | In production |
+| Spread map | Logistic model turning distance and position around today's moved and spread-out pixels into a burn chance per 1 km cell | `models/v4/spread.json` | In production |
+| v3 blend | The same models without terrain and land cover | git history (`models/v3`) | Superseded |
+| v2 blend | XGBoost (118 features) and sequence network trained on the uncorrected labels | git history (`models/v2`) | Superseded |
 | Fast model | The first XGBoost models (87 features) | `data/prediction/models_split` | Superseded |
 | Frontend grid model | Ridge-regularised logistic regression on 5.6 km grid cells, refitted on each zone's loaded days | `prediction.py` on the `frontend` branch | In the app today |
 
@@ -287,14 +292,35 @@ For every fire seen on the run's last day, the engine predicts days +1, +2 and +
 
 The "likely" growth is the median, so for a small fire that grows on fewer than half of the days it is close to 0 even when growth is quite possible; `p_grow` and `growth_expected` show that possibility directly.
 
-| Feature group | Features (118) |
+| Feature group | Features (149 with weather) |
 |---|---|
 | Fire now | Size, footprint, growth, fire power, pixels, passes, clusters, front distance, age, merges so far (along the chain) |
 | History | The previous 4 fire-days of the chain: growth, power, separate parts, days back; 3-day trends |
 | Separate parts | How many not-yet-joined fires the fire consists of that day, and the gap between them |
 | Neighbours | Distance and gap to the nearest other fire, its size, growth and power, fires within 10 and 25 km |
 | Place | Latitude, region, season, elevation, local 10-year fire frequency |
+| Terrain | Mean elevation and its spread (ruggedness), mean and 90th-percentile slope, downslope direction, within about 3 km (Copernicus DEM), and the wind component blowing uphill on days +1 to +3 |
+| Fuel | Share of tree, shrub, grass, crop, built-up, bare, snow, water, wetland, mangrove and moss within about 1 km and 5 km (ESA WorldCover) |
 | Weather, days d to d+3 | Temperature, humidity, vapour pressure deficit, wind, gusts and direction, rain, hours since rain, soil moisture at 3 depths, wind towards the nearest fire |
+
+### Terrain and fuel (v4)
+
+v4 adds what burns and the shape of the ground: land-cover shares from ESA WorldCover and elevation, slope and slope direction from the Copernicus DEM, read for all 283,905 fire locations (`static_features.py`). The tree models use them in physically sensible ways; share of each model's total gain (with weather):
+
+| Model | Terrain % | Land cover % | Most used |
+|---|---|---|---|
+| survival | 3.8 | 4.0 | elev_mean, lc5_tree, slope_mean |
+| grow_1 | 4.2 | 4.1 | elev_mean, lc1_grass, lc1_tree |
+| amount_1 | 1.6 | 1.5 | downslope_n, w3_wind_upslope, lc5_grass |
+| frp_1 | 2.6 | 3.1 | lc1_grass, elev_mean, lc5_crop |
+| dx_1 | 4.9 | 5.4 | lc5_grass, downslope_n, elev_mean |
+| dy_1 | 5.4 | 5.5 | downslope_e, lc5_grass, downslope_n |
+| merge_1 | 3.1 | 2.9 | downslope_e, downslope_n, elev_mean |
+| grow_3 | 4.6 | 4.4 | w3_wind_upslope, elev_mean, lc5_grass |
+| frp_3 | 3.0 | 3.6 | lc5_crop, elev_mean, lc1_grass |
+| dx_3 | 5.4 | 6.2 | lc5_grass, downslope_n, downslope_e |
+
+With weather, v4 scores the same as v3 (within ±0.2 points overall): the place's character is largely carried by the weather already. Without a forecast, v4 is 0.7–1.0 points better than v3, recovering part of the gap to the with-weather models. The sequence network did not gain from these features. Copernicus CEMS fire danger indices (FWI) were not added: Copernicus processes one request at a time, which would take many hours, and deep soil moisture already covers most of their long-term dryness signal.
 
 All models train on **forecast-like weather**: each training row's weather for days +1 to +3 gets a real forecast error added (same day ahead and region), so they trust a forecast only as much as forecasts deserve.
 
@@ -310,10 +336,11 @@ Mean of five accuracies: growth class (none / small / large), fire power within 
 
 | Model | Overall accuracy %, with weather | Overall accuracy %, no weather |
 |---|---|---|
-| v2 blend (previous production) | 61.6 / 60.3 / 59.3 | 60.3 / 58.7 / 58.3 |
-| v3 XGBoost | 62.1 / 61.0 / 60.6 | 60.9 / 59.3 / 58.9 |
-| v3 sequence network | 61.9 / 60.7 / 60.4 | 60.4 / 58.9 / 58.9 |
-| **v3 blend (production)** | **62.2 / 61.1 / 60.8** | 61.0 / 59.4 / 59.3 |
+| v2 blend | 61.6 / 60.3 / 59.3 | 60.3 / 58.7 / 58.3 |
+| v3 blend | 62.2 / 61.1 / 60.8 | 61.0 / 59.4 / 59.3 |
+| v4 XGBoost | 62.1 / 60.8 / 60.6 | 61.8 / 60.5 / 60.1 |
+| v4 sequence network | 61.7 / 60.4 / 60.3 | 60.3 / 58.9 / 58.7 |
+| **v4 blend (production)** | **62.4 / 61.0 / 60.9** | **61.7 / 60.4 / 60.0** |
 
 In the detailed tables the merge threshold is chosen for the best F1 instead, which raises merge precision and lowers merge balanced accuracy.
 
@@ -321,36 +348,36 @@ In the detailed tables the merge threshold is chosen for the best F1 instead, wh
 
 The check that found the problem: what really happened against what v2 and v3 predicted.
 
-| Day | Fire size | Fire-days | Really out % | v2 says out % | v3 says out % | Really grew % | v2 likely grew % | v3 chance it grows % | Real mean growth km² | v3 expected growth km² |
+| Day | Fire size | Fire-days | Really out % | v2 says out % | v4 says out % | Really grew % | v2 likely grew % | v4 chance it grows % | Real mean growth km² | v4 expected growth km² |
 |---|---|---|---|---|---|---|---|---|---|---|
-| +1 | under 1 km² | 25,054 | 51.8 | 81.3 | **59.7** | 23.6 | 1.7 | **21.0** | 0.25 | 0.18 |
-| +1 | 1-10 km² | 17,981 | 41.4 | 48.3 | **42.8** | 36.4 | 22.5 | **34.4** | 0.83 | 0.71 |
-| +1 | 10-100 km² | 4,711 | 20.7 | 13.7 | **18.7** | 68.6 | 80.6 | **69.2** | 7.33 | 7.14 |
-| +1 | over 100 km² | 1,632 | 12.9 | 10.2 | **14.8** | 84.3 | 91.5 | **85.1** | 62.78 | 68.22 |
-| +3 | under 1 km² | 25,054 | 73.6 | 92.2 | **84.1** | 40.1 | 3.5 | **36.6** | 0.69 | 0.47 |
-| +3 | 1-10 km² | 17,981 | 65.3 | 71.6 | **64.1** | 50.1 | 24.6 | **49.0** | 2.63 | 2.02 |
-| +3 | 10-100 km² | 4,711 | 48.2 | 39.7 | **33.8** | 74.0 | 68.6 | **76.2** | 20.5 | 21.13 |
-| +3 | over 100 km² | 1,632 | 36.8 | 34.0 | **25.2** | 85.2 | 76.8 | **86.2** | 158.34 | 182.38 |
+| +1 | under 1 km² | 25,054 | 51.8 | 81.3 | **57.8** | 23.6 | 1.7 | **20.6** | 0.25 | 0.12 |
+| +1 | 1-10 km² | 17,981 | 41.4 | 48.3 | **41.3** | 36.4 | 22.5 | **33.9** | 0.83 | 0.5 |
+| +1 | 10-100 km² | 4,711 | 20.7 | 13.7 | **17.6** | 68.6 | 80.6 | **69.0** | 7.33 | 5.58 |
+| +1 | over 100 km² | 1,632 | 12.9 | 10.2 | **13.7** | 84.3 | 91.5 | **85.1** | 62.78 | 49.37 |
+| +3 | under 1 km² | 25,054 | 73.6 | 92.2 | **85.4** | 40.1 | 3.5 | **36.2** | 0.69 | 0.3 |
+| +3 | 1-10 km² | 17,981 | 65.3 | 71.6 | **65.8** | 50.1 | 24.6 | **48.4** | 2.63 | 1.41 |
+| +3 | 10-100 km² | 4,711 | 48.2 | 39.7 | **34.4** | 74.0 | 68.6 | **75.8** | 20.5 | 16.07 |
+| +3 | over 100 km² | 1,632 | 36.8 | 34.0 | **26.8** | 85.2 | 76.8 | **86.2** | 158.34 | 137.24 |
 
 ### Extinction (is the fire out by that day?)
 
-Threshold 0.5. Calibration error: mean gap between the predicted chance and how often fires were really out, over 10 bins. v2 is scored here on the corrected labels; its calibration was off by 13.6 / 9.5 / 6.2 points, v3's by 1.9 / 0.9 / 1.2.
+Threshold 0.5. Calibration error: mean gap between the predicted chance and how often fires were really out, over 10 bins. v2 is scored here on the corrected labels; its calibration was off by 13.6 / 9.5 / 6.2 points, v4's by 1.9 / 0.9 / 1.2.
 
 | Model | Accuracy % | Precision % | Recall % | F1 % | ROC AUC | PR AUC | Brier | Calibration error, pts |
 |---|---|---|---|---|---|---|---|---|
-| v2 blend (previous production) | 71.9 / 75.9 / 79.0 | 62.9 / 73.6 / 79.6 | 87.0 / 90.5 / 92.4 | 73.0 / 81.1 / 85.5 | 0.819 / 0.845 / 0.857 | 0.749 / 0.869 / 0.918 | 0.1978 / 0.1694 / 0.1455 | 13.54 / 9.54 / 6.27 |
-| v3 XGBoost (survival + two-part growth) | 74.4 / 77.3 / 79.1 | 68.8 / 78.7 / 82.9 | 75.8 / 82.9 / 86.8 | 72.1 / 80.8 / 84.8 | 0.833 / 0.855 / 0.858 | 0.792 / 0.883 / 0.918 | 0.1654 / 0.1528 / 0.1406 | 1.91 / 0.88 / 1.25 |
-| v3 sequence network | 74.2 / 76.7 / 79.5 | 70.5 / 77.6 / 81.4 | 70.7 / 83.4 / 89.8 | 70.6 / 80.4 / 85.4 | 0.832 / 0.854 / 0.864 | 0.793 / 0.885 / 0.926 | 0.1652 / 0.1529 / 0.1372 | 1.39 / 0.80 / 1.18 |
-| **v3 blend (production)** | 74.4 / 77.3 / 79.1 | 68.8 / 78.7 / 82.9 | 75.8 / 82.9 / 86.8 | 72.1 / 80.8 / 84.8 | 0.833 / 0.855 / 0.858 | 0.792 / 0.883 / 0.918 | 0.1654 / 0.1528 / 0.1406 | 1.91 / 0.88 / 1.25 |
+| v2 blend | 71.9 / 75.9 / 79.0 | 62.9 / 73.6 / 79.6 | 87.0 / 90.5 / 92.4 | 73.0 / 81.1 / 85.5 | 0.819 / 0.845 / 0.857 | 0.749 / 0.869 / 0.918 | 0.1978 / 0.1694 / 0.1455 | 13.54 / 9.54 / 6.27 |
+| v4 XGBoost (survival + two-part growth, terrain, land cover) | 74.4 / 77.3 / 79.3 | 69.5 / 78.7 / 82.4 | 73.9 / 83.0 / 88.0 | 71.7 / 80.8 / 85.1 | 0.832 / 0.855 / 0.858 | 0.793 / 0.883 / 0.919 | 0.1657 / 0.1531 / 0.1408 | 1.92 / 0.92 / 1.26 |
+| v4 sequence network | 74.0 / 76.4 / 79.1 | 69.7 / 76.9 / 80.9 | 72.0 / 84.2 / 90.1 | 70.8 / 80.4 / 85.3 | 0.829 / 0.852 / 0.861 | 0.790 / 0.884 / 0.925 | 0.1672 / 0.1543 / 0.1387 | 2.31 / 1.23 / 1.05 |
+| **v4 blend (production)** | 74.4 / 77.3 / 79.3 | 69.5 / 78.7 / 82.4 | 73.9 / 83.0 / 88.0 | 71.7 / 80.8 / 85.1 | 0.832 / 0.855 / 0.858 | 0.793 / 0.883 / 0.919 | 0.1657 / 0.1531 / 0.1408 | 1.92 / 0.92 / 1.26 |
 | Persistence baseline | 56.3 / 42.6 / 33.0 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | – / – / – | – / – / – | – / – / – | – / – / – |
 
 ### Chance it grows (by at least 0.1 km²)
 
 | Model | Accuracy % | Precision % | Recall % | F1 % | ROC AUC | PR AUC | Calibration error, pts |
 |---|---|---|---|---|---|---|---|
-| v3 XGBoost (survival + two-part growth) | 76.8 / 72.5 / 71.9 | 78.3 / 76.9 / 76.1 | 45.5 / 52.4 / 61.5 | 57.5 / 62.3 / 68.0 | 0.797 / 0.799 / 0.809 | 0.732 / 0.779 / 0.812 | 2.38 / 2.85 / 2.74 |
-| v3 sequence network | 76.9 / 72.4 / 71.8 | 78.3 / 76.3 / 75.2 | 46.1 / 52.7 / 62.5 | 58.0 / 62.4 / 68.3 | 0.796 / 0.798 / 0.806 | 0.731 / 0.779 / 0.811 | 1.85 / 2.23 / 1.98 |
-| **v3 blend (production)** | 77.1 / 72.7 / 72.3 | 79.0 / 77.1 / 76.3 | 45.9 / 52.6 / 62.3 | 58.0 / 62.6 / 68.6 | 0.801 / 0.803 / 0.812 | 0.736 / 0.783 / 0.816 | 2.00 / 2.27 / 2.03 |
+| v4 XGBoost (survival + two-part growth, terrain, land cover) | 76.8 / 72.3 / 72.0 | 78.2 / 76.5 / 76.3 | 45.6 / 52.4 / 61.4 | 57.6 / 62.2 / 68.0 | 0.796 / 0.800 / 0.809 | 0.731 / 0.780 / 0.812 | 2.60 / 2.83 / 2.74 |
+| v4 sequence network | 76.7 / 72.2 / 71.7 | 78.6 / 76.7 / 76.0 | 44.9 / 51.7 / 60.9 | 57.2 / 61.8 / 67.6 | 0.796 / 0.796 / 0.804 | 0.730 / 0.777 / 0.809 | 2.23 / 2.60 / 2.55 |
+| **v4 blend (production)** | 76.9 / 72.6 / 72.3 | 79.2 / 77.4 / 76.9 | 45.1 / 52.0 / 61.2 | 57.5 / 62.2 / 68.2 | 0.801 / 0.803 / 0.811 | 0.736 / 0.783 / 0.815 | 2.38 / 2.50 / 2.47 |
 
 ### Merging with a separate fire
 
@@ -358,10 +385,10 @@ Threshold chosen for the best F1 on 2024. Merges are rare (4–8% of fire-days),
 
 | Model | Balanced acc. % | Precision % | Recall % | F1 % | ROC AUC | PR AUC | Brier |
 |---|---|---|---|---|---|---|---|
-| v2 blend (previous production) | 71.1 / 78.6 / 77.4 | 53.1 / 50.2 / 58.8 | 43.9 / 61.2 / 58.4 | 48.1 / 55.2 / 58.6 | 0.947 / 0.938 / 0.931 | 0.518 / 0.599 / 0.645 | 0.0265 / 0.0377 / 0.0444 |
-| v3 XGBoost (survival + two-part growth) | 72.1 / 77.5 / 77.8 | 48.6 / 50.1 / 55.8 | 46.3 / 59.0 / 59.8 | 47.4 / 54.2 / 57.8 | 0.945 / 0.938 / 0.932 | 0.507 / 0.586 / 0.637 | 0.0270 / 0.0385 / 0.0451 |
-| v3 sequence network | 69.5 / 75.1 / 78.2 | 54.9 / 55.9 / 55.6 | 40.3 / 53.0 / 60.5 | 46.5 / 54.4 / 58.0 | 0.943 / 0.936 / 0.930 | 0.510 / 0.591 / 0.637 | 0.0267 / 0.0381 / 0.0450 |
-| **v3 blend (production)** | 69.7 / 73.8 / 80.1 | 56.2 / 59.0 / 52.4 | 40.6 / 50.0 / 65.4 | 47.2 / 54.1 / 58.2 | 0.947 / 0.939 / 0.934 | 0.519 / 0.597 / 0.645 | 0.0266 / 0.0379 / 0.0445 |
+| v2 blend | 71.1 / 78.6 / 77.4 | 53.1 / 50.2 / 58.8 | 43.9 / 61.2 / 58.4 | 48.1 / 55.2 / 58.6 | 0.947 / 0.938 / 0.931 | 0.518 / 0.599 / 0.645 | 0.0265 / 0.0377 / 0.0444 |
+| v4 XGBoost (survival + two-part growth, terrain, land cover) | 71.1 / 75.3 / 79.4 | 51.6 / 54.7 / 52.8 | 43.9 / 53.6 / 63.8 | 47.5 / 54.2 / 57.8 | 0.945 / 0.937 / 0.931 | 0.506 / 0.588 / 0.637 | 0.0270 / 0.0385 / 0.0452 |
+| v4 sequence network | 72.3 / 75.5 / 76.7 | 49.0 / 56.1 / 58.9 | 46.6 / 53.8 / 56.9 | 47.8 / 54.9 / 57.9 | 0.942 / 0.934 / 0.929 | 0.507 / 0.586 / 0.634 | 0.0268 / 0.0383 / 0.0450 |
+| **v4 blend (production)** | 69.2 / 73.7 / 77.8 | 56.8 / 59.5 / 58.1 | 39.6 / 49.7 / 59.3 | 46.7 / 54.2 / 58.7 | 0.946 / 0.938 / 0.933 | 0.517 / 0.597 / 0.644 | 0.0266 / 0.0379 / 0.0445 |
 | Persistence baseline | 50.0 / 50.0 / 50.0 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | – / – / – | – / – / – | – / – / – |
 
 ### Growth of the burned area
@@ -370,20 +397,20 @@ Class: none (< 0.1 km²), small (0.1–2 km²) or large (≥ 2 km²). Coverage: 
 
 | Model | MAE km² | Class accuracy % | Class macro F1 % | Low–high coverage % | Pinball loss (log) |
 |---|---|---|---|---|---|
-| v2 blend (previous production) | 1.95 / 3.58 / 5.10 | 72.4 / 64.6 / 60.1 | 60.1 / 55.0 / 51.1 | 80.8 / 75.5 / 70.7 | 0.0747 / 0.1010 / 0.1262 |
-| v3 XGBoost (survival + two-part growth) | 1.97 / 3.54 / 5.06 | 72.9 / 66.9 / 65.3 | 60.9 / 60.8 / 62.9 | 88.1 / 87.7 / 87.4 | 0.0727 / 0.0922 / 0.1032 |
-| v3 sequence network | 1.96 / 3.58 / 5.06 | 72.4 / 66.5 / 64.4 | 61.3 / 60.1 / 61.3 | 83.8 / 83.4 / 81.2 | 0.0727 / 0.0915 / 0.1026 |
-| **v3 blend (production)** | 1.92 / 3.47 / 4.92 | 72.9 / 66.9 / 65.4 | 61.6 / 61.3 / 63.4 | 84.3 / 83.9 / 81.7 | 0.0715 / 0.0904 / 0.1010 |
+| v2 blend | 1.95 / 3.58 / 5.10 | 72.4 / 64.6 / 60.1 | 60.1 / 55.0 / 51.1 | 80.8 / 75.5 / 70.7 | 0.0747 / 0.1010 / 0.1262 |
+| v4 XGBoost (survival + two-part growth, terrain, land cover) | 1.96 / 3.59 / 5.05 | 72.9 / 66.9 / 65.3 | 60.8 / 60.9 / 62.8 | 87.9 / 87.6 / 87.5 | 0.0729 / 0.0924 / 0.1033 |
+| v4 sequence network | 2.01 / 3.64 / 5.16 | 72.5 / 66.4 / 64.1 | 60.8 / 59.9 / 60.7 | 84.9 / 82.6 / 81.2 | 0.0730 / 0.0920 / 0.1033 |
+| **v4 blend (production)** | 1.94 / 3.53 / 4.98 | 72.9 / 66.8 / 65.4 | 61.5 / 61.2 / 63.4 | 85.5 / 83.4 / 82.1 | 0.0717 / 0.0906 / 0.1013 |
 | Persistence baseline | 2.85 / 5.87 / 9.07 | 32.5 / 35.9 / 36.4 | 37.8 / 37.3 / 35.8 | – / – / – | – / – / – |
 
 ### Fire power (FRP)
 
 | Model | MAE MW | Within ×2 % | Low–high coverage % | Peak FRP MAE MW |
 |---|---|---|---|---|
-| v2 blend (previous production) | 295 / 370 / 420 | 39.9 / 37.2 / 36.2 | 76.6 / 77.1 / 75.5 | 537 / 687 / 789 |
-| v3 XGBoost (survival + two-part growth) | 298 / 375 / 423 | 39.7 / 37.3 / 37.3 | 73.7 / 73.4 / 72.3 | 545 / 700 / 793 |
-| v3 sequence network | 302 / 377 / 421 | 39.8 / 37.7 / 37.9 | 78.1 / 78.1 / 77.2 | 549 / 697 / 794 |
-| **v3 blend (production)** | 295 / 370 / 414 | 40.0 / 37.7 / 37.9 | 76.6 / 76.6 / 75.4 | 536 / 686 / 780 |
+| v2 blend | 295 / 370 / 420 | 39.9 / 37.2 / 36.2 | 76.6 / 77.1 / 75.5 | 537 / 687 / 789 |
+| v4 XGBoost (survival + two-part growth, terrain, land cover) | 299 / 375 / 424 | 39.8 / 37.1 / 37.3 | 73.5 / 73.1 / 71.8 | 543 / 701 / 799 |
+| v4 sequence network | 306 / 375 / 420 | 39.9 / 37.7 / 37.9 | 78.3 / 77.9 / 76.6 | 559 / 696 / 793 |
+| **v4 blend (production)** | 298 / 370 / 416 | 40.2 / 37.9 / 38.0 | 76.6 / 76.3 / 74.7 | 543 / 687 / 783 |
 | Persistence baseline | 420 / 579 / 645 | 33.2 / 30.1 / 30.0 | – / – / – | 766 / 1077 / 1232 |
 
 ### Spread direction and centre movement
@@ -392,34 +419,34 @@ Fires that moved at least 1 km.
 
 | Model | Within 45° % | Within 90° % | Median angle error ° | Median centre error km |
 |---|---|---|---|---|
-| v2 blend (previous production) | 35.4 / 36.3 / 34.7 | 59.5 / 59.4 / 59.3 | 70.7 / 70.6 / 71.7 | 2.97 / 3.37 / 3.71 |
-| v3 XGBoost (survival + two-part growth) | 36.1 / 36.1 / 34.9 | 59.3 / 59.7 / 58.9 | 70.5 / 69.9 / 71.0 | 2.97 / 3.36 / 3.73 |
-| v3 sequence network | 35.8 / 35.5 / 34.2 | 59.7 / 59.9 / 59.6 | 69.8 / 70.6 / 71.8 | 2.96 / 3.38 / 3.71 |
-| **v3 blend (production)** | 36.2 / 36.0 / 35.4 | 59.8 / 59.9 / 60.1 | 69.7 / 69.8 / 70.4 | 2.95 / 3.36 / 3.69 |
+| v2 blend | 35.4 / 36.3 / 34.7 | 59.5 / 59.4 / 59.3 | 70.7 / 70.6 / 71.7 | 2.97 / 3.37 / 3.71 |
+| v4 XGBoost (survival + two-part growth, terrain, land cover) | 35.8 / 35.8 / 34.9 | 59.5 / 60.5 / 59.2 | 70.0 / 69.6 / 71.7 | 2.95 / 3.36 / 3.72 |
+| v4 sequence network | 35.1 / 35.0 / 34.7 | 59.8 / 59.6 / 59.7 | 71.1 / 71.5 / 71.5 | 2.97 / 3.38 / 3.73 |
+| **v4 blend (production)** | 36.5 / 35.8 / 35.2 | 60.1 / 59.9 / 59.9 | 69.5 / 70.4 / 71.0 | 2.94 / 3.36 / 3.71 |
 | Persistence baseline | 21.1 / 19.8 / 20.5 | 38.7 / 37.8 / 38.8 | 115.6 / 116.4 / 114.2 | 5.48 / 9.13 / 12.76 |
 
 ### Without weather
 
 | Model | Extinction ROC AUC | Extinction calibration, pts | Merge ROC AUC | Growth MAE km² | FRP within ×2 % |
 |---|---|---|---|---|---|
-| v2 blend (previous production) | 0.773 / 0.779 / 0.787 | 14.17 / 10.15 / 7.15 | 0.944 / 0.933 / 0.924 | 2.09 / 3.98 / 5.78 | 39.1 / 36.0 / 36.1 |
-| v3 XGBoost (survival + two-part growth) | 0.787 / 0.796 / 0.800 | 1.86 / 1.27 / 1.48 | 0.942 / 0.933 / 0.925 | 2.09 / 3.96 / 5.61 | 39.1 / 36.6 / 36.7 |
-| v3 sequence network | 0.776 / 0.784 / 0.785 | 0.80 / 0.80 / 1.47 | 0.941 / 0.932 / 0.924 | 2.12 / 4.01 / 5.67 | 39.4 / 36.9 / 37.2 |
-| **v3 blend (production)** | 0.787 / 0.796 / 0.800 | 1.86 / 1.27 / 1.48 | 0.944 / 0.935 / 0.927 | 2.06 / 3.90 / 5.51 | 39.5 / 36.9 / 37.3 |
+| v2 blend | 0.773 / 0.779 / 0.787 | 14.17 / 10.15 / 7.15 | 0.944 / 0.933 / 0.924 | 2.09 / 3.98 / 5.78 | 39.1 / 36.0 / 36.1 |
+| v4 XGBoost (survival + two-part growth, terrain, land cover) | 0.820 / 0.845 / 0.848 | 1.99 / 1.01 / 1.21 | 0.943 / 0.936 / 0.930 | 1.99 / 3.70 / 5.17 | 39.7 / 37.1 / 36.9 |
+| v4 sequence network | 0.773 / 0.781 / 0.780 | 1.61 / 1.13 / 1.59 | 0.940 / 0.930 / 0.922 | 2.15 / 4.04 / 5.76 | 39.4 / 37.3 / 37.5 |
+| **v4 blend (production)** | 0.820 / 0.845 / 0.848 | 1.99 / 1.01 / 1.21 | 0.944 / 0.936 / 0.929 | 2.01 / 3.74 / 5.29 | 40.2 / 37.6 / 37.3 |
 
-### Robustness (v3)
+### Robustness (v4)
 
 Retrained without one year or one world region and tested on what was left out (quicker check models: learning rate 0.1, days +1 and +3).
 
 | Left out of training | Overall accuracy %, day +1 / +3 |
 |---|---|
-| Year 2024 | 62.4 / 59.8 |
-| Americas | 61.5 / 59.7 |
-| Africa | 60.9 / 58.5 |
+| Year 2024 | 62.2 / 59.8 |
+| Americas | 61.6 / 59.4 |
+| Africa | 60.9 / 58.2 |
 
 ### With real weather forecasts
 
-Measured for the earlier models (on the old labels) with the forecasts that were issued at the time. v3 has not been tested this way yet.
+Measured for the earlier models (on the old labels) with the forecasts that were issued at the time. v3 and v4 have not been tested this way yet.
 
 | Overall accuracy %, day +1 / +2 / +3 | Fast model | v2 XGBoost |
 |---|---|---|
@@ -439,7 +466,7 @@ Calibrated on 2024, checked on 2025–2026. A cell counts as burned if any satel
 
 ### Behaviour checks
 
-The v3 blend passes all 11: more wind or drier air gives more growth, drier air more fire power, rain raises the chance of extinction and cuts growth, turning the wind turns the predicted spread, raw growth is never negative, ranges are ordered, chances stay in 0..1, results are deterministic and it works without weather.
+The v4 blend passes all 11: more wind or drier air gives more growth, drier air more fire power, rain raises the chance of extinction and cuts growth, turning the wind turns the predicted spread, raw growth is never negative, ranges are ordered, chances stay in 0..1, results are deterministic and it works without weather.
 
 ### Frontend grid model
 
@@ -455,11 +482,10 @@ That is one zone and one day, so it says little in general, but here persistence
 ## Data layout
 
 ```
-models/v3/                   production models shipped with the repository (Git LFS)
+models/v4/                   production models shipped with the repository (Git LFS, 339 MB)
   weather/ no_weather/       25 compressed XGBoost models each (survival, two-part growth, fire power, movement, merging)
   seq/                       sequence network as numpy arrays
-  spread.json
-models/v2/                   previous models, kept for comparison
+  spread.json                (models/v2 and models/v3 are in git history)
 docs/images/                 README images
 data/                        git-ignored: rebuild with the commands in Usage
   archive/                   10-year scan: raw FIRMS files, frequency map, selected fires
@@ -492,7 +518,7 @@ These run offline, with no key. The accuracy tests need the training table and m
 | `python test_prediction_accuracy.py cv` | Retrains without one year or region (GPU) |
 | `python test_prediction_accuracy.py forecast` | Accuracy with archived real forecasts (uses Open-Meteo) |
 
-`PRED_TABLE=fire_days_v3.csv.gz` scores against the corrected labels, `PRED_MODELS=<folder>` tests another model folder, `PRED_BLEND=models_v3,models_seq_v3` a blend, and `PRED_SOIL_FROM_D=1` gives days +1 to +3 day d's soil moisture, as the models expect.
+`PRED_TABLE=fire_days_v4.csv.gz` (or `_v3`) scores against the corrected labels, `PRED_MODELS=<folder>` tests another model folder, `PRED_BLEND=models_v4,models_seq_v4` a blend, and `PRED_SOIL_FROM_D=1` gives days +1 to +3 day d's soil moisture, as the models expect.
 
 ## Limitations
 
@@ -502,7 +528,8 @@ These run offline, with no key. The accuracy tests need the training table and m
 - **Fire chains:** linking uses distance and timing only; two different fires that start close together a few days apart can be joined, and a fire that vanishes for more than 3 days is still split.
 - **Expected growth** is calibrated to be right on average; for fires under 1 km² it is still about a third too low.
 - **Weather coverage:** only about half of the training rows have weather; small fires outside the fetched cells have none.
-- **Not yet tested with real forecasts:** v3's real-forecast check is still to run (it needs the Open-Meteo archive).
+- **Not yet tested with real forecasts:** the v4 real-forecast check is still to run (it needs the Open-Meteo archive).
+- **Terrain and fuel for new places:** the engine reads them from the cloud the first time a place is seen (cached afterwards), so a new area needs internet access; terrain is read at 180 m and land cover at 40 m resolution, and land cover is the 2021 map.
 - **Simulated forecast errors:** drawn from real errors at about 200 cells, which approximates training on archived forecasts.
 - **Soil moisture:** days +1 to +3 use day d's value, because the forecast archive has none.
 - **First day:** a fire seen for the first time has no history, so its predictions are less reliable.
@@ -520,6 +547,8 @@ These run offline, with no key. The accuracy tests need the training table and m
 | **Open-Meteo** | Observed hourly weather (ERA5), archived forecasts for training and testing, frontend fire weather | [Open-Meteo](https://open-meteo.com/) · [Forecast API](https://open-meteo.com/en/docs) · [Historical weather API (ERA5)](https://open-meteo.com/en/docs/historical-weather-api) · [Previous runs API](https://open-meteo.com/en/docs/previous-runs-api) |
 | **ECMWF IFS** | The forecast model behind the archived forecasts (0.25°) | [ECMWF forecasts](https://www.ecmwf.int/en/forecasts/datasets/set-i) |
 | **ERA5** (Copernicus Climate Change Service) | The reanalysis behind the observed weather | [ERA5 single levels](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels) |
+| **Copernicus DEM GLO-90** | Elevation, slope and slope direction around each fire | [Copernicus DEM on AWS](https://registry.opendata.aws/copernicus-dem/) |
+| **ESA WorldCover 2021** (10 m) | Land cover (fuel) around each fire | [ESA WorldCover on AWS](https://registry.opendata.aws/esa-worldcover-vito/) · [ESA WorldCover](https://esa-worldcover.org/) |
 | **Copernicus CEMS** fire danger indices | Optional, off by default | [CEMS fire historical](https://ewds.climate.copernicus.eu/datasets/cems-fire-historical-v1) |
 | **Esri World Imagery** | Frontend globe imagery | [World Imagery service](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer) |
 | **Natural Earth** | Country borders (frontend) | [Natural Earth](https://www.naturalearthdata.com/) |
@@ -529,7 +558,7 @@ Libraries: [XGBoost](https://xgboost.readthedocs.io/), [PyTorch](https://pytorch
 
 ## Credits
 
-We acknowledge the use of data from NASA's Fire Information for Resource Management System ([FIRMS](https://www.earthdata.nasa.gov/data/tools/firms)), part of NASA's Earth Science Data and Information System. Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0), based on ECMWF IFS forecasts and Copernicus ERA5. Imagery © Esri; borders from Natural Earth.
+We acknowledge the use of data from NASA's Fire Information for Resource Management System ([FIRMS](https://www.earthdata.nasa.gov/data/tools/firms)), part of NASA's Earth Science Data and Information System. Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0), based on ECMWF IFS forecasts and Copernicus ERA5. Imagery © Esri; borders from Natural Earth. Terrain: Copernicus DEM, © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA. Land cover: © ESA WorldCover project 2021, contains modified Copernicus Sentinel data (2021) processed by the ESA WorldCover consortium.
 
 | Contributor | Area |
 |---|---|

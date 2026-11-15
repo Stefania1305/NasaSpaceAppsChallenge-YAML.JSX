@@ -45,8 +45,8 @@ PARAMS = dict(tree_method="hist", eta=0.05, max_depth=8, min_child_weight=5, sub
 AFT_SCALES = (0.6, 0.9, 1.3)
 
 
-def load_table():
-    df = pd.read_csv(P_DIR / "fire_days_v3.csv.gz", low_memory=False)
+def load_table(table="fire_days_v3.csv.gz"):
+    df = pd.read_csv(P_DIR / table, low_memory=False)
     df = add_history(df)
     for k in range(1, H + 1):
         df[f"grow_{k}"] = np.where(df[f"growth_{k}"].isna(), np.nan, (df[f"growth_{k}"] >= GROW_KM2).astype(float))
@@ -147,7 +147,9 @@ def train(df, variant, full, device, out_dir, log=print):
     feats = feature_columns(df, weather=(variant == "weather"))
     a, b, _ = split(df, full)
     out_dir.mkdir(parents=True, exist_ok=True)
-    card = {"variant": variant, "features": len(feats), "full": full, "rows_train": len(a), "models": {}}
+    from prediction_data import STATIC_COLS
+    card = {"variant": variant, "features": len(feats), "full": full, "rows_train": len(a), "models": {},
+            "static_features": any(c in feats for c in STATIC_COLS)}
     t0 = time.time()
     m, sc, calib = train_survival(a, b, feats, device, log)
     m.save_model(str(out_dir / "survival.json"))
@@ -247,9 +249,10 @@ def main():
     ap.add_argument("--variant", default="weather", choices=["weather", "no_weather"])
     ap.add_argument("--out", default="models_v3")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--table", default="fire_days_v3.csv.gz", help="fire_days_v4.csv.gz adds terrain and land cover")
     args = ap.parse_args()
     t0 = time.time()
-    df = load_table()
+    df = load_table(args.table)
     from forecast_errors import forecast_like
     df = forecast_like(df, rows=(df.split == "train").to_numpy() | args.full, seed=0)
     print(f"{len(df):,} fire-days, variant {args.variant}, {'all years' if args.full else 'train 2016-2023'}", flush=True)

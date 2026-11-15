@@ -1,0 +1,10 @@
+{
+ "rows_train": 333452,
+ "features": 149,
+ "epochs": 16,
+ "best_epoch": 16,
+ "full": true,
+ "forecast_noise": true,
+ "weather_dropout": 0.4,
+ "seconds": 96.8
+}

@@ -10,6 +10,7 @@ Output: data/prediction/accuracy/small_fires.json
 """
 
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -26,7 +27,7 @@ SIZES = [(0, 1, "under 1 km2"), (1, 10, "1-10 km2"), (10, 100, "10-100 km2"), (1
 def main():
     import prediction_v3 as V
     from seq_numpy import NumpySeq
-    df = add_history(pd.read_csv(P_DIR / "fire_days_v3.csv.gz", low_memory=False))
+    df = add_history(pd.read_csv(P_DIR / os.environ.get("PRED_TABLE", "fire_days_v3.csv.gz"), low_memory=False))
     te = df[df.split == "test"].copy()
     soil = te.copy()
     for k in range(1, H + 1):
@@ -35,8 +36,8 @@ def main():
     models = {
         "v2": PM.blend(PM.xgb_predict(PM.xgb_models(P_DIR / "models_v2", "weather"), soil),
                        NumpySeq.load(P_DIR / "models_seq").predict_df(soil, weather=True)),
-        "v3": PM.blend(V.predict(P_DIR / "models_v3", soil, "weather"),
-                       NumpySeq.load(P_DIR / "models_seq_v3").predict_df(soil, weather=True)),
+        "v3": PM.blend(V.predict(P_DIR / os.environ.get("PRED_NEW", "models_v3"), soil, "weather"),
+                       NumpySeq.load(P_DIR / os.environ.get("PRED_NEW_SEQ", "models_seq_v3")).predict_df(soil, weather=True)),
     }
     res = {}
     for k in range(1, H + 1):
@@ -61,7 +62,7 @@ def main():
                   f"grew real {row['real_grew_%']:5} v2 likely {row['v2_likely_grew_%']:5} v3 likely {row['v3_likely_grew_%']:5} "
                   f"v3 chance {row.get('v3_mean_chance_grows_%', '-')} | growth real {row['real_mean_growth_km2']} v3 expected {row.get('v3_mean_expected_growth_km2', '-')}",
                   flush=True)
-    (DATA_DIR / "prediction" / "accuracy" / "small_fires.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+    (DATA_DIR / "prediction" / "accuracy" / os.environ.get("PRED_OUT_NAME", "small_fires.json")).write_text(json.dumps(res, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

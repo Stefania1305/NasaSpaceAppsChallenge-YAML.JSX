@@ -56,24 +56,34 @@ from weather_worker import RAIN_MM, weather_key
 MODELS = DATA_DIR / "prediction" / "models"                # models trained locally (prediction_train.py)
 SHIPPED = Path(__file__).resolve().parent / "models" / "v2"  # models shipped with the repository (Git LFS), used when none are trained locally
 SEQ_LOCAL = DATA_DIR / "prediction" / "models_seq_full"      # sequence network trained locally on all years
-V3_LOCAL = DATA_DIR / "prediction" / "models_v3_full"         # v3 models trained locally on all years
-V3_SHIPPED = Path(__file__).resolve().parent / "models" / "v3"
-SEQ_V3 = (DATA_DIR / "prediction" / "models_seq_v3_full", V3_SHIPPED / "seq")
+REPO = Path(__file__).resolve().parent
+# newest first: v4 (v3 + terrain and land cover), then v3; local models trained on all years, then shipped ones
+V3_CANDIDATES = [(DATA_DIR / "prediction" / "models_v4_full", DATA_DIR / "prediction" / "models_seq_v4_full"),
+                 (REPO / "models" / "v4", REPO / "models" / "v4" / "seq"),
+                 (DATA_DIR / "prediction" / "models_v3_full", DATA_DIR / "prediction" / "models_seq_v3_full"),
+                 (REPO / "models" / "v3", REPO / "models" / "v3" / "seq")]
 BLEND_SKIP = {"out"}                                         # outputs taken from XGBoost alone
 
 
 def v3_dir(variant):
-    """Folder of the v3 models (local first, then shipped), or None."""
-    for d in (V3_LOCAL, V3_SHIPPED):
+    """Folder of the newest v3-style models (v4, then v3; local first, then shipped), or None."""
+    for d, _ in V3_CANDIDATES:
         if (d / variant / "card.json").exists():
             return d
     return None
 
 
-def load_seq(v3=False):
+def v3_seq_dirs(variant):
+    for d, sq in V3_CANDIDATES:
+        if (d / variant / "card.json").exists():
+            return (sq,)
+    return ()
+
+
+def load_seq(v3=False, variant="weather"):
     """The sequence network (numpy), local if trained, else shipped; None if neither exists."""
     from seq_numpy import NumpySeq
-    for d in (SEQ_V3 if v3 else (SEQ_LOCAL, SHIPPED / "seq")):
+    for d in (v3_seq_dirs(variant) if v3 else (SEQ_LOCAL, SHIPPED / "seq")):
         if (d / "weights.npz").exists() and (d / "prep.json").exists():
             head = (d / "weights.npz").read_bytes()[:40]
             if head.startswith(b"version https://git-lfs"):
@@ -232,6 +242,10 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
         days = [(pd.Timestamp(last) + timedelta(days=k)).strftime("%Y-%m-%d") for k in range(0, H + 1)]
         coverage = {f"day+{k}": bool((wd.day == d).any()) for k, d in enumerate(days)}
     X = add_place_and_weather(active, run_dir, wd, cells, load_freq())
+    if use_v3 and (v3_dir(variant0) / variant0 / "card.json").exists() and \
+            json.loads((v3_dir(variant0) / variant0 / "card.json").read_text(encoding="utf-8")).get("static_features"):
+        from prediction_data import add_static
+        X = add_static(X, sample_missing=True)         # reads new places from the cloud files, then caches them
     if mode == "provided":
         # as in training for real use: days +1..+3 take day d's soil moisture
         for k in range(1, H + 1):
@@ -243,7 +257,7 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
     if use_v3:
         import prediction_v3
         Pd = prediction_v3.predict(v3_dir(variant), X, variant)
-        model_name = "v3 (survival + two-part growth)"
+        model_name = ("v4: v3 + terrain and land cover" if "v4" in str(v3_dir(variant)) else "v3") + " (survival + two-part growth)"
     else:
         models = load_models(variant)
         if not models:
@@ -260,7 +274,7 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
                 m = models.get(f"{target}_{k}")
                 Pd[f"{target}_{k}"] = m.predict(M).astype("float64") if m is not None else np.full(len(X), np.nan)
         model_name = "v2"
-    seq = load_seq(v3=use_v3)
+    seq = load_seq(v3=use_v3, variant=variant)
     S = None
     if seq is not None:
         # the network reads each fire's previous fire-days, so its history comes from the whole run

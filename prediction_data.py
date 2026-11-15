@@ -437,7 +437,31 @@ def feature_columns(df: pd.DataFrame, weather: bool = True) -> list:
             "nb_dist_km", "nb_gap_km", "nb_fp", "nb_new_area", "nb_frp", "nb_n10", "nb_n25", "sep_parts", "sep_gap_km",
             *HIST_COLS]
     wx = [f"w{k}_{c}" for k in range(0, H + 1) for c in WX] + [f"w{k}_wind_to_nb" for k in range(1, H + 1)]
-    return [c for c in base + (wx if weather else []) if c in df]
+    static = STATIC_COLS + [f"w{k}_wind_upslope" for k in range(1, H + 1)]
+    return [c for c in base + static + (wx if weather else []) if c in df]
+
+
+# terrain (Copernicus DEM) and fuel (ESA WorldCover) around the fire, from static_features.py
+STATIC_COLS = ["elev_mean", "elev_std", "slope_mean", "slope_p90", "downslope_e", "downslope_n",
+               "lc1_tree", "lc1_shrub", "lc1_grass", "lc1_crop", "lc1_built", "lc1_bare", "lc1_snow", "lc1_water", "lc1_wetland",
+               "lc1_mangrove", "lc1_moss", "lc5_tree", "lc5_shrub", "lc5_grass", "lc5_crop", "lc5_built", "lc5_bare", "lc5_snow",
+               "lc5_water", "lc5_wetland", "lc5_mangrove", "lc5_moss"]
+
+
+def add_static(df: pd.DataFrame, sample_missing: bool = False) -> pd.DataFrame:
+    """Terrain and land-cover columns for each fire-day (cache of static_features.py; optionally sample new places),
+    plus the wind component blowing uphill on days +1..+3 (fire runs faster uphill and with the wind)."""
+    import static_features as S
+    d = df.copy()
+    for kind in ("terrain", "landcover"):
+        F = S.lookup(d, kind, sample_missing=sample_missing)
+        for c in F.columns:
+            d[c] = F[c].to_numpy()
+    for k in range(1, H + 1):
+        if f"w{k}_u_mean" in d and "downslope_e" in d:
+            # uphill = against the downslope direction; positive when the wind pushes the fire uphill
+            d[f"w{k}_wind_upslope"] = -(d[f"w{k}_u_mean"] * d.downslope_e + d[f"w{k}_v_mean"] * d.downslope_n)
+    return d
 
 
 def main() -> None:

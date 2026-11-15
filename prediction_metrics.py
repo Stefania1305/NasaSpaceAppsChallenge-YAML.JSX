@@ -189,14 +189,15 @@ def main_v3(table):
             soil[f"w{k}_{c}"] = soil[f"w0_{c}"]
     te, ck = df.split == "test", df.split == "check"
     from seq_numpy import NumpySeq
-    seq2, seq3 = NumpySeq.load(P_DIR / "models_seq"), NumpySeq.load(P_DIR / "models_seq_v3")
+    new_dir, new_seq = os.environ.get("PRED_NEW", "models_v3"), os.environ.get("PRED_NEW_SEQ", "models_seq_v3")
+    seq2, seq3 = NumpySeq.load(P_DIR / "models_seq"), NumpySeq.load(P_DIR / new_seq)
     res = {"table": table, "test_rows": int(te.sum()), "test_fires": int(df[te].groupby(["run", "fire_id"]).ngroups), "models": {}}
     for variant in ("weather", "no_weather"):
         w = variant == "weather"
         x2 = xgb_models(P_DIR / "models_v2", variant)
-        m3 = V.load(P_DIR / "models_v3", variant)
+        m3 = V.load(P_DIR / new_dir, variant)
         fns = {"v2_blend": lambda D: blend(xgb_predict(x2, D), seq2.predict_df(D, weather=w)),
-               "v3_xgb": lambda D: V.predict(P_DIR / "models_v3", D, variant, models=m3),
+               "v3_xgb": lambda D: V.predict(P_DIR / new_dir, D, variant, models=m3),
                "v3_sequence": lambda D: seq3.predict_df(D, weather=w)}
         preds = {n: (f(soil[te]), f(soil[ck])) for n, f in fns.items()}
         preds["v3_blend"] = (blend(preds["v3_xgb"][0], preds["v3_sequence"][0]), blend(preds["v3_xgb"][1], preds["v3_sequence"][1]))
@@ -212,8 +213,9 @@ def main_v3(table):
         print(f"  {variant}: scored in {time.time() - t0:.0f} s", flush=True)
     res["models"]["persistence"] = {"weather": {str(k): score(df[te], None, k, 0.5, "persistence") for k in range(1, H + 1)}}
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "metrics_v3.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
-    print(f"saved {OUT / 'metrics_v3.json'} in {time.time() - t0:.0f} s")
+    name = os.environ.get("PRED_OUT_NAME", "metrics_v3.json")
+    (OUT / name).write_text(json.dumps(res, indent=1), encoding="utf-8")
+    print(f"saved {OUT / name} in {time.time() - t0:.0f} s")
 
 
 def main_v2():

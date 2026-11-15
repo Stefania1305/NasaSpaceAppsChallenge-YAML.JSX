@@ -25,7 +25,7 @@ export function Splash() {
         </ul>
         <button type="button" id="start" autoFocus disabled={leaving} onClick={start}>Get started →</button>
       </div>
-      <p className="credit">Data: NASA FIRMS · Imagery © Esri · Maps © OpenStreetMap</p>
+      <p className="credit">Data: NASA FIRMS · Imagery © Esri · Borders: Natural Earth</p>
     </div>
   );
 }

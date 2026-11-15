@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { num, pct, shortDate } from '../format';
 
 const FIRE = '#ea580c';
-// The risk zones' colours by chance band (same as ZONE_BANDS in riskShapes.ts).
+// The fire heatmap colours by chance band (same ramp as riskHeat.ts).
 export const RISK_BANDS = [
   { from: .10, to: .25, color: '#fde68a', label: '10–25%' },
   { from: .25, to: .40, color: '#fbbf24', label: '25–40%' },

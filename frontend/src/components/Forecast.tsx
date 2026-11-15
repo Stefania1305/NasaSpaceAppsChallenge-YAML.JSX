@@ -1,6 +1,7 @@
 import { useApp } from '../store';
 import { num, pct, shortDate } from '../format';
 import { Compass, MiniBar, RankingGauge, RiskHistogram, Timeline } from './Charts';
+import { WEATHER_VARS, weatherRange, type WeatherVar } from '../weatherHeat';
 
 // Part 1 of the side panel after Predict: the fire forecast (it takes the place of the zone controls).
 // The information is grouped into titled cards: about the forecast, the forecast itself, recent fire
@@ -35,6 +36,76 @@ function CompareBars({ rows }: { rows: { name: string; v: number; muted?: boolea
   );
 }
 
+// On/off switch (used for the weather layers).
+function Switch({ on, onClick, label, busy, id }: { on: boolean; onClick: () => void; label: string; busy?: boolean; id?: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} title={label} id={id}
+            className={`switch${on ? ' on' : ''}${busy ? ' busy' : ''}`} onClick={onClick}>
+      <span className="knob" />
+    </button>
+  );
+}
+
+const RATING_TEXT = { high: 'High: hot, dry or windy, fire spreads easily',
+                      moderate: 'Moderate: some fire-friendly conditions',
+                      low: 'Low: cool, humid, calm or wet' } as const;
+
+// Weather card: one switch per weather layer (temperature, humidity, wind), each drawn separately on the map.
+// While any is on, the zone's weather for the selected forecast day is summarised at the top.
+function WeatherGroup() {
+  const layers = useApp(s => s.weatherLayers);
+  const w = useApp(s => s.weather);
+  const loading = useApp(s => s.weatherLoading);
+  const error = useApp(s => s.weatherError);
+  const fdate = useApp(s => s.forecast?.forecast?.[s.day]?.date);
+  const toggle = useApp.getState().toggleWeatherLayer;
+  const any = Object.values(layers).some(Boolean);
+  const sm = any && w ? w.summary.find(x => x.date === fdate) : undefined;
+  return (
+    <Group title="Weather">
+      {any && loading && <p className="gsub">Loading the weather…</p>}
+      {any && error && <p className="warn">⚠ {error}</p>}
+      {any && !loading && !error && sm && (sm.available ? <>
+        <div className={`wxrating ${sm.rating}`}>
+          <span className="dot" aria-hidden="true" />Fire weather on {shortDate(sm.date)}: <b>{RATING_TEXT[sm.rating!]}</b>
+        </div>
+        <div className="pstats wxstats">
+          <div className="pstat"><b>{Math.round(sm.temp_max!)}°C</b>Highest temperature</div>
+          <div className="pstat"><b>{sm.rh_min}%</b>Lowest humidity</div>
+          <div className="pstat"><b>{sm.wind_max} km/h</b>Strongest wind{sm.wind_from_compass ? `, from the ${sm.wind_from_compass}` : ''}</div>
+        </div>
+        <p className="gsub">Rain {sm.rain_mean} mm on average{sm.gust_max != null ? ` · gusts up to ${sm.gust_max} km/h` : ''}.</p>
+      </> : <p className="gsub">No weather forecast is available for {shortDate(sm.date)}.</p>)}
+      {!any && <p className="gsub">Show the weather across the zone on the map: switch on any layer below.</p>}
+
+      {/* One row per layer: its name, its switch, and (while on) its colour key */}
+      <div className="wxlayers">
+        {(Object.keys(WEATHER_VARS) as WeatherVar[]).map(k => {
+          const cfg = WEATHER_VARS[k], on = layers[k];
+          const [lo, hi] = w ? weatherRange(w, k) : [0, 1];
+          return (
+            <div className={`wxlayer${on ? ' on' : ''}`} key={k}>
+              <div className="wxrow">
+                <span className="wxname"><i style={{ background: cfg.ramp[3] }} aria-hidden="true" />{cfg.label}</span>
+                <Switch id={`wx-${k}-toggle`} on={on} busy={on && loading} onClick={() => toggle(k)}
+                        label={`${on ? 'Hide' : 'Show'} ${cfg.label.toLowerCase()} on the map`} />
+              </div>
+              {on && w && !loading && (
+                <div className="wxkey">
+                  <span className="wxbar" style={{ background: `linear-gradient(90deg, ${cfg.ramp.join(', ')})` }} />
+                  <span className="wxends"><span>{Math.round(lo)} {cfg.unit}</span><span>{Math.round(hi)} {cfg.unit}</span></span>
+                  <p className="gsub">{cfg.note}.</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {any && w && <p className="notes">Hover the map for the values at a spot. Weather: {w.source}.</p>}
+    </Group>
+  );
+}
+
 export function Forecast() {
   const visible = useApp(s => s.forecastVisible);
   const d = useApp(s => s.forecast);
@@ -66,7 +137,7 @@ export function Forecast() {
         <Group title="About this forecast"
                action={<button type="button" className="secondary small" id="zoomZone" onClick={() => zoomToZone(1500)}>Zoom to zone</button>}>
           <dl className="meta">
-            <dt>Zone</dt><dd>{zone ? `${zone.w}, ${zone.s} → ${zone.e}, ${zone.n}` : '—'}</dd>
+            <dt>Zone</dt><dd>{d.country ? <><b>{d.country}</b> (inside its borders)</> : zone ? `${zone.w}, ${zone.s} → ${zone.e}, ${zone.n}` : '—'}</dd>
             <dt>Data</dt><dd>{shortDate(d.range[0])} – {shortDate(d.range[1])}</dd>
             <dt>Source</dt><dd>{source}</dd>
             <dt>Grid</dt><dd>{d.cell_km} km cells</dd>
@@ -94,6 +165,9 @@ export function Forecast() {
           )}
           <RiskHistogram probs={(d.cells ?? []).map((c: { p: number[] }) => c.p[day] ?? 0)} />
         </Group>
+
+        {/* Weather overlay switch + summary for the selected day */}
+        <WeatherGroup />
 
         {/* Fire activity: the observed days flowing into the forecast */}
         <Group title="Fire activity · past and forecast">

@@ -4,10 +4,15 @@
 import { create } from 'zustand';
 import * as engine from './engine';
 import { getJSON } from './api';
+import { countryById, countryZone, placesFor, territoryAt } from './countries';
+import { buildTimeline, type TimelineData } from './timeline';
+import { featherPx, heatField, heatFrame, type HeatField } from './riskHeat';
+import { shapeMask } from './mapImage';
+import type { WeatherVar } from './weatherHeat';
 import { areaKm2, EMPTY, normalise, r2, zoneAroundPoint, type FC, type Zone } from './geo';
 import { num, shortDate } from './format';
 
-export type Method = 'draw' | 'pin' | 'coords' | 'view';
+export type Method = 'draw' | 'pin' | 'coords' | 'country';
 export type Mode = 'harmonise' | 'fetch';
 type Params = { date: string; days: string; area: string };
 type Loaded = { mode: Mode; sensor: string; params: Params };
@@ -15,6 +20,13 @@ export type Msg = { text: string; kind: 'info' | 'ok' | 'error' } | null;
 type Availability = Record<string, { min: string; max: string }>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Forecast = any;
+export type WeatherDay = { temp: number | null; rh: number | null; wind: number | null; dir: number | null;
+                           gust: number | null; rain: number | null };
+export type WeatherSummary = { date: string; available: boolean; temp_max?: number; rh_min?: number; wind_max?: number;
+                               gust_max?: number | null; wind_from?: number | null; wind_from_compass?: string | null;
+                               rain_mean?: number; rating?: 'low' | 'moderate' | 'high' };
+export type Weather = { dates: string[]; nx: number; ny: number; bbox: [number, number, number, number]; points: { lat: number; lon: number; days: WeatherDay[] }[];
+                        summary: WeatherSummary[]; source: string };
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
 const body = () => document.body.classList;
@@ -35,6 +47,10 @@ interface AppState {
   pinMode: boolean;
   zone: Zone | null;
   pinAt: { lat: number; lng: number } | null;
+  zoneCountry: string | null;                   // the country's name, when the zone was picked by clicking a country
+  zoneCountryId: number | null;                 // ...and its id (the forecast is then limited to its borders)
+  zoneTerritory: number | null;                 // ...and which of its territories (France: mainland, French Guiana...)
+  countries: 'idle' | 'loading' | 'ready' | 'error';   // the country shapes for that method
   pinError: boolean;
   // Time window + data availability
   date: string;
@@ -57,6 +73,13 @@ interface AppState {
   forecastVisible: boolean;
   day: number;
   cameraBeforePredict: ReturnType<typeof engine.cameraSnapshot> | null;
+  // Weather overlay (Open-Meteo, via /api/weather): the switch in the forecast panel, and the data for the
+  // forecast days of the current prediction (`weatherKey` says which zone and days it belongs to).
+  weatherLayers: Record<WeatherVar, boolean>;  // which weather layers are on (each has its own switch)
+  weather: Weather | null;
+  weatherKey: string | null;
+  weatherLoading: boolean;
+  weatherError: string | null;
   // Misc
   status: string;
   firesShown: boolean;
@@ -69,10 +92,15 @@ interface AppState {
   setMethod: (m: Method) => void;
   toggleDrawing: () => void;
   togglePinMode: () => void;
-  selectZone: (z: Zone, fit?: boolean, fromPin?: boolean) => void;
+  selectZone: (z: Zone, fit?: boolean, fromPin?: boolean, country?: { id: number; name: string; part: number | null }) => void;
+  selectCountry: (id: number, part?: number | null, at?: [number, number]) => void;
+  // The territory box: go to another territory of the picked country or of its family (France → New Caledonia...);
+  // with a forecast on screen, it's re-run there.
+  switchTerritory: (id: number, part: number | null) => Promise<void>;
+  switchingTo: string | null;                   // the territory being loaded from the box, if any
+  switchError: string | null;
   clearZone: () => void;
   coordsCommitted: () => void;
-  useCurrentView: () => void;
   readPinArea: () => number | null;
   applyPin: (fit: boolean) => void;
   setDate: (v: string) => void;
@@ -85,7 +113,20 @@ interface AppState {
   loadData: () => Promise<void>;
   predict: () => Promise<void>;
   analyse: () => Promise<void>;
-  showDay: (i: number) => void;
+  showDay: (i: number, fromTimeline?: boolean) => void;
+  // Fire timeline (animated heatmap + the bar under the legend)
+  timeline: Pick<TimelineData, 'frames' | 'events'> | null;
+  timelineBuilding: boolean;
+  tlFrame: number;                              // the frame on screen
+  tlPlaying: boolean;
+  tlSeek: { frame: number; n: number } | null;  // a jump requested from outside the bar (day tabs, checkpoints)
+  buildTimeline: () => Promise<void>;
+  setTlFrame: (i: number) => void;
+  setTlPlaying: (on: boolean) => void;
+  seekTimeline: (i: number) => void;
+  clearTimeline: () => void;
+  toggleWeatherLayer: (v: WeatherVar) => void;
+  loadWeather: () => Promise<void>;
   zoomToZone: (duration?: number) => void;
   flyToHotspot: (lat: number, lon: number) => void;
   changeZone: () => void;
@@ -124,8 +165,16 @@ export const useApp = create<AppState>((set, get) => ({
   pinMode: false,
   zone: null,
   pinAt: null,
+  zoneCountry: null,
+  zoneCountryId: null,
+  zoneTerritory: null,
+  switchingTo: null,
+  switchError: null,
+  countries: 'idle',
   pinError: false,
-  date: new Date(Date.now() - 4 * 864e5).toISOString().slice(0, 10),
+  // Default window: the 5 days ending yesterday (UTC). Today's near-real-time data is still arriving, so a window
+  // ending today sees a nearly fire-free last day and the forecast comes out almost empty.
+  date: new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10),
   days: '5',
   sensors: [],
   availability: {},
@@ -143,6 +192,16 @@ export const useApp = create<AppState>((set, get) => ({
   forecastVisible: false,
   day: 0,
   cameraBeforePredict: null,
+  weatherLayers: { temp: false, rh: false, wind: false },
+  timeline: null,
+  timelineBuilding: false,
+  tlFrame: 0,
+  tlPlaying: false,
+  tlSeek: null,
+  weather: null,
+  weatherKey: null,
+  weatherLoading: false,
+  weatherError: null,
   status: '',
   firesShown: false,
 
@@ -209,31 +268,72 @@ export const useApp = create<AppState>((set, get) => ({
     if (engine.isDrawing()) engine.setDrawing(false);     // don't leave a half-started draw/pin mode active
     if (engine.isPinMode()) engine.setPinMode(false);
     set({ method: m });
+    // "Pick a country" needs the country shapes: load them the first time.
+    if (m === 'country' && get().countries !== 'ready' && get().countries !== 'loading') {
+      set({ countries: 'loading' });
+      engine.ensureCountries().then(() => set({ countries: 'ready' }), () => set({ countries: 'error' }));
+    }
   },
   toggleDrawing: () => engine.setDrawing(!engine.isDrawing()),
   togglePinMode: () => engine.setPinMode(!engine.isPinMode()),
 
   // `fromPin`: the zone was built around the map pin; any other way of setting the zone removes the pin.
-  selectZone: (z, fit = false, fromPin = false) => {
+  // `country`: the zone is a clicked country's extent (its border is shown with the zone).
+  selectZone: (z, fit = false, fromPin = false, country) => {
     if (!fromPin) engine.removePin();
+    engine.setSelectedCountry(country?.id ?? null);
     const zone = normalise(z);
     if (zone.w === zone.e || zone.s === zone.n) { get().clearZone(); return; }
     get().invalidateData();
     engine.showZone(zone);
     COORD_KEYS.forEach(k => { const el = $<HTMLInputElement>(k); if (el) el.value = String(zone[k]); });
     const appearing = !get().zone;
-    set({ zone, pinAt: fromPin ? engine.pinLngLat() : null });
+    set({ zone, pinAt: fromPin ? engine.pinLngLat() : null, zoneCountry: country?.name ?? null, zoneCountryId: country?.id ?? null,
+          zoneTerritory: country?.part ?? null });
     // "Analyse zone" only exists once there is a zone; bring it into view when it first appears.
     if (appearing && document.activeElement?.tagName !== 'INPUT') {
       afterRender(() => $('run')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
     }
     // Flying in from the globe passes through the globe→flat transition on the way.
-    if (fit) engine.fitZone(zone, 40, 2500);
+    // (a country with territories shows the territory box at the bottom: keep the zone clear of it)
+    const hasBox = !!(country && placesFor(country.id, country.part));
+    if (fit) engine.fitZone(zone, hasBox ? { top: 40, left: 40, right: 40, bottom: 160 } : 40, 2800);
+  },
+
+  // "Pick a country": the zone becomes the rectangle the country fills, and the map flies there. A country with
+  // far-off territories is picked one territory at a time: the one clicked on the map (`at`), the one chosen in
+  // the territory box (`part`), or else its main one.
+  selectCountry: (id, part, at) => {
+    const c = countryById(id);
+    if (!c) return;
+    const k = !c.parts?.length ? null : part ?? (at ? territoryAt(c, at[0], at[1]) : 0) ?? 0;
+    const tName = k != null && c.parts![k].name !== c.name ? c.parts![k].name : null;
+    get().selectZone(countryZone(c, k), true, false, { id, name: tName ? `${c.name} · ${tName}` : c.name, part: k });
+  },
+
+  switchTerritory: async (id, part) => {
+    const { zoneCountryId, forecastVisible, zoneTerritory } = get();
+    const c = countryById(id);
+    if (!c || (part != null && !c.parts?.[part]) || get().switchingTo) return;
+    if (id === zoneCountryId && part === zoneTerritory && forecastVisible) return;
+    set({ switchError: null });
+    get().selectCountry(id, part);                      // new zone + fly there (clears the old forecast)
+    if (!forecastVisible) return;
+    // A forecast was on screen: run the same analysis for this territory, so the box hops straight between them.
+    set({ switchingTo: part != null ? c.parts![part].name : c.name });
+    try {
+      await get().analyse();
+      const err = get().predictMsg?.kind === 'error' ? get().predictMsg!.text : get().loadMsg?.kind === 'error' ? get().loadMsg!.text : null;
+      if (err) set({ switchError: err });
+    } finally {
+      set({ switchingTo: null });
+    }
   },
 
   clearZone: () => {
     engine.removePin();
-    set({ zone: null, pinAt: null, loaded: null, lastFires: null, status: '' });
+    engine.setSelectedCountry(null);
+    set({ zone: null, pinAt: null, zoneCountry: null, zoneCountryId: null, zoneTerritory: null, loaded: null, lastFires: null, status: '' });
     get().clearPrediction();
     engine.showZone(null);
     engine.setFires(EMPTY);
@@ -244,8 +344,6 @@ export const useApp = create<AppState>((set, get) => ({
     const v = Object.fromEntries(COORD_KEYS.map(k => [k, parseFloat($<HTMLInputElement>(k)?.value ?? '')])) as Zone;
     if (Object.values(v).every(Number.isFinite)) get().selectZone(v, true);
   },
-
-  useCurrentView: () => get().selectZone(engine.currentViewZone()),
 
   readPinArea: () => {
     const a = parseFloat($<HTMLInputElement>('pinArea')?.value ?? '');
@@ -332,13 +430,20 @@ export const useApp = create<AppState>((set, get) => ({
     // Remember where the map was when Predict was clicked, so "Change zone" can fly back there.
     set({ cameraBeforePredict: engine.cameraSnapshot(), predicting: true,
           predictMsg: { kind: 'info', text: 'Running prediction…' } });
+    get().clearTimeline();
     engine.setRisk(EMPTY);
+    engine.setWeather(null);
     try {
+      const countryId = get().zoneCountryId, part = get().zoneTerritory;
       const d = await getJSON('/api/predict?' + new URLSearchParams({ ...loaded.params, source: loaded.mode,
-        ...(loaded.mode === 'fetch' ? { sensor: loaded.sensor } : {}) }));
+        ...(loaded.mode === 'fetch' ? { sensor: loaded.sensor } : {}),
+        ...(countryId != null ? { country: String(countryId) } : {}),
+        ...(countryId != null && part != null ? { part: String(part) } : {}) }));
       set({ predictMsg: { kind: 'ok', text: `✓ ${d.forecast.length}-day forecast ready.` } });
       // Close the window, fly to the zone (fires + forecast are on the map) and show the details in the panel.
       get().closeModal();
+      // A country's forecast: fire heat, dots and weather are drawn only inside its borders.
+      engine.setClipCountry(d.country && countryId != null ? countryId : null, part);
       const { lastFires } = get();
       if (lastFires) engine.setFires(lastFires);           // fire dots + legend appear only now
       // Map: one square per grid cell, carrying the probability for each forecast day.
@@ -352,6 +457,8 @@ export const useApp = create<AppState>((set, get) => ({
       get().showDay(0);
       get().showForecastPanel(true);
       get().zoomToZone();
+      get().buildTimeline();                             // the animated heatmap + its bar
+      if (weatherOn(get())) get().loadWeather();         // weather layers are on: bring them for the new forecast
     } catch (err) {
       set({ predictMsg: { kind: 'error', text: (err as Error).message } });
     } finally {
@@ -373,31 +480,114 @@ export const useApp = create<AppState>((set, get) => ({
     await get().predict();
   },
 
-  showDay: (i) => {
+  showDay: (i, fromTimeline = false) => {
     const f = get().forecast?.forecast?.[i];
     if (!f) return;
+    // Picking a day tab moves the timeline to that forecast day (and pauses it).
+    const tl = get().timeline;
+    if (!fromTimeline && tl) {
+      const k = tl.frames.findIndex(fr => fr.kind === 'forecast' && fr.index === i);
+      if (k >= 0) { get().seekTimeline(k); return; }
+    }
+    if (get().day === i && fromTimeline) return;
     engine.setRiskDay(i);
+    const { weather, weatherLayers } = get();
+    if (weatherOn(get()) && weather) engine.setWeather(weather, i, weatherLayers);
     set({ day: i, status: `Showing the fire forecast for ${shortDate(f.date)} (+${i + 1} day${i ? 's' : ''}) on the map.` });
   },
 
-  // Zoom in until the zone fills the map edge to edge (a camera move only: you can still zoom out or pan).
-  zoomToZone: (duration = 2000) => {
-    const { zone } = get();
-    if (zone) engine.fitZone(zone, 0, duration);
+  // ---------------- Fire timeline ----------------
+  // Built after each prediction: one heatmap image per day (observed days, then forecast days) and checkpoints.
+  buildTimeline: async () => {
+    const { forecast, lastFires, zone } = get();
+    if (!forecast || !zone) return;
+    set({ timelineBuilding: true });
+    const data = buildTimeline(forecast, lastFires ?? EMPTY, (zone.e - zone.w) * (zone.n - zone.s), engine.getClipInside());
+    if (!data) { set({ timelineBuilding: false }); return; }
+    // One grid of heat values per day on a shared frame (and the country's soft-edged mask, if limited to one).
+    // The longer side is 720 px: plenty after the map's smoothing, and quick to recolour on every animation tick.
+    const frame = heatFrame(data.boxes.flat(), data.extent, 720);
+    const fields: HeatField[] = [];
+    for (const b of data.boxes) {
+      fields.push(heatField(b, frame));
+      await new Promise(r => setTimeout(r, 0));       // keep the page responsive while the days are computed
+      if (get().forecast !== forecast) return;         // a newer prediction (or Change zone) took over
+    }
+    const clipGeom = engine.getClipGeometry();
+    const mask = clipGeom ? shapeMask(frame, clipGeom, featherPx(data.boxes.flat(), frame)) : null;
+    engine.setTimeline({ fields, frame, mask });
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    set({ timeline: { frames: data.frames, events: data.events }, timelineBuilding: false, tlFrame: 0,
+          tlPlaying: !reduced, tlSeek: { frame: 0, n: (get().tlSeek?.n ?? 0) + 1 } });
+    get().setTlFrame(0);
   },
-  flyToHotspot: (lat, lon) => { engine.stopSpin(); engine.flyTo({ center: [lon, lat], zoom: 9, duration: 2000 }); },
+  // The bar reports each new frame: show that day's fire dots, and follow forecast days in the panel too.
+  setTlFrame: (i) => {
+    const fr = get().timeline?.frames[i];
+    if (!fr) return;
+    set({ tlFrame: i });                                // (the bar fades the fire dots between days itself)
+    if (fr.kind === 'forecast') get().showDay(fr.index, true);
+  },
+  setTlPlaying: (on) => set({ tlPlaying: on }),
+  seekTimeline: (i) => set({ tlPlaying: false, tlSeek: { frame: i, n: (get().tlSeek?.n ?? 0) + 1 } }),
+  clearTimeline: () => {
+    engine.setTimeline(null);
+    engine.setFireDay(null);
+    set({ timeline: null, timelineBuilding: false, tlPlaying: false, tlFrame: 0 });
+  },
+
+  // Weather switch in the forecast panel: shows / hides the weather markers for the forecast day on the map.
+  // A weather layer's switch in the forecast panel: shows / hides that layer for the forecast day on the map.
+  toggleWeatherLayer: (v) => {
+    const layers = { ...get().weatherLayers, [v]: !get().weatherLayers[v] };
+    set({ weatherLayers: layers, weatherError: null });
+    if (!Object.values(layers).some(Boolean)) engine.setWeather(null);
+    else get().loadWeather();                          // reuses the loaded weather when it's for this forecast
+  },
+  // Weather for the current zone on the forecast days (reused if already loaded for the same zone and days).
+  loadWeather: async () => {
+    const { forecast, zone } = get();
+    const first = forecast?.forecast?.[0]?.date;
+    if (!zone || !first) return;
+    const params = { area: [zone.w, zone.s, zone.e, zone.n].join(','), start: first, days: String(forecast.forecast.length) };
+    const key = new URLSearchParams(params).toString();
+    if (get().weather && get().weatherKey === key) { engine.setWeather(get().weather, get().day, get().weatherLayers); return; }
+    set({ weatherLoading: true, weatherError: null });
+    try {
+      const w: Weather = await getJSON('/api/weather?' + key);
+      set({ weather: w, weatherKey: key });
+      // Only draw it if it's still wanted and still for the forecast on screen.
+      const now = get();
+      if (weatherOn(now) && now.forecastVisible && now.forecast?.forecast?.[0]?.date === first) engine.setWeather(w, now.day, now.weatherLayers);
+    } catch (err) {
+      set({ weatherError: (err as Error).message });
+    } finally {
+      set({ weatherLoading: false });
+    }
+  },
+
+  // Zoom in until the zone fills the map edge to edge (a camera move only: you can still zoom out or pan).
+  zoomToZone: (duration = 2600) => {
+    const { zone, zoneCountryId, zoneTerritory } = get();
+    // (with the territory box at the bottom, keep the zone clear of it)
+    const hasBox = zoneCountryId != null && !!placesFor(zoneCountryId, zoneTerritory);
+    if (zone) engine.fitZone(zone, hasBox ? { top: 0, left: 0, right: 0, bottom: 140 } : 0, duration);
+  },
+  flyToHotspot: (lat, lon) => { engine.stopSpin(); engine.flyTo({ center: [lon, lat], zoom: 9, duration: 2400 }); },
 
   // Back to the zone controls: clear the map (fire dots, legend, forecast squares and the zone outline) and fly back
   // to where the map was when Predict was clicked. The zone stays selected and the loaded data is kept, so
   // "Analyse zone" brings the outline back and predicting again redraws the rest.
   changeZone: () => {
     get().showForecastPanel(false);
+    get().clearTimeline();
     engine.setFires(EMPTY);
     engine.setRisk(EMPTY);
+    engine.setWeather(null);
     engine.showZone(null);
     set({ status: '' });
     const cam = get().cameraBeforePredict;
-    if (cam) engine.flyTo({ ...cam, duration: 2000, essential: true });
+    if (cam) engine.flyTo({ ...cam, duration: 2600, essential: true });
   },
 
   // Loaded data no longer matches once the zone or time window changes.
@@ -408,7 +598,10 @@ export const useApp = create<AppState>((set, get) => ({
     get().clearPrediction();
   },
   clearPrediction: () => {
+    get().clearTimeline();
+    engine.setClipCountry(null);
     engine.setRisk(EMPTY);
+    engine.setWeather(null);
     get().showForecastPanel(false);
     set({ predictMsg: null });
   },
@@ -419,6 +612,9 @@ export const useApp = create<AppState>((set, get) => ({
   },
 }));
 
+// Is any weather layer switched on?
+export const weatherOn = (s: { weatherLayers: Record<WeatherVar, boolean> }) => Object.values(s.weatherLayers).some(Boolean);
+
 // End of the opening transition: remove the (now invisible) opening screen and the intro-only CSS state.
 function finishIntro() {
   clearTimeout(introTimer);
@@ -428,11 +624,12 @@ function finishIntro() {
 }
 
 // Text for the "Selected zone" box.
-export function zoneSummary(zone: Zone, pinAt: { lat: number; lng: number } | null) {
+export function zoneSummary(zone: Zone, pinAt: { lat: number; lng: number } | null, country: string | null = null) {
   return {
     coords: `${zone.w}, ${zone.s} → ${zone.e}, ${zone.n}`,
     size: `≈ ${Math.round(areaKm2(zone)).toLocaleString()} km² · ${r2(zone.e - zone.w)}° × ${r2(zone.n - zone.s)}°`,
     pin: pinAt ? `Centred on the pin at ${pinAt.lat.toFixed(3)}, ${pinAt.lng.toFixed(3)}` : null,
+    country: country ? `The forecast covers ${country} only, inside its borders.` : null,
   };
 }
 

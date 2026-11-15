@@ -24,6 +24,8 @@ VIIRS_CHOICES = {"NOAA20": "NOAA-20", "NOAA21": "NOAA-21", "SNPP": "Suomi NPP"}
 GRID_CHOICES = {0.01, 0.05, 0.1, 0.25}
 from type_inference import TypeReference, add_type_columns
 from prediction import predict
+from weather import fetch_weather
+from country_mask import country_mask
 import threading
 import time
 from collections import OrderedDict
@@ -33,6 +35,7 @@ FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 # Windows' registry can map .js to text/plain, which browsers refuse for module scripts.
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("application/json", ".geojson")   # map data (land borders)
 
 # Small in-memory cache so /api/predict can reuse the data the user just loaded
 # instead of fetching it from FIRMS again (FIRMS calls can take a minute).
@@ -262,7 +265,9 @@ class Handler(BaseHTTPRequestHandler):
             rel = url.path[len("/app/"):]
             target = (FRONTEND_DIST / rel).resolve()
             if FRONTEND_DIST.resolve() in target.parents and target.is_file():
-                return self.send_file(target)
+                # Only the hashed build output (assets/) can be cached for good; data files such as
+                # countries.geojson keep their name when they change, so they're revalidated each time.
+                return self.send_file(target, no_cache=not rel.startswith("assets/"))
             return self.send_json(404, {"error": "Not found"})
 
         if url.path in ("/", "/index.html", "/test", "/test.html", "/app", "/app.html", "/app-old"):
@@ -309,6 +314,14 @@ class Handler(BaseHTTPRequestHandler):
             if source == "fetch" and sensor not in SENSORS:
                 return self.send_json(400, {"error": "Unknown sensor."})
             bbox = (-180.0, -90.0, 180.0, 90.0) if area == "world" else tuple(float(x) for x in area.split(","))
+            # Optional ?country=<id>: limit the forecast to that country's borders (zone picked by clicking it).
+            mask = None
+            if q.get("country"):
+                try:
+                    # &part=<k>: only one of its territories (e.g. French Guiana for France)
+                    mask = country_mask(int(q["country"]), int(q["part"]) if q.get("part") else None)
+                except (ValueError, KeyError):
+                    return self.send_json(400, {"error": "Unknown country or territory."})
             try:
                 if source == "harmonise":
                     data = cached(("harmonise", day, days, area), lambda: fetch_harmonised(day, days, area))
@@ -317,11 +330,37 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 return self.send_json(502, {"error": f"Could not get the input data: {exc}"})
             try:
-                result = predict(data["columns"], data["rows"], day, days, bbox)
+                result = predict(data["columns"], data["rows"], day, days, bbox,
+                                 inside=mask.contains if mask else None)
                 result["source"] = "harmonised sensors" if source == "harmonise" else sensor
+                if mask:
+                    result["country"] = mask.name
                 self.send_json(200, result)
             except Exception as exc:
                 self.send_json(500, {"error": f"Prediction failed: {exc}"})
+            return
+
+        # Fire-weather for the zone on the forecast days (from Open-Meteo): ?area=w,s,e,n&start=YYYY-MM-DD&days=1..7
+        if url.path == "/api/weather":
+            try:
+                area = q.get("area", "")
+                if not re.fullmatch(r"-?[\d.]+(,-?[\d.]+){3}", area):
+                    raise ValueError("Area must be west,south,east,north.")
+                w, s_, e, n = (float(x) for x in area.split(","))
+                start = date.fromisoformat(q.get("start", ""))
+                ndays = int(q.get("days", "3"))
+                if not (1 <= ndays <= 7):
+                    raise ValueError("days must be 1 to 7.")
+            except ValueError as exc:
+                return self.send_json(400, {"error": str(exc)})
+            end = start + timedelta(days=ndays - 1)
+            try:
+                self.send_json(200, cached(("weather", area, start.isoformat(), ndays),
+                                           lambda: fetch_weather(w, s_, e, n, start, end)))
+            except urllib.error.HTTPError as exc:
+                self.send_json(502, {"error": f"The weather service refused the request ({exc.code})."})
+            except Exception as exc:
+                self.send_json(502, {"error": f"Could not get the weather: {exc}"})
             return
 
         if url.path == "/api/compare":

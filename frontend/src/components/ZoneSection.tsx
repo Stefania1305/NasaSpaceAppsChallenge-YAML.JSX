@@ -21,6 +21,7 @@ const PinIcon = ({ w = 11, h = 16 }) => (
 );
 
 // Part 1 of the side panel: choose the prediction zone (four ways, picked from a dropdown).
+// "Pick a country": hovering a country on the map highlights its border; clicking it selects it.
 export function ZoneSection() {
   const hidden = useApp(s => s.forecastVisible);
   const method = useApp(s => s.method);
@@ -29,9 +30,11 @@ export function ZoneSection() {
   const pinError = useApp(s => s.pinError);
   const zone = useApp(s => s.zone);
   const pinAt = useApp(s => s.pinAt);
-  const { setMethod, toggleDrawing, togglePinMode, coordsCommitted, useCurrentView, applyPin, clearZone } = useApp.getState();
+  const zoneCountry = useApp(s => s.zoneCountry);
+  const countries = useApp(s => s.countries);
+  const { setMethod, toggleDrawing, togglePinMode, coordsCommitted, applyPin, clearZone } = useApp.getState();
   const commitPin = useRef(() => applyPin(true)).current;
-  const summary = zone ? zoneSummary(zone, pinAt) : null;
+  const summary = zone ? zoneSummary(zone, pinAt, zoneCountry) : null;
 
   return (
     <section id="zoneSection" hidden={hidden}>
@@ -39,9 +42,9 @@ export function ZoneSection() {
       <label className="methodpick">How to set the zone
         <select id="zoneMethod" value={method} onChange={e => setMethod(e.target.value as Method)}>
           <option value="draw">Draw a rectangle</option>
+          <option value="country">Pick a country</option>
           <option value="pin">Pin a point</option>
           <option value="coords">Type coordinates</option>
-          <option value="view">Use what's on screen</option>
         </select>
       </label>
 
@@ -76,16 +79,20 @@ export function ZoneSection() {
         </div>
       </div>
 
-      <div className="method" data-method="view" hidden={method !== 'view'}>
-        <p className="hint">Pan and zoom the map to the area you want, then click the button.</p>
-        <button type="button" id="useView" className="secondary wide" onClick={useCurrentView}>Use current view</button>
+      <div className="method" data-method="country" hidden={method !== 'country'}>
+        <p className="hint" id="countryHint">
+          {countries === 'loading' ? 'Loading the countries…'
+            : countries === 'error' ? <span style={{ color: '#dc2626' }}>Couldn't load the countries. Choose the method again to retry.</span>
+            : <>Move the mouse over the map: the country under it lights up. <b>Click it</b> to make it the zone: the forecast then covers that country only.</>}
+        </p>
       </div>
 
       <div className="selected" id="zoneSelected" hidden={!zone}>
         <div className="mhead" style={{ marginBottom: 2 }}>Selected zone</div>
         <div id="zoneinfo" className="zoneinfo">
           {summary
-            ? <>Zone <b>{summary.coords}</b><br />{summary.size}{summary.pin && <><br />{summary.pin}</>}</>
+            ? <>{zoneCountry && <><b>{zoneCountry}</b><br /></>}Zone <b>{summary.coords}</b><br />{summary.size}
+                {summary.pin && <><br />{summary.pin}</>}{summary.country && <><br />{summary.country}</>}</>
             : 'No zone selected.'}
         </div>
         <button type="button" id="clear" className="secondary wide" onClick={clearZone}>

@@ -9,7 +9,12 @@ import { useApp } from './store';
 import { EMPTY, ZONE_COLOR, boxPolygon, lngLatOk, normalise, wrapLng, zoneAroundPoint,
          type FC, type LngLat, type Zone } from './geo';
 import { pct } from './format';
-import { riskZones } from './riskShapes';
+import { colorize, riskImage, type HeatField } from './riskHeat';
+import { WindFlow } from './windFlow';
+import { countryById, loadCountries, territoryGeometry } from './countries';
+import { shapeTest, type Frame, type Geometry } from './mapImage';
+import type { Weather } from './store';
+import { WEATHER_VARS, weatherAt, weatherImage, type WeatherVar } from './weatherHeat';
 
 let map!: maplibregl.Map;
 let mapReady!: Promise<void>;
@@ -49,40 +54,65 @@ export function init() {
     zoom: 1.6,
     maxPitch: 0,
     attributionControl: { compact: true },
+    // Keep tiles for every zoom level in memory (the default keeps about 5 levels). Otherwise, after browsing a
+    // zone up close, the low-detail tiles the whole globe needs have been dropped, and zooming back out shows
+    // black holes (at the edges and over the poles) for a moment while they reload.
+    maxTileCacheZoomLevels: 22,
     style: {
       version: 8,
-      // Globe below zoom 3, fully flat (Web Mercator) from zoom 5; MapLibre morphs between them.
-      projection: { type: ['interpolate', ['linear'], ['zoom'], 3, 'vertical-perspective', 5, 'mercator'] },
-      sky: { 'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 3, 1, 5, 0] },
+      // Globe below zoom 2.8, fully flat (Web Mercator) from zoom 5.6; MapLibre morphs between them. The morph is
+      // spread over a wide zoom range and eased in and out (slow start, slow finish) so the globe unrolls into the
+      // flat map gradually; the atmosphere and the orange halo fade on the same curve (see MORPH_* below).
+      projection: { type: ['interpolate', ['cubic-bezier', .45, 0, .55, 1], ['zoom'], 2.8, 'vertical-perspective', 5.6, 'mercator'] },
+      sky: { 'atmosphere-blend': ['interpolate', ['cubic-bezier', .45, 0, .55, 1], ['zoom'], 0, 1, 2.8, 1, 5.6, 0] },
       sources: {
         imagery: { type: 'raster', tileSize: 256, maxzoom: 19,
           tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
           attribution: 'Imagery &copy; Esri' },
-        osm: { type: 'raster', tileSize: 256, maxzoom: 19,
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-          attribution: '&copy; OpenStreetMap contributors' },
+        // Country borders on land only (no sea / maritime boundaries): Natural Earth 1:10m, public domain,
+        // shipped with the app in public/borders.geojson.
+        borders: { type: 'geojson', data: `${import.meta.env.BASE_URL}borders.geojson`,
+          attribution: 'Borders: Natural Earth' },
+        // Country shapes for the "Pick a country" zone method (loaded on first use, see countries.ts).
+        countries: { type: 'geojson', data: EMPTY as never },
         zone: { type: 'geojson', data: EMPTY as never },
         draft: { type: 'geojson', data: EMPTY as never },
         fires: { type: 'geojson', data: EMPTY as never },
         risk: { type: 'geojson', data: EMPTY as never },
-        riskzones: { type: 'geojson', data: EMPTY as never },
       },
       layers: [
-        // Street map underneath; satellite imagery on top that fades out as you zoom in.
-        { id: 'osm', type: 'raster', source: 'osm' },
-        { id: 'imagery', type: 'raster', source: 'imagery',
-          paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 3, 1, 5.5, 0] } },
+        // Satellite imagery at every zoom, globe and flat map alike.
+        // No tile fade: when zooming out quickly, each coarser set of tiles would fade in from transparent while the
+        // detailed ones are dropped, leaving black gaps (and a black polar cap) for a moment. Shown at once instead.
+        { id: 'imagery', type: 'raster', source: 'imagery', paint: { 'raster-fade-duration': 0 } },
+        // Land borders: a thin dark casing under a soft white line, so they read on bright desert and dark forest
+        // alike; they get a little bolder as you zoom in.
+        { id: 'borders-casing', type: 'line', source: 'borders', layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': 'rgba(0, 0, 0, .45)',
+                   'line-width': ['interpolate', ['linear'], ['zoom'], 1, 1.2, 5, 2.6, 10, 4] } },
+        { id: 'borders', type: 'line', source: 'borders', layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': 'rgba(255, 255, 255, .78)',
+                   'line-width': ['interpolate', ['linear'], ['zoom'], 1, .5, 5, 1.1, 10, 1.8] } },
+        // "Pick a country": an invisible fill to find the country under the mouse, then the hovered and the
+        // selected country's border as a soft orange glow under a crisp line (filters pick the country by id).
+        { id: 'country-hit', type: 'fill', source: 'countries', paint: { 'fill-color': '#000', 'fill-opacity': 0 } },
+        { id: 'country-hover-fill', type: 'fill', source: 'countries', filter: ['==', ['get', 'id'], -1],
+          paint: { 'fill-color': '#fb923c', 'fill-opacity': .12 } },
+        ...(['hover', 'sel'] as const).flatMap(k => [
+          { id: `country-${k}-glow`, type: 'line' as const, source: 'countries', filter: ['==', ['get', 'id'], -1],
+            layout: { 'line-join': 'round' as const },
+            paint: { 'line-color': '#f97316', 'line-opacity': .55, 'line-blur': 4,
+                     'line-width': ['interpolate', ['linear'], ['zoom'], 1, 4, 6, 9] } },
+          { id: `country-${k}`, type: 'line' as const, source: 'countries', filter: ['==', ['get', 'id'], -1],
+            layout: { 'line-join': 'round' as const },
+            paint: { 'line-color': '#fdba74', 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 1.2, 6, 2.4] } },
+        ]) as maplibregl.LayerSpecification[],
         { id: 'zone-fill', type: 'fill', source: 'zone', paint: { 'fill-color': ZONE_COLOR, 'fill-opacity': .1 } },
         { id: 'zone-line', type: 'line', source: 'zone',
           paint: { 'line-color': ZONE_COLOR, 'line-width': 2, 'line-dasharray': [3, 2] } },
         { id: 'draft-fill', type: 'fill', source: 'draft', paint: { 'fill-color': ZONE_COLOR, 'fill-opacity': .15 } },
         { id: 'draft-line', type: 'line', source: 'draft', paint: { 'line-color': ZONE_COLOR, 'line-width': 2 } },
-        // Predicted fire risk as rounded zones (drawn under the detections): one shape per chance band, stacked, so
-        // a zone's core shows the deeper colour of its higher-risk part (see riskShapes.ts).
-        { id: 'risk-zones', type: 'fill', source: 'riskzones', paint: {
-          'fill-color': ['get', 'color'], 'fill-opacity': .4 } },
-        { id: 'risk-zones-line', type: 'line', source: 'riskzones', paint: {
-          'line-color': ['get', 'edge'], 'line-width': 1.3, 'line-opacity': .8 } },
+        // The predicted fire risk is drawn as a soft heatmap image (added when there's a forecast, see setRisk).
         // The grid cells themselves stay as an invisible layer, so clicking a spot still shows its chances.
         { id: 'risk-fill', type: 'fill', source: 'risk', paint: { 'fill-color': '#000', 'fill-opacity': 0 } },
         { id: 'fires', type: 'circle', source: 'fires', paint: {
@@ -102,6 +132,15 @@ export function init() {
   setupBackdrop();
   setupHalo();
   setupSpin();
+  setupWeatherTip();
+  setupCountryPick();
+  // Redrawing a heatmap image cancels the previous image's load; MapLibre reports that cancellation as an error.
+  // It's harmless, so drop just that case and log everything else as usual.
+  map.on('error', e => {
+    const err = (e as { error?: Error }).error;
+    if (err && /aborted|AbortError/i.test(`${err.name} ${err.message}`)) return;
+    console.error(err ?? e);
+  });
   setupInteractions();
 
   addEventListener('resize', () => {
@@ -171,7 +210,7 @@ function setupBackdrop() {
     const dt = Math.min(.05, (now - last) / 1000);
     last = now;
     // Nothing to see once the flat map covers the backdrop, or when the tab is hidden.
-    if (document.hidden || map.getZoom() > 5.2) {
+    if (document.hidden || map.getZoom() > MORPH_END) {
       if (!cleared) { g.clearRect(0, 0, W, H); cleared = true; }
       requestAnimationFrame(frame);
       return;
@@ -233,11 +272,17 @@ function globeRim(center: maplibregl.LngLat, c: maplibregl.Point, bearingDeg: nu
   return best;
 }
 
+// The globe ↔ flat-map morph range (must match the projection in the style above) and a soft 0..1 ramp.
+const MORPH_START = 2.8, MORPH_END = 5.6;
+const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+// Camera flights between the globe and a zone: ease in and out (slow start, slow landing).
+export const easeInOut = (t: number) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
 function setupHalo() {
   const halo = document.querySelector<HTMLElement>('.space .halo')!;
   const placeHalo = () => {
     const z = map.getZoom();
-    if (z > 4.6) { halo.style.opacity = '0'; return; }
+    if (z > MORPH_END - .6) { halo.style.opacity = '0'; return; }
     const center = map.getCenter(), c = map.project(center);
     const E = globeRim(center, c, 90), W = globeRim(center, c, 270), N = globeRim(center, c, 0), S = globeRim(center, c, 180);
     let cx = c.x, cy = c.y, r = 512 * Math.pow(2, z) / (2 * Math.PI);
@@ -249,7 +294,8 @@ function setupHalo() {
     const D = r * 2 / 0.6;                                                        // 60% stop = globe edge
     halo.style.width = halo.style.height = `${D}px`;
     halo.style.transform = `translate(${cx - D / 2}px, ${cy - D / 2}px)`;
-    halo.style.opacity = String(Math.max(0, Math.min(1, (4.5 - z) / 2)));
+    // Fades out as the globe unrolls, on an eased curve, gone a little before the map is fully flat.
+    halo.style.opacity = String(1 - smoothstep(MORPH_START, MORPH_END - .6, z));
   };
   // Never let a decoration throw inside the map's render loop (an exception there freezes the map).
   const safePlaceHalo = () => { try { placeHalo(); } catch (err) { console.warn('halo', err); } };
@@ -465,9 +511,16 @@ export function goHome() {
 export function globeView() {
   if (!reducedMotion()) spinning = true;
   if (showingWholeGlobe()) { glideTo(appPadding(), reducedMotion() ? 0 : 1100, closedZoomNow()); return; }
-  // From a flat (zoomed-in) map the globe can't be measured yet (the map only becomes a globe when it next
-  // draws), so glide out to an approximate globe size first, then settle to the exact size once it's drawn.
-  glideTo(appPadding(), reducedMotion() ? 0 : 1800, 2.2, () => {
+  // From a flat (zoomed-in) map the globe can't be measured (the map only becomes a globe when it next draws),
+  // but its size is already known (`closedZoom`, measured after "Get started", in latitude-adjusted units), so
+  // glide straight out to it in one continuous move. Only if that's unknown, glide out to an approximate size
+  // and settle once the globe is drawn.
+  if (closedZoom != null) {
+    const z = closedZoom - sizeZoom(0);                          // back to a plain zoom at the current latitude
+    glideTo(appPadding(), reducedMotion() ? 0 : 2400, Math.max(1, Math.min(MORPH_START, z)));
+    return;
+  }
+  glideTo(appPadding(), reducedMotion() ? 0 : 2300, 2.2, () => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (!gliding && showingWholeGlobe()) glideTo(appPadding(), reducedMotion() ? 0 : 500, closedZoomNow());
     }));
@@ -492,48 +545,248 @@ function closedZoomNow() {
 }
 
 // ---------------- Map layers ----------------
-export const showZone = (z: Zone | null) => setData('zone', z ? boxPolygon(z) : EMPTY);
-// Fire dots + their legend always appear and disappear together.
-export function setFires(data: FC) {
-  setData('fires', data);
-  useApp.setState({ firesShown: data.features.length > 0 });
+export const showZone = (z: Zone | null) => {
+  // A zone picked by clicking a country is that country (its border is shown below), not the dashed rectangle.
+  setData('zone', z && selectedCountry == null ? boxPolygon(z) : EMPTY);
+  // A zone picked by clicking a country also shows that country's border (hidden along with the zone).
+  const id = z && selectedCountry != null ? selectedCountry : -1;
+  mapReady.then(() => ['country-sel-glow', 'country-sel'].forEach(l => map.setFilter(l, ['==', ['get', 'id'], id])));
+};
+
+// ---------------- "Pick a country" ----------------
+let selectedCountry: number | null = null;
+let hoveredCountry = -1;
+let countryTip: maplibregl.Popup | null = null;
+// Load the country shapes onto the map (the first time the method is chosen).
+export const ensureCountries = () => loadCountries().then(fc => setData('countries', fc));
+export const setSelectedCountry = (id: number | null) => { selectedCountry = id; };
+// The method is live while it's chosen and its controls are on screen (not during a forecast or another mode).
+function countryMode() {
+  const s = useApp.getState();
+  return s.method === 'country' && (s.panelOpen || !isDesktop()) && !s.forecastVisible && !drawing && !pinMode && !isSplash();
 }
-// The forecast squares (one per grid cell) and the day shown; the map draws them as rounded zones.
+function setHover(id: number, at?: maplibregl.LngLat) {
+  if (id !== hoveredCountry) {
+    hoveredCountry = id;
+    ['country-hover-glow', 'country-hover', 'country-hover-fill'].forEach(l => map.setFilter(l, ['==', ['get', 'id'], id]));
+    map.getCanvas().style.cursor = id >= 0 ? 'pointer' : '';
+  }
+  const c = id >= 0 ? countryById(id) : null;
+  if (!c || !at) { countryTip?.remove(); return; }
+  countryTip!.setLngLat(at).setHTML(`<b>${c.name.replace(/[<>&]/g, '')}</b> · click to select`);
+  if (!countryTip!.isOpen()) countryTip!.addTo(map);
+}
+function setupCountryPick() {
+  countryTip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'wx-tip', offset: 14, maxWidth: 'none' });
+  // The country under a screen point, or -1. Beside the globe (in space) MapLibre snaps the point to the horizon,
+  // which would pick a country at the globe's edge, so the point must map back onto itself to count.
+  const under = (p: maplibregl.Point, at: maplibregl.LngLat) => {
+    if (!lngLatOk(at)) return -1;
+    const back = map.project(at);
+    if (Math.hypot(back.x - p.x, back.y - p.y) > 2) return -1;
+    const f = map.queryRenderedFeatures(p, { layers: ['country-hit'] })[0];
+    return f ? Number(f.properties?.id) : -1;
+  };
+  map.on('mousemove', e => {
+    if (!countryMode()) { if (hoveredCountry >= 0 || countryTip?.isOpen()) setHover(-1); return; }
+    setHover(under(e.point, e.lngLat), e.lngLat);
+  });
+  map.getCanvas().addEventListener('mouseleave', () => { if (hoveredCountry >= 0) setHover(-1); });
+  map.on('click', e => {
+    if (!countryMode()) return;
+    const id = under(e.point, e.lngLat);
+    if (id < 0) return;
+    setHover(-1);
+    // Outside the map's own event handling (the selection flies the camera).
+    const at: [number, number] = [wrapLng(e.lngLat.lng), e.lngLat.lat];     // the territory clicked comes first
+    setTimeout(() => useApp.getState().selectCountry(id, null, at), 0);
+  });
+}
+// Fire dots + their legend always appear and disappear together.
+// The fire detections as loaded (for the zone's rectangle); with a country limit only those inside it are drawn.
+let firesAll: FC = EMPTY;
+export function setFires(data: FC) {
+  firesAll = data;
+  drawFires();
+}
+function drawFires() {
+  const shown = clip
+    ? { type: 'FeatureCollection' as const, features: firesAll.features.filter(f => clip!.inside(f.geometry.coordinates[0], f.geometry.coordinates[1])) }
+    : firesAll;
+  setData('fires', shown);
+  useApp.setState({ firesShown: shown.features.length > 0 });
+}
+// ---------------- Fire-risk heatmap ----------------
+// The forecast squares (one per grid cell) and the day shown; the map draws them as a soft heatmap (riskHeat.ts)
+// just under the fire dots, with the invisible squares kept for click-to-inspect.
 let riskSquares: FC = EMPTY, riskProp = 'p1';
+// Put an image layer on the map (or update it), inserted under `before`; remove it when `img` is null.
+function setImageLayer(id: string, img: ReturnType<typeof riskImage>, opacity: number, before: string) {
+  const src = map.getSource(id) as maplibregl.ImageSource | undefined;
+  if (!img) {
+    if (map.getLayer(id)) map.removeLayer(id);
+    if (src) map.removeSource(id);
+    return;
+  }
+  if (src) { src.updateImage(img); return; }
+  map.addSource(id, { type: 'image', ...img });
+  map.addLayer({ id, type: 'raster', source: id,
+                 paint: { 'raster-opacity': opacity, 'raster-fade-duration': 250, 'raster-resampling': 'linear' } }, before);
+}
+// While the timeline is on, it draws the fire heat (one image per day); the static day image stays off.
+const drawRisk = () => mapReady.then(() =>
+  setImageLayer('risk-heat', timelineImages ? null : riskImage(riskSquares, riskProp, clip?.geometry ?? null), 1, 'risk-fill'));
+
+// ---------------- Fire timeline (animated heatmap) ----------------
+// Each day is kept as a grid of heat values (observed days, then forecast days; see timeline.ts), all on one
+// shared frame. Every animation tick blends two days' values and recolours them into a canvas that the map shows
+// (a canvas source), so fires grow, fade and spread continuously instead of one picture cross-fading into the next.
+export type TimelineFields = { fields: HeatField[]; frame: Frame; mask: Uint8ClampedArray | null };
+let tl: (TimelineFields & { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; img: ImageData; last: number }) | null = null;
+let timelineImages: boolean = false;                     // the static day heatmap stays off while this is on
+export const getClipInside = () => clip?.inside ?? null;
+export const getClipGeometry = () => clip?.geometry ?? null;
+export function setTimeline(data: TimelineFields | null) {
+  timelineImages = !!data?.fields.length;
+  mapReady.then(() => {
+    if (map.getLayer('tl-heat')) map.removeLayer('tl-heat');
+    if (map.getSource('tl-heat')) map.removeSource('tl-heat');
+    if (!data?.fields.length) { tl = null; drawRisk(); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = data.frame.width; canvas.height = data.frame.height;
+    const ctx = canvas.getContext('2d')!;
+    tl = { ...data, canvas, ctx, img: ctx.createImageData(canvas.width, canvas.height), last: -1 };
+    setImageLayer('risk-heat', null, 1, 'risk-fill');
+    map.addSource('tl-heat', { type: 'canvas', canvas, coordinates: data.frame.coordinates, animate: false });
+    map.addLayer({ id: 'tl-heat', type: 'raster', source: 'tl-heat',
+                   paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear' } }, 'risk-fill');
+    showTimeline(0);
+  });
+}
+// Which two days a timeline position lies between, and how far the morph from the first to the second has got
+// (eased: it lingers briefly on each day, then moves smoothly to the next).
+export function timelineBlend(pos: number, n: number) {
+  const i = Math.max(0, Math.min(n - 1, Math.floor(pos))), j = Math.min(n - 1, i + 1);
+  const u = Math.max(0, Math.min(1, (pos - i - .08) / .84));
+  return { i, j, t: j === i ? 0 : u * u * (3 - 2 * u) };
+}
+// Show position `pos` (in days; the fraction morphs into the next day, easing in and out around each day).
+export function showTimeline(pos: number) {
+  if (!tl) return;
+  const n = tl.fields.length, { i, j, t } = timelineBlend(pos, n);
+  const key = i + t;
+  if (Math.abs(key - tl.last) < 1e-4) return;           // nothing changed (paused)
+  tl.last = key;
+  colorize(tl.fields[i], tl.img.data, t > 0 ? { to: tl.fields[j], t } : undefined, tl.mask ?? undefined);
+  tl.ctx.putImageData(tl.img, 0, 0);
+  // Upload the new pixels once: a canvas source re-reads its canvas only while "playing".
+  const src = map.getSource('tl-heat') as maplibregl.CanvasSource | undefined;
+  if (src) { src.play(); src.pause(); map.triggerRepaint(); }
+}
+// Fire dots for one observed day only (null: all; 'none': hide them, e.g. on forecast days).
+export function setFireDay(date: string | null) {
+  fireBlendKey = '';
+  mapReady.then(() => {
+    map.setFilter('fires', date ? ['==', ['get', 'date'], date] : null);
+    map.setPaintProperty('fires', 'circle-opacity', .8);
+    map.setPaintProperty('fires', 'circle-stroke-opacity', 1);
+  });
+}
+// During the timeline: the dots of day `a` fade out while those of day `b` fade in (t = 0..1, the same eased
+// morph as the heatmap). null for a forecast day, which has no detections. Updated in small steps (12 per
+// change of day) so the map isn't re-styled on every animation tick.
+let fireBlendKey = '';
+export function setFireBlend(a: string | null, b: string | null, t: number) {
+  const q = Math.round(t * 12) / 12;
+  const key = `${a}|${b}|${q}`;
+  if (key === fireBlendKey || !map.getLayer('fires')) return;
+  fireBlendKey = key;
+  const days = [...new Set([a, b].filter((d): d is string => !!d))];
+  map.setFilter('fires', days.length ? ['in', ['get', 'date'], ['literal', days]] : ['==', ['get', 'date'], '-']);
+  const op = (scale: number) => (a && b && a !== b
+    ? ['case', ['==', ['get', 'date'], b], scale * q, scale * (1 - q)]
+    : scale * (a && a === b ? 1 : a ? 1 - q : q)) as never;
+  map.setPaintProperty('fires', 'circle-opacity', op(.8));
+  map.setPaintProperty('fires', 'circle-stroke-opacity', op(1));
+}
+// Pan (without zooming) to a timeline checkpoint.
+export function panToEvent(at: [number, number]) {
+  map.easeTo({ center: at, duration: 1200, easing: easeInOut, essential: true });
+}
+
+// Forecast limited to a country (zone picked by clicking it): the fire heatmap, fire dots, weather layers and
+// wind streaks are all cut to its borders. null lifts the limit.
+let clip: { geometry: Geometry; inside: (lon: number, lat: number) => boolean } | null = null;
+export function setClipCountry(id: number | null, part: number | null = null) {
+  const c = id == null ? null : countryById(id);
+  const geometry = c ? territoryGeometry(c, part) : null;     // one territory (e.g. French Guiana) or the whole country
+  clip = geometry ? { geometry, inside: shapeTest(geometry) } : null;
+  drawFires();
+}
 export function setRisk(data: FC) {
   riskSquares = data;
   setData('risk', data);
-  setData('riskzones', riskZones(data, riskProp));
+  drawRisk();
 }
 export function setRiskDay(i: number) {
   riskProp = `p${i + 1}`;
-  setData('riskzones', riskZones(riskSquares, riskProp));
+  drawRisk();
   mapReady.then(() => map.setFilter('risk-fill', ['>=', ['get', riskProp], 0.1]));
 }
 
-// ---------------- Camera helpers ----------------
-export function fitZone(z: Zone, padding: number, duration: number) {
-  stopSpin();
-  map.fitBounds([[z.w, z.s], [z.e, z.n]], { padding, duration, essential: true });
+// ---------------- Weather layers ----------------
+// Each weather variable is its own layer, switched on and off separately: temperature and humidity as heatmaps,
+// wind as a speed heatmap with animated streaks flowing the way it blows (windFlow.ts). They sit under the fire
+// heatmap and dots, so those stay readable, and fade out towards the zone's border. Hovering the zone shows the
+// values of the layers that are on.
+export type WeatherLayers = Record<WeatherVar, boolean>;
+const NO_LAYERS: WeatherLayers = { temp: false, rh: false, wind: false };
+let wxShown: { w: Weather; day: number; layers: WeatherLayers } | null = null;
+let wxTip: maplibregl.Popup | null = null;
+let windFlow: WindFlow | null = null;
+export function setWeather(w: Weather | null, dayIdx = 0, layers: WeatherLayers = NO_LAYERS) {
+  const any = !!w && Object.values(layers).some(Boolean);
+  wxShown = any ? { w: w!, day: dayIdx, layers } : null;
+  mapReady.then(() => {
+    // Under the fire heatmap if it's there (so fire stays on top), otherwise under the fire-cell layer.
+    const before = map.getLayer('risk-heat') ? 'risk-heat' : 'risk-fill';
+    for (const v of ['temp', 'rh', 'wind'] as WeatherVar[])
+      setImageLayer(`wx-${v}`, any && layers[v] ? weatherImage(w!, dayIdx, v, clip?.geometry ?? null) : null, v === 'wind' ? .45 : .55, before);
+    windFlow ??= new WindFlow(map);
+    windFlow.show(any && layers.wind ? w : null, dayIdx, clip?.inside ?? null);
+    if (!any) wxTip?.remove();
+  });
 }
-export function flyTo(opts: maplibregl.FlyToOptions) { map.flyTo(opts); }
+function setupWeatherTip() {
+  wxTip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'wx-tip', offset: 14, maxWidth: 'none' });
+  map.on('mousemove', e => {
+    if (!wxShown || drawing || pinMode) { wxTip?.remove(); return; }
+    const { w, day, layers } = wxShown;
+    const parts: string[] = [];
+    if (clip && !clip.inside(e.lngLat.lng, e.lngLat.lat)) { wxTip?.remove(); return; }   // outside the country
+    for (const v of ['temp', 'rh', 'wind'] as WeatherVar[]) {
+      if (!layers[v]) continue;
+      const x = weatherAt(w, day, v, e.lngLat.lng, e.lngLat.lat);
+      if (x != null) parts.push(`${WEATHER_VARS[v].label} <b>${Math.round(x)} ${WEATHER_VARS[v].unit}</b>`);
+    }
+    if (!parts.length) { wxTip?.remove(); return; }
+    wxTip!.setLngLat(e.lngLat).setHTML(parts.join(' · '));
+    if (!wxTip!.isOpen()) wxTip!.addTo(map);
+  });
+  map.getCanvas().addEventListener('mouseleave', () => wxTip?.remove());
+}
+
+// ---------------- Camera helpers ----------------
+export function fitZone(z: Zone, padding: number | maplibregl.PaddingOptions, duration: number) {
+  stopSpin();
+  // A gentle arc (curve < 1.42 means less zooming out mid-flight) with an eased start and landing.
+  map.fitBounds([[z.w, z.s], [z.e, z.n]], { padding, duration, essential: true, curve: 1.2, easing: easeInOut });
+}
+export function flyTo(opts: maplibregl.FlyToOptions) { map.flyTo({ curve: 1.2, easing: easeInOut, ...opts }); }
 export function cameraSnapshot() {
   const c = map.getCenter();
   return { center: [c.lng, c.lat] as [number, number], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
 }
-// "Use current view": only the part of the map that isn't behind the side panel (on the globe, the whole view).
-export function currentViewZone(): Zone {
-  stopSpin();
-  let b = map.getBounds();
-  if (map.getZoom() >= 5) {
-    const c = map.getCanvas(), left = map.getPadding().left ?? 0;
-    b = new maplibregl.LngLatBounds(map.unproject([left, c.clientHeight]), map.unproject([c.clientWidth, 0]));
-  }
-  let w = b.getWest(), e = b.getEast();
-  if (e - w >= 360) { w = -180; e = 180; } else { w = wrapLng(w); e = wrapLng(e); if (e < w) { w = -180; e = 180; } }
-  return { w, s: b.getSouth(), e, n: b.getNorth() };
-}
-
 // ---------------- Drawing and pin modes ----------------
 export function setDrawing(on: boolean) {
   if (on && pinMode) setPinMode(false);

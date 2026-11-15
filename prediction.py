@@ -268,9 +268,16 @@ def backtest(grid, rng):
     }
 
 
-def predict(columns, rows, start: str, ndays: int, area: tuple, horizon: int = 3, seed: int = 7) -> dict:
+def predict(columns, rows, start: str, ndays: int, area: tuple, horizon: int = 3, seed: int = 7,
+            inside=None) -> dict:
+    """`inside(lon, lat) -> bool` (optional) limits everything to one region, e.g. a country: only the fire
+    detections inside it are used, and only grid cells whose centre is inside it are forecast."""
     start_d = date.fromisoformat(start)
     cell = choose_cell(area)
+    if inside is not None:
+        lon_i, lat_i = columns.index("longitude"), columns.index("latitude")
+        rows = [r for r in rows if _f(r[lon_i]) is not None and _f(r[lat_i]) is not None
+                and inside(float(r[lon_i]), float(r[lat_i]))]
     grid = Grid(columns, rows, start_d, ndays, cell)
     last = ndays - 1
 
@@ -279,6 +286,8 @@ def predict(columns, rows, start: str, ndays: int, area: tuple, horizon: int = 3
     spread = (vx, vy) if events >= 10 and strength >= 0.1 else (0.0, 0.0)
 
     cands = grid.candidates(last)
+    if inside is not None:
+        cands = [k for k in cands if inside((k[0] + .5) * cell, (k[1] + .5) * cell)]
     feats = {k: grid.features(last, k, spread) for k in cands}
     per_cell = {k: [0.0] * horizon for k in cands}
     forecast, models = [], []

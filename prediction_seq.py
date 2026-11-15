@@ -38,115 +38,21 @@ from prediction_data import H, WX, add_history, feature_columns
 
 OUT = DATA_DIR / "prediction" / "models_seq"
 QUANT = torch.tensor([0.1, 0.5, 0.9])
-CONT = ["growth", "frp", "frp_peak", "dx", "dy"]
-BIN = ["out", "merge"]
-HIST = 4
-DYN = ["fine_fp", "new_area", "frp", "frp_peak", "pixels", "passes", "clusters_alive", "front", "sep_parts", "sep_gap_km",
-       "dx_l1", "dy_l1", "merge"]
-LOG = {"fine_fp", "all_fp", "frp", "frp_l1", "frp_peak", "pixels", "passes", "clusters_alive", "clusters_seen", "front",
-       "nb_dist_km", "nb_gap_km", "nb_fp", "nb_frp", "nb_n10", "nb_n25", "sep_parts", "sep_gap_km", "risk_days", "age_days",
-       "merges_so_far"}
-ASINH = {"new_area", "new_area_l1", "new_area_l2", "dx_l1", "dy_l1", "dx_l2", "dy_l2", "nb_new_area"}
+from seq_numpy import ASINH, CONT, DYN, HIST, LOG, Prep, col_kind, fwd_target, inv_target, transform  # noqa: E402
+
+BIN = ["out", "merge"]           # binary outputs; --bins adds "grow" (stored in prep.json with the model)
 WEATHER_DROP = 0.4
 
 
-def col_kind(c):
-    if c in LOG or c.endswith(("_rain", "_since_rain")):
-        return "log"
-    if c in ASINH:
-        return "asinh"
-    return "lin"
-
-
-def fwd_target(t, y):
-    return np.log1p(np.clip(y, 0, None)) if t in ("growth", "frp", "frp_peak") else np.arcsinh(y)
-
-
-def inv_target(t, y):
-    return np.expm1(y).clip(min=0) if t in ("growth", "frp", "frp_peak") else np.sinh(y)
-
-
-def transform(c, v):
-    k = col_kind(c)
-    if k == "log":
-        return np.log1p(np.clip(v, 0, None))
-    if k == "asinh":
-        return np.arcsinh(v)
-    return v
-
-
-class Prep:
-    """Feature preparation shared by training and the engine."""
-
-    def __init__(self, feats, stats=None):
-        self.feats = feats
-        self.wcols = [c for c in feats if c[:1] == "w" and c[1:2].isdigit()]
-        self.stats = stats or {}
-
-    def fit(self, df):
-        for c in self.feats + DYN:
-            v = transform(c, df[c].to_numpy("float64"))
-            m, s = np.nanmean(v), np.nanstd(v)
-            self.stats[c] = [float(0 if np.isnan(m) else m), float(1 if not s or np.isnan(s) else s)]
-        return self
-
-    def matrix(self, df, soil_from_d=True):
-        d = df
-        if soil_from_d:
-            d = df.copy()
-            for k in range(1, H + 1):
-                for c in ("sm0", "sm1", "sm2"):
-                    if f"w{k}_{c}" in d and f"w0_{c}" in d:
-                        d[f"w{k}_{c}"] = d[f"w0_{c}"]
-        cols = []
-        for c in self.feats:
-            m, s = self.stats[c]
-            cols.append((transform(c, d[c].to_numpy("float64")) - m) / s)
-        X = np.stack(cols, axis=1).astype("float32")
-        miss = np.isnan(X)
-        X[miss] = 0
-        return np.concatenate([X, miss.astype("float32")], axis=1), d
-
-    def history(self, df):
-        """Previous up to HIST fire-days of the same fire: [n, HIST, len(DYN)+2] (features, days back, present)."""
-        key = df.run.astype(str) + "|" + df.fire_id.astype(str)
-        order = np.lexsort((df.day.to_numpy(), key.to_numpy()))
-        inv = np.empty_like(order); inv[order] = np.arange(len(order))
-        s = df.iloc[order]
-        k = key.iloc[order].to_numpy()
-        day = pd.to_datetime(s.day).to_numpy()
-        dyn = np.stack([(transform(c, s[c].to_numpy("float64")) - self.stats[c][0]) / self.stats[c][1] for c in DYN], axis=1)
-        dyn = np.nan_to_num(dyn).astype("float32")
-        out = np.zeros((len(s), HIST, len(DYN) + 2), "float32")
-        for j in range(1, HIST + 1):
-            same = np.zeros(len(s), bool)
-            same[j:] = k[j:] == k[:-j]
-            back = np.zeros(len(s), "float32")
-            back[j:] = (day[j:] - day[:-j]).astype("timedelta64[D]").astype("float32")
-            ok = same & (back <= 7)
-            src = np.roll(dyn, j, axis=0)
-            out[ok, HIST - j, :len(DYN)] = src[ok]
-            out[ok, HIST - j, len(DYN)] = back[ok] / 7
-            out[ok, HIST - j, len(DYN) + 1] = 1
-        return out[inv]
-
-    def to_json(self):
-        return {"feats": self.feats, "stats": self.stats}
-
-    @classmethod
-    def from_json(cls, d):
-        return cls(d["feats"], d["stats"])
-
-
 class Net(nn.Module):
-    def __init__(self, n_in, n_dyn, hidden=384):
+    def __init__(self, n_in, n_dyn, hidden=384, n_bin=2):
         super().__init__()
         self.gru = nn.GRU(n_dyn, 64, batch_first=True)
         self.mlp = nn.Sequential(nn.Linear(n_in + 64, hidden), nn.GELU(), nn.LayerNorm(hidden), nn.Dropout(0.1),
                                  nn.Linear(hidden, hidden), nn.GELU(), nn.LayerNorm(hidden), nn.Dropout(0.1),
                                  nn.Linear(hidden, 256), nn.GELU())
         self.q = nn.Linear(256, len(CONT) * H * 3)
-        self.b = nn.Linear(256, len(BIN) * H)
+        self.b = nn.Linear(256, n_bin * H)
 
     def forward(self, x, h):
         _, hn = self.gru(h)
@@ -156,9 +62,10 @@ class Net(nn.Module):
         return q, self.b(z)
 
 
-def targets(df):
+def targets(df, bins=None):
+    bins = bins or BIN
     yc = np.stack([fwd_target(t, df[f"{t}_{k}"].to_numpy("float64")) for t in CONT for k in range(1, H + 1)], axis=1)
-    yb = np.stack([df[f"{t}_{k}"].to_numpy("float64") for t in BIN for k in range(1, H + 1)], axis=1)
+    yb = np.stack([df[f"{t}_{k}"].to_numpy("float64") for t in bins for k in range(1, H + 1)], axis=1)
     return yc.astype("float32"), yb.astype("float32")
 
 
@@ -307,7 +214,7 @@ class SeqModel:
     def load(cls, d=OUT, device=None):
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         prep = Prep.from_json(json.loads((d / "prep.json").read_text(encoding="utf-8")))
-        net = Net(len(prep.feats) * 2, len(DYN) + 2)
+        net = Net(len(prep.feats) * 2, len(DYN) + 2, n_bin=len(prep.bins))
         net.load_state_dict(torch.load(d / "model.pt", map_location=device))
         return cls(net, prep, device)
 
@@ -329,7 +236,7 @@ class SeqModel:
         for ti, t in enumerate(CONT):
             for k in range(1, H + 1):
                 P[f"{t}_{k}"] = inv_target(t, q[:, ti * H + (k - 1), :].astype("float64"))
-        for ti, t in enumerate(BIN):
+        for ti, t in enumerate(self.prep.bins):
             for k in range(1, H + 1):
                 P[f"{t}_{k}"] = p[:, ti * H + (k - 1)].astype("float64")
         return P
@@ -338,7 +245,7 @@ class SeqModel:
 def tensors_for(prep, df, device, noise_cols):
     X, d = prep.matrix(df)
     Hh = prep.history(df)
-    YC, YB = targets(df)
+    YC, YB = targets(df, prep.bins)
     RAW = np.stack([d[f"w{k}_{c}"].to_numpy("float32") for (_, k, c) in noise_cols], axis=1) if noise_cols else np.zeros((len(df), 0), "float32")
     G = df.region.map(lambda r: list(GROUPS).index(group_of(r))).to_numpy()
     T = lambda a: torch.tensor(a, device=device)
@@ -351,21 +258,27 @@ def main() -> None:
     ap.add_argument("--full", action="store_true", help="train on all years (production); epochs from the checked run")
     ap.add_argument("--no-noise", action="store_true")
     ap.add_argument("--out", default="models_seq", help="folder under data/prediction")
+    ap.add_argument("--table", default="fire_days.csv.gz", help="training table (fire_days_v3.csv.gz: fire chains)")
+    ap.add_argument("--bins", default="out,merge", help="binary outputs, e.g. out,merge,grow")
     args = ap.parse_args()
     out = DATA_DIR / "prediction" / args.out
     t0 = time.time()
     torch.manual_seed(0); np.random.seed(0)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    df = add_history(pd.read_csv(DATA_DIR / "prediction" / "fire_days.csv.gz", low_memory=False))
+    df = add_history(pd.read_csv(DATA_DIR / "prediction" / args.table, low_memory=False))
+    bins = args.bins.split(",")
+    if "grow" in bins:
+        for k in range(1, H + 1):
+            df[f"grow_{k}"] = np.where(df[f"growth_{k}"].isna(), np.nan, (df[f"growth_{k}"] >= 0.1).astype(float))
     feats = feature_columns(df, weather=True)
     tr = df if args.full else df[df.split == "train"]
-    prep = Prep(feats).fit(tr)
+    prep = Prep(feats, bins=bins).fit(tr)
     noise = None if args.no_noise else Noise(prep, dev).build()
     ncols = noise.idx if noise else []
     print(f"{len(df):,} fire-days, {len(feats)} features, device {dev}, forecast noise {'on' if noise else 'off'}", flush=True)
     T = tensors_for(prep, tr.reset_index(drop=True), dev, ncols)
     wmask = torch.tensor([1.0 if c in prep.wcols else 0.0 for c in feats] * 2, device=dev)
-    net = Net(len(feats) * 2, len(DYN) + 2).to(dev)
+    net = Net(len(feats) * 2, len(DYN) + 2, n_bin=len(bins)).to(dev)
     val = None
     if not args.full:
         va = df[df.split == "check"].reset_index(drop=True)

@@ -125,7 +125,9 @@ def nearest_cell(cells: pd.DataFrame, lat: np.ndarray, lon: np.ndarray, max_deg:
 # Fire-days of one run
 # ---------------------------------------------------------------------------
 
-def fire_days(run_dir: Path, with_targets: bool = True) -> pd.DataFrame:
+def fire_days(run_dir: Path, with_targets: bool = True, keep_all: bool = False) -> pd.DataFrame:
+    """Daily state of every fire in a run. keep_all: every sighted fire-day, also the last H days of the run
+    (needed to link fires into chains before the targets are worked out)."""
     kg = run_dir / "kg"
     fs = read(kg, "nodes_FireState", ["fire_id", "time", "family", "pixels", "frp_sum_mw", "cumulative_fine_km2",
                                       "cumulative_footprint_km2", "clusters_alive", "clusters_seen", "front_distance_km"])
@@ -229,7 +231,7 @@ def fire_days(run_dir: Path, with_targets: bool = True) -> pd.DataFrame:
             # past the fire's last day there are no rows: it no longer grows
             t[f"growth_{k}"] = t[f"growth_{k}"].fillna(0)
         horizon = (pd.to_datetime(t.day) + pd.Timedelta(days=H)).dt.strftime("%Y-%m-%d")
-        t = t[t.seen & (horizon <= t.run_last)]
+        t = t[t.seen] if keep_all else t[t.seen & (horizon <= t.run_last)]
     else:
         t = t[t.seen]
     return t
@@ -360,9 +362,21 @@ def load_freq() -> pd.DataFrame | None:
     return f.rename(columns={"share_of_years": "risk_share", "mean_fire_days": "risk_days"})
 
 
+CHAINS = False          # link fires that vanish and reappear into chains (prediction_labels.py)
+
+
 def build_run(run_dir: str) -> pd.DataFrame:
     run_dir = Path(run_dir)
-    t = fire_days(run_dir)
+    if CHAINS:
+        from prediction_labels import relabel
+        t = fire_days(run_dir, keep_all=True)
+        if t.empty:
+            return t
+        t = relabel(t, with_targets=True)
+        horizon = (pd.to_datetime(t.day) + pd.Timedelta(days=H)).dt.strftime("%Y-%m-%d")
+        t = t[horizon <= t.run_last]
+    else:
+        t = fire_days(run_dir)
     if t.empty:
         return t
     kg = run_dir / "kg"
@@ -375,9 +389,10 @@ def build_run(run_dir: str) -> pd.DataFrame:
 FREQ = None
 
 
-def _init():
-    global FREQ
+def _init(chains=False):
+    global FREQ, CHAINS
     FREQ = load_freq()
+    CHAINS = chains
 
 
 HIST_COLS = [f"h{j}_{c}" for j in range(1, 5) for c in ("new_area", "frp", "sep_parts", "back")] +             ["area_trend3", "frp_trend3", "seen_last7"]
@@ -387,7 +402,8 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     """The fire's previous (up to) 4 fire-days as features: growth, power, separate parts and how many days back,
     plus the mean growth of the last 3 fire-days, power against its 3-day mean, and fire-days seen in the last week."""
     d = df.copy()
-    key = d.run.astype(str) + "|" + d.fire_id.astype(str)
+    who = d.chain if "chain" in d else d.fire_id                 # a chain of fires that vanished and came back
+    key = d.run.astype(str) + "|" + who.astype(str)
     order = np.lexsort((d.day.to_numpy(), key.to_numpy()))
     s = d.iloc[order]
     k = key.iloc[order].to_numpy()
@@ -425,11 +441,16 @@ def feature_columns(df: pd.DataFrame, weather: bool = True) -> list:
 
 
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--chains", action="store_true", help="link vanishing and reappearing fires into chains")
+    ap.add_argument("--out", default="fire_days.csv.gz")
+    args = ap.parse_args()
     t0 = time.time()
     runs = [r for r in sorted((DATA_DIR / "runs").glob("*")) if (r / "kg" / "nodes_WeatherHour.csv.gz").exists()]
     print(f"{len(runs)} runs with the weather part", flush=True)
     parts = []
-    with ProcessPoolExecutor(max_workers=8, initializer=_init) as pool:
+    with ProcessPoolExecutor(max_workers=8, initializer=_init, initargs=(args.chains,)) as pool:
         for r, df in zip(runs, pool.map(build_run, map(str, runs))):
             print(f"  {r.name}: {len(df):,} fire-days", flush=True)
             parts.append(df)
@@ -437,7 +458,7 @@ def main() -> None:
     data["year"] = data.day.str[:4].astype(int)
     data["split"] = np.where(data.year <= 2023, "train", np.where(data.year == 2024, "check", "test"))
     OUT.mkdir(parents=True, exist_ok=True)
-    data.to_csv(OUT / "fire_days.csv.gz", index=False)
+    data.to_csv(OUT / args.out, index=False)
     wx_cov = data["w1_tmax"].notna().mean()
     summary = {"rows": len(data), "fires": int(data.groupby(["run", "fire_id"]).ngroups),
                "split": {k: int(v) for k, v in data.split.value_counts().items()},
@@ -445,7 +466,11 @@ def main() -> None:
                "targets": {f"out_{k}": round(float(data[f"out_{k}"].mean()), 3) for k in range(1, H + 1)} |
                           {f"merge_{k}": round(float(data[f"merge_{k}"].mean()), 4) for k in range(1, H + 1)},
                "seconds": round(time.time() - t0, 1)}
-    (OUT / "fire_days_summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
+    if "chain" in data:
+        summary["chains"] = int(data.groupby(["run", "chain"]).ngroups)
+        summary["out_unknown_censored"] = {f"out_{k}": round(float(data[f"out_{k}"].isna().mean()), 3) for k in range(1, H + 1)}
+        summary["grew_0.1"] = {f"growth_{k}": round(float((data[f"growth_{k}"] >= 0.1).mean()), 3) for k in range(1, H + 1)}
+    (OUT / args.out.replace(".csv.gz", "_summary.json")).write_text(json.dumps(summary, indent=1), encoding="utf-8")
     print(json.dumps(summary, indent=1))
 
 

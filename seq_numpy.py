@@ -60,8 +60,9 @@ def inv_target(t, y):
 class Prep:
     """Feature preparation shared by training and prediction."""
 
-    def __init__(self, feats, stats=None):
+    def __init__(self, feats, stats=None, bins=None):
         self.feats = feats
+        self.bins = bins or ["out", "merge"]
         self.wcols = [c for c in feats if c[:1] == "w" and c[1:2].isdigit()]
         self.stats = stats or {}
 
@@ -93,7 +94,8 @@ class Prep:
 
     def history(self, df):
         """Previous up to HIST fire-days of the same fire: [n, HIST, len(DYN) + 2] (features, days back, present)."""
-        key = df.run.astype(str) + "|" + df.fire_id.astype(str)
+        who = df.chain if "chain" in df and df.chain.notna().all() else df.fire_id
+        key = df.run.astype(str) + "|" + who.astype(str)
         order = np.lexsort((df.day.to_numpy(), key.to_numpy()))
         inv = np.empty_like(order)
         inv[order] = np.arange(len(order))
@@ -116,11 +118,11 @@ class Prep:
         return out[inv]
 
     def to_json(self):
-        return {"feats": self.feats, "stats": self.stats}
+        return {"feats": self.feats, "stats": self.stats, "bins": self.bins}
 
     @classmethod
     def from_json(cls, d):
-        return cls(d["feats"], d["stats"])
+        return cls(d["feats"], d["stats"], d.get("bins"))
 
 
 def _sig(x):
@@ -179,7 +181,7 @@ class NumpySeq:
 
     def predict_df(self, df, weather=True, batch=20000, history=None):
         """history: precomputed [n, HIST, ...] (e.g. from the whole run when df holds only the latest fire-days)."""
-        cols = list(dict.fromkeys(self.prep.feats + DYN + ["run", "fire_id", "day"]))
+        cols = list(dict.fromkeys(self.prep.feats + DYN + ["run", "fire_id", "day", "chain"]))
         d = df.reindex(columns=cols)
         X, _ = self.prep.matrix(d)
         if not weather:
@@ -198,7 +200,7 @@ class NumpySeq:
         for ti, t in enumerate(CONT):
             for k in range(1, H + 1):
                 P[f"{t}_{k}"] = inv_target(t, q[:, ti * H + (k - 1), :])
-        for ti, t in enumerate(BIN):
+        for ti, t in enumerate(self.prep.bins):
             for k in range(1, H + 1):
                 P[f"{t}_{k}"] = p[:, ti * H + (k - 1)]
         return P

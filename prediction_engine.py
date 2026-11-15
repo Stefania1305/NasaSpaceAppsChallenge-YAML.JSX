@@ -11,9 +11,12 @@ For every fire seen on the run's last day it predicts, for day +1, +2, +3:
   spread map  chance that each 1 km cell around the fire burns
 with low / likely / high values (10th / 50th / 90th percentile) for every number.
 
-Models: XGBoost (prediction_train.py) blended with the sequence network (prediction_seq.py, run here with numpy):
-the two are averaged for growth, fire power, movement and merging; the chance a fire is out comes from XGBoost
-alone (better calibrated). Without a sequence model, XGBoost alone is used.
+Models (newest available is used):
+  v3  fire chains (fires that vanish for up to 3 days and come back are one fire), extinction from a calibrated
+      survival model, growth from a two-part model (chance it grows + how much), plus the sequence network:
+      averaged with it for growth, fire power, movement and merging. Adds p_grow (chance it grows >= 0.1 km2)
+      and growth_expected (km2) to the output.
+  v2  XGBoost blended with the sequence network; extinction from XGBoost alone.
 
 Weather forecast input (--weather file.json / .csv, or a DataFrame / list of dicts passed to predict()): hourly rows
   latitude, longitude                 point of the forecast (degrees); matched to fires within 0.5 degree
@@ -53,13 +56,24 @@ from weather_worker import RAIN_MM, weather_key
 MODELS = DATA_DIR / "prediction" / "models"                # models trained locally (prediction_train.py)
 SHIPPED = Path(__file__).resolve().parent / "models" / "v2"  # models shipped with the repository (Git LFS), used when none are trained locally
 SEQ_LOCAL = DATA_DIR / "prediction" / "models_seq_full"      # sequence network trained locally on all years
+V3_LOCAL = DATA_DIR / "prediction" / "models_v3_full"         # v3 models trained locally on all years
+V3_SHIPPED = Path(__file__).resolve().parent / "models" / "v3"
+SEQ_V3 = (DATA_DIR / "prediction" / "models_seq_v3_full", V3_SHIPPED / "seq")
 BLEND_SKIP = {"out"}                                         # outputs taken from XGBoost alone
 
 
-def load_seq():
-    """The sequence network (numpy), local if trained, else shipped in models/v2/seq; None if neither exists."""
+def v3_dir(variant):
+    """Folder of the v3 models (local first, then shipped), or None."""
+    for d in (V3_LOCAL, V3_SHIPPED):
+        if (d / variant / "card.json").exists():
+            return d
+    return None
+
+
+def load_seq(v3=False):
+    """The sequence network (numpy), local if trained, else shipped; None if neither exists."""
     from seq_numpy import NumpySeq
-    for d in (SEQ_LOCAL, SHIPPED / "seq"):
+    for d in (SEQ_V3 if v3 else (SEQ_LOCAL, SHIPPED / "seq")):
         if (d / "weights.npz").exists() and (d / "prep.json").exists():
             head = (d / "weights.npz").read_bytes()[:40]
             if head.startswith(b"version https://git-lfs"):
@@ -196,6 +210,11 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
     fd = fire_days(run_dir, with_targets=False)
     if fd.empty:
         raise SystemExit("No fires in this run.")
+    variant0 = "weather" if weather is not None else "no_weather"
+    use_v3 = v3_dir(variant0) is not None
+    if use_v3:
+        from prediction_labels import relabel
+        fd = relabel(fd, with_targets=False)          # link fires that vanished and came back, as in training
     fd = add_history(fd)
     last = fd.day.max()
     active = fd[fd.day == last].copy()
@@ -220,42 +239,53 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
                 X[f"w{k}_{c}"] = X[f"w0_{c}"]
         coverage["fires_with_forecast"] = int(X.w1_tmax.notna().sum())
     variant = "weather" if mode != "none" else "no_weather"
-    models = load_models(variant)
-    if not models:
-        raise SystemExit(f"No trained models in {MODELS / variant}. Run prediction_train.py first.")
-    # each model knows the features it was trained on; older models simply ignore newer columns
-    feats = next(iter(models.values())).feature_names or feature_columns(X, weather=(variant == "weather"))
-    for c in feats:
-        if c not in X:
-            X[c] = np.nan
-    M = xgb.DMatrix(X[feats].astype("float32"))
-    seq = load_seq()
+    use_v3 = v3_dir(variant) is not None
+    if use_v3:
+        import prediction_v3
+        Pd = prediction_v3.predict(v3_dir(variant), X, variant)
+        model_name = "v3 (survival + two-part growth)"
+    else:
+        models = load_models(variant)
+        if not models:
+            raise SystemExit(f"No trained models in {MODELS / variant}. Run prediction_train.py first.")
+        # each model knows the features it was trained on; older models simply ignore newer columns
+        feats = next(iter(models.values())).feature_names or feature_columns(X, weather=(variant == "weather"))
+        M = xgb.DMatrix(X.reindex(columns=feats).astype("float32"))
+        Pd = {}
+        for k in range(1, H + 1):
+            for target, (fwd, inv) in CONT.items():
+                if f"{target}_{k}" in models:
+                    Pd[f"{target}_{k}"] = inv(np.sort(models[f"{target}_{k}"].predict(M), axis=1).astype("float64"))
+            for target in ("out", "merge"):
+                m = models.get(f"{target}_{k}")
+                Pd[f"{target}_{k}"] = m.predict(M).astype("float64") if m is not None else np.full(len(X), np.nan)
+        model_name = "v2"
+    seq = load_seq(v3=use_v3)
     S = None
     if seq is not None:
         # the network reads each fire's previous fire-days, so its history comes from the whole run
-        cols = list(dict.fromkeys(seq.prep.feats + ["run", "fire_id", "day"]))
-        hist = seq.prep.history(fd.reindex(columns=list(dict.fromkeys(["run", "fire_id", "day"] + __import__("seq_numpy").DYN))))[act_pos]
+        cols = list(dict.fromkeys(seq.prep.feats + ["run", "fire_id", "day", "chain"]))
+        hcols = list(dict.fromkeys(["run", "fire_id", "day", "chain"] + __import__("seq_numpy").DYN))
+        hist = seq.prep.history(fd.reindex(columns=hcols))[act_pos]
         S = seq.predict_df(X.reindex(columns=cols), weather=(variant == "weather"), history=hist)
+        for key in list(Pd):
+            if key in S and key.split("_")[0] not in BLEND_SKIP:
+                v = (Pd[key] + S[key]) / 2
+                Pd[key] = np.sort(v, axis=1) if v.ndim == 2 else v
+        model_name += " + sequence network"
     out = []
     for k in range(1, H + 1):
         r = X[["run", "fire_id", "day", "lat0", "lon0", "clat", "clon", "fine_fp", "frp"]].copy()
         r["day_ahead"] = k
         r["date"] = (pd.to_datetime(r.day) + timedelta(days=k)).dt.strftime("%Y-%m-%d")
-        for target, (fwd, inv) in CONT.items():
-            m = models.get(f"{target}_{k}")
-            if m is None:
-                continue
-            q = inv(np.sort(m.predict(M), axis=1).astype("float64"))
-            if S is not None and target not in BLEND_SKIP:
-                q = np.sort((q + S[f"{target}_{k}"]) / 2, axis=1)
-            for j, name in enumerate(("low", "likely", "high")):
-                r[f"{target}_{name}"] = q[:, j]
-        for target in ("out", "merge"):
-            m = models.get(f"{target}_{k}")
-            pr = m.predict(M).astype("float64") if m is not None else np.full(len(X), np.nan)
-            if S is not None and target not in BLEND_SKIP:
-                pr = (pr + S[f"{target}_{k}"]) / 2
-            r[f"p_{target}"] = pr
+        for target in CONT:
+            if f"{target}_{k}" in Pd:
+                for j, name in enumerate(("low", "likely", "high")):
+                    r[f"{target}_{name}"] = Pd[f"{target}_{k}"][:, j]
+        r["p_out"], r["p_merge"] = Pd[f"out_{k}"], Pd[f"merge_{k}"]
+        if f"grow_{k}" in Pd:
+            r["p_grow"] = Pd[f"grow_{k}"]
+            r["growth_expected"] = Pd[f"growth_mean_{k}"]
         out.append(r)
     P = pd.concat(out, ignore_index=True).sort_values(["fire_id", "day_ahead"], ignore_index=True)
     # consistency: growth >= 0 and never shrinking over the days; chances never falling over the days
@@ -278,7 +308,7 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
             "footprint_low_km2", "footprint_likely_km2", "footprint_high_km2", "growth_low", "growth_likely", "growth_high",
             "direction_deg", "spread_rate_km_day", "move_km", "dx_low", "dx_likely", "dx_high", "dy_low", "dy_likely", "dy_high",
             "centre_lat", "centre_lon", "radius_km", "frp_low", "frp_likely", "frp_high",
-            "frp_peak_low", "frp_peak_likely", "frp_peak_high", "p_out", "p_merge"]
+            "frp_peak_low", "frp_peak_likely", "frp_peak_high", "p_out", "p_merge", "p_grow", "growth_expected"]
     P = P[[c for c in keep if c in P]].round(4)
     out_dir = run_dir / "prediction"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -286,7 +316,7 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
     n_cells = write_spread(run_dir, P, last, out_dir)
     (out_dir / "predictions.json").write_text(P.to_json(orient="records"), encoding="utf-8")
     summary = {"run": run_dir.name, "from_day": last, "active_fires": int(len(active)), "rows": len(P), "spread_cells": n_cells,
-               "weather": mode, "weather_coverage": coverage, "models": variant + (" + sequence network" if S is not None else ""), "seconds": round(time.time() - t0, 1),
+               "weather": mode, "weather_coverage": coverage, "models": f"{variant}: {model_name}", "seconds": round(time.time() - t0, 1),
                "note": weather_label or {"provided": "weather forecast provided by the caller", "none": "no forecast provided: no-weather models"}[mode]}
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     return {"predictions": P, "summary": summary, "out": out_dir}

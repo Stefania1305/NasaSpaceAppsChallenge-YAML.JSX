@@ -44,7 +44,8 @@ from prediction_train import CONT, persistence
 OUT = DATA_DIR / "prediction" / "accuracy"
 import os
 MODELS = DATA_DIR / "prediction" / os.environ.get("PRED_MODELS", "models")       # model folder to test
-SOIL_FROM_D = os.environ.get("PRED_SOIL_FROM_D") == "1"                           # days +1..+3 soil moisture = day d (as in real use)
+SOIL_FROM_D = os.environ.get("PRED_SOIL_FROM_D") == "1"
+TABLE = os.environ.get("PRED_TABLE", "fire_days.csv.gz")                         # fire_days_v3.csv.gz: fire chains                           # days +1..+3 soil moisture = day d (as in real use)
 GROWTH_CUTS = (0.1, 2.0)
 REGION_GROUPS = {"Americas": [0, 1, 2, 11, 12, 13], "Africa": [14, 15], "Asia and Australia": [3, 5, 6, 7, 8, 9, 10]}
 SIZE = [(0, 1, "under 1 km2"), (1, 10, "1-10 km2"), (10, 100, "10-100 km2"), (100, 1e9, "over 100 km2")]
@@ -56,7 +57,7 @@ def log(*a):
 
 def load():
     from prediction_data import add_history
-    df = add_history(pd.read_csv(DATA_DIR / "prediction" / "fire_days.csv.gz", low_memory=False))
+    df = add_history(pd.read_csv(DATA_DIR / "prediction" / TABLE, low_memory=False))
     if SOIL_FROM_D:
         for k in range(1, H + 1):
             for c in ("sm0", "sm1", "sm2"):
@@ -75,6 +76,18 @@ class SeqWrap:
         return self.m.predict_df(X, weather=self.weather)
 
 
+class V3Wrap:
+    """v3 models (survival + two-part growth) behind the usual interface."""
+
+    def __init__(self, folder, variant):
+        import prediction_v3 as V
+        self.V, self.folder, self.variant = V, folder, variant
+        self.models = V.load(folder, variant)
+
+    def predict(self, X):
+        return self.V.predict(self.folder, X, self.variant, models=self.models)
+
+
 class BlendWrap:
     """Average of XGBoost and the sequence model: quantiles averaged then sorted, chances averaged."""
 
@@ -84,9 +97,13 @@ class BlendWrap:
     def predict(self, X):
         a, b = predict(self.x, X, None), self.s.predict(X)
         out = {}
+        skip_out = os.environ.get("PRED_BLEND_OUT", "xgb") == "xgb"     # extinction from the tree model alone
         for k in a:
-            v = (a[k] + b[k]) / 2
-            out[k] = np.sort(v, axis=1) if v.ndim == 2 else v
+            if k in b and not (skip_out and k.startswith("out")):
+                v = (a[k] + b[k]) / 2
+                out[k] = np.sort(v, axis=1) if v.ndim == 2 else v
+            else:
+                out[k] = a[k]
         return out
 
 
@@ -94,9 +111,13 @@ def boosters(variant):
     blend = os.environ.get("PRED_BLEND")                    # e.g. "models_v2,models_seq"
     if blend:
         xd, sd = blend.split(",")
-        return BlendWrap(boosters_in(DATA_DIR / "prediction" / xd, variant), SeqWrap(DATA_DIR / "prediction" / sd, variant == "weather"))
+        xdir = DATA_DIR / "prediction" / xd
+        xm = V3Wrap(xdir, variant) if (xdir / variant / "survival.json").exists() else boosters_in(xdir, variant)
+        return BlendWrap(xm, SeqWrap(DATA_DIR / "prediction" / sd, variant == "weather"))
     if (MODELS / "weights.npz").exists():
         return SeqWrap(MODELS, variant == "weather")
+    if (MODELS / variant / "survival.json").exists():
+        return V3Wrap(MODELS, variant)
     return boosters_in(MODELS, variant)
 
 
@@ -170,10 +191,11 @@ def scores(df, P, k, merge_thr=0.5, kind="model"):
         s["direction_45"] = float(np.mean(e <= 45)); s["direction_90"] = float(np.mean(e <= 90))
         s["direction_median_err_deg"] = float(np.median(e))
         s["centre_err_median_km"] = float(np.median(np.hypot(dx[mv] - rx[mv], dy[mv] - ry[mv])))
-    out = df[f"out_{k}"].to_numpy()
-    s["out"] = float(np.mean((pout >= 0.5) == (out == 1)))
-    if kind != "persistence" and len(np.unique(out)) > 1:
-        s["out_auc"] = float(roc_auc_score(out, pout))
+    out = df[f"out_{k}"].to_numpy("float64")
+    ko = ~np.isnan(out)
+    s["out"] = float(np.mean((pout[ko] >= 0.5) == (out[ko] == 1)))
+    if kind != "persistence" and len(np.unique(out[ko])) > 1:
+        s["out_auc"] = float(roc_auc_score(out[ko], pout[ko]))
     m = df[f"merge_{k}"].to_numpy() == 1
     hit = (pm >= merge_thr)
     if m.any() and (~m).any():
@@ -263,7 +285,9 @@ def heldout(df):
                                            "below_likely_%": round(100 * float(np.mean(y[ok] < q[ok, 1])), 1),
                                            "aim": "10 / 10 / 50"}
         for t in ("out", "merge"):
-            p, y = Pw[f"{t}_{k}"], te[f"{t}_{k}"].to_numpy()
+            p, y = Pw[f"{t}_{k}"], te[f"{t}_{k}"].to_numpy("float64")
+            keep = ~np.isnan(y)
+            p, y = p[keep], y[keep]
             bins = np.clip((p * 10).astype(int), 0, 9)
             tab = [{"predicted_%": round(100 * float(p[bins == b].mean()), 1), "observed_%": round(100 * float(y[bins == b].mean()), 1),
                     "rows": int((bins == b).sum())} for b in range(10) if (bins == b).sum() >= 30]
@@ -378,7 +402,8 @@ def cv_fold(df, name, train, test, feats):
         for t in ("out", "merge"):
             col = f"{t}_{k}"
             for d, src in ((da, a), (db, b)):
-                d.set_label(src[col].to_numpy().astype("float32")); d.set_weight(np.ones(len(src), "float32"))
+                y = src[col].to_numpy("float64"); ok = ~np.isnan(y)          # censored extinction labels: weight 0
+                d.set_label(np.nan_to_num(y).astype("float32")); d.set_weight(ok.astype("float32"))
             bst = xgb.train({**CV_PARAMS, "objective": "binary:logistic", "eval_metric": "logloss"}, da, 1500,
                             evals=[(db, "v")], early_stopping_rounds=40, verbose_eval=False)
             P[col] = bst.predict(dt, iteration_range=(0, bst.best_iteration + 1)).astype("float64")

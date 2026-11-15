@@ -78,7 +78,7 @@ export function Panel() {
       <ZoneSection />
 
       <section>
-        <h2><span className="step-no">02</span>Time window</h2>
+        <h2>Time window</h2>
         <div className="row">
           <label>Start date<input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} /></label>
           <label>Days of data

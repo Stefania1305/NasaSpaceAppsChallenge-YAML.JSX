@@ -1,5 +1,10 @@
 import { useEffect, useRef, type InputHTMLAttributes } from 'react';
 import { useApp, zoneSummary, type Method } from '../store';
+import { areaKm2 } from '../geo';
+
+// Degrees with their hemisphere, for the selected-zone readout.
+const lat = (v: number, d = 2) => `${Math.abs(v).toFixed(d)}° ${v >= 0 ? 'N' : 'S'}`;
+const lon = (v: number, d = 2) => `${Math.abs(v).toFixed(d)}° ${v >= 0 ? 'E' : 'W'}`;
 
 // An input whose value is committed on the browser's native "change" event (Enter, leaving the field or the
 // spinner arrows), exactly like the original app; React's onChange would fire on every keystroke instead.
@@ -48,7 +53,7 @@ export function ZoneSection() {
 
   return (
     <section id="zoneSection" hidden={hidden}>
-      <h2><span className="step-no">01</span>Prediction zone</h2>
+      <h2>Prediction zone</h2>
       <p className="methodlabel" id="zoneMethodLabel">How to set the zone</p>
       <div className="methods" id="zoneMethod" role="radiogroup" aria-labelledby="zoneMethodLabel">
         {METHODS.map(m => (
@@ -109,12 +114,24 @@ export function ZoneSection() {
       </div>
 
       <div className="selected" id="zoneSelected" hidden={!zone}>
-        <div className="mhead" style={{ marginBottom: 2 }}>Selected zone</div>
-        <div id="zoneinfo" className="zoneinfo">
-          {summary
-            ? <>{zoneCountry && <><b>{zoneCountry}</b><br /></>}Zone <b>{summary.coords}</b><br />{summary.size}
-                {summary.pin && <><br />{summary.pin}</>}{summary.country && <><br />{summary.country}</>}</>
-            : 'No zone selected.'}
+        <div className="mhead">Selected zone</div>
+        {/* A readout: the zone's name, its four edges, its size, then the pin and country notes when they apply. */}
+        <div id="zoneinfo" className="zoneinfo zcard">
+          {zone && summary ? <>
+            <p className="z-name">{zoneCountry ?? (pinAt ? 'Area around the pin' : 'Custom area')}</p>
+            <dl className="z-bounds">
+              <div><dt>North</dt><dd>{lat(zone.n)}</dd></div>
+              <div><dt>South</dt><dd>{lat(zone.s)}</dd></div>
+              <div><dt>West</dt><dd>{lon(zone.w)}</dd></div>
+              <div><dt>East</dt><dd>{lon(zone.e)}</dd></div>
+            </dl>
+            <dl className="z-size">
+              <div><dt>Area</dt><dd>{Math.round(areaKm2(zone)).toLocaleString()} km²</dd></div>
+              <div><dt>Span</dt><dd>{(zone.e - zone.w).toFixed(2)}° × {(zone.n - zone.s).toFixed(2)}°</dd></div>
+            </dl>
+            {pinAt && <p className="z-note"><span>Pin</span>{lat(pinAt.lat, 3)}, {lon(pinAt.lng, 3)}</p>}
+            {zoneCountry && <p className="z-cover">The forecast covers {zoneCountry} only, inside its borders.</p>}
+          </> : 'No zone selected.'}
         </div>
         <button type="button" id="clear" className="secondary wide" onClick={clearZone}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">

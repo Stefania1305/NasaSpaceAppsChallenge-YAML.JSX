@@ -827,11 +827,11 @@ We acknowledge the use of data from NASA's Fire Information for Resource Managem
 
 | Contributor | Background | Area |
 |---|---|---|
-| Bogdan Diaconiță ([Diaco12](https://github.com/Diaco12)) | 1st year, Computer Engineering | Frontend: React app, app integration with the prediction engine, backtest, launch video |
+| Bogdan Diaconiță ([Diaco12](https://github.com/Diaco12)) | 1st year, Computer Engineering | Frontend |
 | Cezar Sava | 2nd year, Computer Engineering | Full stack |
-| Ștefania Roman ([Stefania1305](https://github.com/Stefania1305)) | 3rd year, Computer Engineering | Full stack, repository owner |
-| Adelin Olteanu ([Adelin12378](https://github.com/Adelin12378)) | 3rd year, Computer Engineering | Full stack: pipeline, knowledge graph and prediction models |
-| Valentin Floricescu | Computer Engineering and Applied Electronics engineer, PhD researcher | Full stack |
+| Ștefania Roman ([Stefania1305](https://github.com/Stefania1305)) | 3rd year, Computer Engineering | Full stack |
+| Adelin Olteanu ([Adelin12378](https://github.com/Adelin12378)) | 3rd year, Computer Engineering | Full stack |
+| Valentin Floricescu | Computer Engineering and Applied Electronics engineer, PhD researcher | Full stack and Coordinator |
 
 Not every contributor pushed to this repository; the table lists the whole team.
 

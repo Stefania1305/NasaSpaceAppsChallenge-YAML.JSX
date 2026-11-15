@@ -20,7 +20,17 @@ const PinIcon = ({ w = 11, h = 16 }) => (
   </svg>
 );
 
-// Part 1 of the side panel: choose the prediction zone (four ways, picked from a dropdown).
+// The four ways to set the zone, as a row of icon buttons (a radio group: arrow keys move between them).
+const ico = { viewBox: '0 0 24 24', width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6,
+              strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
+const METHODS: { id: Method; label: string; icon: JSX.Element }[] = [
+  { id: 'draw', label: 'Draw', icon: <svg {...ico}><rect x="4" y="5" width="16" height="14" rx="1.5" strokeDasharray="3 2.4" /><path d="M14 13l5 5M19 14v4h-4" /></svg> },
+  { id: 'country', label: 'Country', icon: <svg {...ico}><path d="M5 6.5 9 5l6 2 4-1.5v12L15 19l-6-2-4 1.5z" /><path d="M9 5v12M15 7v12" /></svg> },
+  { id: 'pin', label: 'Pin', icon: <svg {...ico}><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.3" /></svg> },
+  { id: 'coords', label: 'Coordinates', icon: <svg {...ico}><circle cx="12" cy="12" r="7" /><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" /><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" /></svg> },
+];
+
+// Part 1 of the side panel: choose the prediction zone (four ways, picked from a row of icon buttons).
 // "Pick a country": hovering a country on the map highlights its border; clicking it selects it.
 export function ZoneSection() {
   const hidden = useApp(s => s.forecastVisible);
@@ -38,15 +48,26 @@ export function ZoneSection() {
 
   return (
     <section id="zoneSection" hidden={hidden}>
-      <h2>Prediction zone</h2>
-      <label className="methodpick">How to set the zone
-        <select id="zoneMethod" value={method} onChange={e => setMethod(e.target.value as Method)}>
-          <option value="draw">Draw a rectangle</option>
-          <option value="country">Pick a country</option>
-          <option value="pin">Pin a point</option>
-          <option value="coords">Type coordinates</option>
-        </select>
-      </label>
+      <h2><span className="step-no">01</span>Prediction zone</h2>
+      <p className="methodlabel" id="zoneMethodLabel">How to set the zone</p>
+      <div className="methods" id="zoneMethod" role="radiogroup" aria-labelledby="zoneMethodLabel">
+        {METHODS.map(m => (
+          <button key={m.id} type="button" role="radio" aria-checked={method === m.id} data-value={m.id}
+                  className={`mbtn${method === m.id ? ' on' : ''}`} onClick={() => setMethod(m.id)}
+                  onKeyDown={e => {
+                    const k = METHODS.findIndex(x => x.id === method);
+                    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+                    if (!step) return;
+                    e.preventDefault();
+                    const next = METHODS[(k + step + METHODS.length) % METHODS.length].id;
+                    setMethod(next);
+                    (e.currentTarget.parentElement?.querySelector(`[data-value="${next}"]`) as HTMLElement | null)?.focus();
+                  }}
+                  tabIndex={method === m.id ? 0 : -1}>
+            {m.icon}<span>{m.label}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="method" data-method="draw" hidden={method !== 'draw'}>
         <p className="hint">Click the button, then drag a rectangle on the map.</p>

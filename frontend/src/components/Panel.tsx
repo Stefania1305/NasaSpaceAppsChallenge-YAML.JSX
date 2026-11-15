@@ -63,17 +63,22 @@ export function Panel() {
       <div className="apphead" id="appHead" ref={headRef} role="button" tabIndex={0} aria-expanded={open} title="Close the panel"
            onClick={() => setPanel(false)}
            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPanel(false); } }}>
-        <h1 className="fit">Fire Pattern Predictor
+        <h1 className="bar-title">
+          <svg className="mark" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6"
+               strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 20.75c-3.75 0-6.25-2.55-6.25-6 0-3.3 2.3-5.25 3.55-7.75.5 1.9 1.55 2.9 2.5 3.3.1-2.5 1.15-4.7 2.9-6.45.2 3.25 3.55 5.5 3.55 9.75 0 3.85-2.5 7.15-6.25 7.15z" />
+            <path d="M12 20.75c-1.5 0-2.55-1.05-2.55-2.55 0-1.5 1.1-2.35 1.95-3.45.45 1.05 1.2 1.5 1.8 1.7.55.85 1.3 1.3 1.3 2.25 0 1.15-1.05 2.05-2.5 2.05z" fill="currentColor" stroke="none" /></svg>
+          <span>Fire Pattern Predictor</span>
           <svg className="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4"
                strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></h1>
-        <p className="fit">NASA FIRMS · MODIS · VIIRS · Landsat</p>
+        <p className="bar-sub">NASA FIRMS · MODIS · VIIRS · Landsat</p>
       </div>
 
       <Forecast />
       <ZoneSection />
 
       <section>
-        <h2>Time window</h2>
+        <h2><span className="step-no">02</span>Time window</h2>
         <div className="row">
           <label>Start date<input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} /></label>
           <label>Days of data
@@ -85,7 +90,8 @@ export function Panel() {
         <p className="hint" id="avail">{nrt.length ? `Near-real-time data available up to ${nrt[nrt.length - 1]}.` : ''}</p>
       </section>
 
-      <button type="button" id="run" disabled={!zone} hidden={!zone} onClick={openModal}>Analyse zone</button>
+      <button type="button" id="run" disabled={!zone} hidden={!zone} onClick={openModal}>
+        Analyse zone<span className="arrow" aria-hidden="true">→</span></button>
       <div id="status" className="hint">{status}</div>
       </div>
     </aside>

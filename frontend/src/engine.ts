@@ -803,6 +803,18 @@ export function fitZone(z: Zone, padding: number | maplibregl.PaddingOptions, du
   map.fitBounds([[z.w, z.s], [z.e, z.n]], { padding, duration, essential: true, curve: 1.2, easing: easeInOut });
 }
 export function flyTo(opts: maplibregl.FlyToOptions) { map.flyTo({ curve: 1.2, easing: easeInOut, ...opts }); }
+// The ground point under a screen point (map-relative px) for the status line, or null in space beside the
+// globe (MapLibre snaps such points to the horizon, so the point must project back onto itself to count).
+export function groundAt(x: number, y: number): [number, number] | null {
+  if (!map) return null;
+  const ll = map.unproject([x, y]);
+  if (!lngLatOk(ll)) return null;
+  const back = map.project(ll);
+  if (Math.hypot(back.x - x, back.y - y) > 2) return null;
+  return [wrapLng(ll.lng), ll.lat];
+}
+export const currentZoom = () => (map ? map.getZoom() : 0);
+
 export function cameraSnapshot() {
   const c = map.getCenter();
   return { center: [c.lng, c.lat] as [number, number], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };

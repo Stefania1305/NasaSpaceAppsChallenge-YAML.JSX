@@ -7,20 +7,30 @@ import { isDesktop } from '../engine';
 //   House → back to the opening screen · Globe → just the spinning globe · Fire → the Fire Pattern Predictor panel.
 // The active one glows like a small sun.
 
+// Drawn on one 24 px grid with a single stroke weight, rounded joins and a faint two-tone fill inside each shape
+// (the `.tone` layer), in the manner of system symbols.
+const icon = { viewBox: '0 0 24 24', width: 24, height: 24, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6,
+               strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
 const House = () => (
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M3.5 11 12 4l8.5 7" /><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5" />
+  <svg {...icon}>
+    <path className="tone" d="M5.75 10.1 12 5l6.25 5.1V19a1 1 0 0 1-1 1H14.4v-4.6a2.4 2.4 0 0 0-4.8 0V20H6.75a1 1 0 0 1-1-1z" stroke="none" />
+    <path d="M3.75 11.1 11.37 4.5a1 1 0 0 1 1.26 0l7.62 6.6" />
+    <path d="M5.75 9.6V19a1 1 0 0 0 1 1H9.6v-4.6a2.4 2.4 0 0 1 4.8 0V20h2.85a1 1 0 0 0 1-1V9.6" />
   </svg>
 );
 const Globe = () => (
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17" /><path d="M12 3.5c2.6 2.4 3.9 5.2 3.9 8.5s-1.3 6.1-3.9 8.5c-2.6-2.4-3.9-5.2-3.9-8.5s1.3-6.1 3.9-8.5z" />
+  <svg {...icon}>
+    <circle className="tone" cx="12" cy="12" r="8.25" stroke="none" />
+    <circle cx="12" cy="12" r="8.25" />
+    <path d="M3.75 12h16.5" />
+    <path d="M12 3.75c2.45 2.3 3.7 5.05 3.7 8.25s-1.25 5.95-3.7 8.25c-2.45-2.3-3.7-5.05-3.7-8.25S9.55 6.05 12 3.75z" />
   </svg>
 );
 const Fire = () => (
-  <svg className="flame" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.4 3.7-8 .5 2 1.6 3 2.6 3.4.1-2.6 1.2-4.9 3-6.7.2 3.4 3.7 5.7 3.7 10.1 0 4-2.6 7.4-6.5 7.4z" />
-    <path d="M12 21c-1.6 0-2.7-1.1-2.7-2.7 0-1.6 1.2-2.5 2.1-3.7.5 1.1 1.3 1.6 1.9 1.8.6.9 1.4 1.4 1.4 2.4 0 1.2-1.1 2.2-2.7 2.2z" />
+  <svg className="flame" {...icon}>
+    <path className="tone" d="M12 20.75c-3.75 0-6.25-2.55-6.25-6 0-3.3 2.3-5.25 3.55-7.75.5 1.9 1.55 2.9 2.5 3.3.1-2.5 1.15-4.7 2.9-6.45.2 3.25 3.55 5.5 3.55 9.75 0 3.85-2.5 7.15-6.25 7.15z" stroke="none" />
+    <path d="M12 20.75c-3.75 0-6.25-2.55-6.25-6 0-3.3 2.3-5.25 3.55-7.75.5 1.9 1.55 2.9 2.5 3.3.1-2.5 1.15-4.7 2.9-6.45.2 3.25 3.55 5.5 3.55 9.75 0 3.85-2.5 7.15-6.25 7.15z" />
+    <path className="core" d="M12 20.75c-1.5 0-2.55-1.05-2.55-2.55 0-1.5 1.1-2.35 1.95-3.45.45 1.05 1.2 1.5 1.8 1.7.55.85 1.3 1.3 1.3 2.25 0 1.15-1.05 2.05-2.5 2.05z" fill="currentColor" stroke="none" />
   </svg>
 );
 

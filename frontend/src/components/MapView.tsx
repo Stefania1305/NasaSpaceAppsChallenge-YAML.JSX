@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useApp } from '../store';
 import { TimelineBar } from './TimelineBar';
 import { TerritoryBar } from './TerritoryBar';
+import { MapHud } from './MapHud';
 
 // The map area: the space backdrop (nebula, stars, halo, embers) behind the MapLibre map, the drawing tip,
 // and in the bottom-right corner the fire legend with the fire timeline bar under it. The engine (src/engine.ts) attaches to these elements by id/class.
@@ -20,6 +21,7 @@ export function MapView() {
       <div id="map" />
       <div id="maptip" className="maptip">Drag to draw the prediction zone · Esc to cancel</div>
       <TerritoryBar />
+      <MapHud />
       <div className="mapcorner">
       <div id="legend" className="legend" hidden={!firesShown}>
         <b>Fire detections</b>

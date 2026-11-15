@@ -1,0 +1,299 @@
+"""Sequence model of the prediction engine (full version), PyTorch on the GPU.
+
+One network predicts every output for days +1, +2, +3 at once:
+  growth, frp, frp_peak, dx, dy    low / likely / high (10th / 50th / 90th percentile, pinball loss)
+  out, merge                       probability
+from
+  history     the fire's previous (up to) 4 fire-days: size, growth, power, passes, clusters, separate parts,
+              movement, merges, days back (a GRU reads them in order)
+  now         every feature of the fire-day table (fire state, place, season, neighbours, weather d..d+3)
+Trained for real use:
+  weather dropout   the weather is hidden for 40 % of the rows (and missing for rows without it), so one model
+                    serves both "with weather" and "no weather"
+  forecast noise    a real forecast error vector (forecast_residuals.csv.gz: same day ahead, same region group)
+                    is added to the weather of days +1..+3 for every row, every time it is seen, so the model
+                    learns to trust the weather as much as a forecast deserves
+  soil moisture     days +1..+3 use day d's value, as the engine does (the forecast archive has none)
+
+For running predictions without PyTorch, the trained network is also saved as plain arrays (weights.npz) that
+seq_numpy.py evaluates with numpy alone (same results).
+
+Usage:  python prediction_seq.py [--epochs 14] [--full] [--out models_seq]   (--full: train on all years)
+Output: data/prediction/<out>/model.pt, weights.npz, prep.json, card.json
+"""
+
+import argparse
+import json
+import math
+import time
+
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+
+from firms import DATA_DIR
+from forecast_errors import GROUPS, NOISY, group_of
+from prediction_data import H, WX, add_history, feature_columns
+
+OUT = DATA_DIR / "prediction" / "models_seq"
+QUANT = torch.tensor([0.1, 0.5, 0.9])
+from seq_numpy import ASINH, CONT, DYN, HIST, LOG, Prep, col_kind, fwd_target, inv_target, transform  # noqa: E402
+
+BIN = ["out", "merge"]           # binary outputs; --bins adds "grow" (stored in prep.json with the model)
+WEATHER_DROP = 0.4
+
+
+class Net(nn.Module):
+    def __init__(self, n_in, n_dyn, hidden=384, n_bin=2):
+        super().__init__()
+        self.gru = nn.GRU(n_dyn, 64, batch_first=True)
+        self.mlp = nn.Sequential(nn.Linear(n_in + 64, hidden), nn.GELU(), nn.LayerNorm(hidden), nn.Dropout(0.1),
+                                 nn.Linear(hidden, hidden), nn.GELU(), nn.LayerNorm(hidden), nn.Dropout(0.1),
+                                 nn.Linear(hidden, 256), nn.GELU())
+        self.q = nn.Linear(256, len(CONT) * H * 3)
+        self.b = nn.Linear(256, n_bin * H)
+
+    def forward(self, x, h):
+        _, hn = self.gru(h)
+        z = self.mlp(torch.cat([x, hn[-1]], dim=1))
+        q = self.q(z).view(-1, len(CONT) * H, 3)
+        q = torch.cat([q[..., :1], q[..., :1] + torch.cumsum(nn.functional.softplus(q[..., 1:]), dim=-1)], dim=-1)  # low<=likely<=high
+        return q, self.b(z)
+
+
+def targets(df, bins=None):
+    bins = bins or BIN
+    yc = np.stack([fwd_target(t, df[f"{t}_{k}"].to_numpy("float64")) for t in CONT for k in range(1, H + 1)], axis=1)
+    yb = np.stack([df[f"{t}_{k}"].to_numpy("float64") for t in bins for k in range(1, H + 1)], axis=1)
+    return yc.astype("float32"), yb.astype("float32")
+
+
+class Noise:
+    """Adds real forecast errors to the weather of days +1..+3 of a batch (in the original units)."""
+
+    def __init__(self, prep, device):
+        R = pd.read_csv(DATA_DIR / "prediction" / "forecast_residuals.csv.gz")
+        self.idx = []           # (column position, k, residual column)
+        for k in range(1, H + 1):
+            for c in NOISY:
+                col = f"w{k}_{c}"
+                if col in prep.feats:
+                    self.idx.append((prep.feats.index(col), k, c))
+        self.prep = prep
+        self.pools = {}
+        for k in range(1, H + 1):
+            for gname in list(GROUPS) + ["all"]:
+                r = R[(R.k == k) & ((R.group == gname) | (gname == "all"))][NOISY].fillna(0).to_numpy("float32")
+                if len(r) >= 50:
+                    self.pools[(k, gname)] = torch.tensor(r, device=device)
+        self.cpos = {c: i for i, c in enumerate(NOISY)}
+        self.device = device
+
+    def build(self):
+        """Tensors for one-step noise: per column its position, day ahead, error column, limits and scaling;
+        per day ahead one error pool with the region groups back to back."""
+        dev = self.device
+        self.pos = torch.tensor([i for i, _, _ in self.idx], device=dev)
+        self.kk = torch.tensor([k - 1 for _, k, _ in self.idx], device=dev)
+        self.rc = torch.tensor([self.cpos[c] for _, _, c in self.idx], device=dev)
+        self.is_rh = torch.tensor([c.startswith("rh") for _, _, c in self.idx], device=dev)
+        self.is_pos = torch.tensor([c in ("rain", "wind_mean", "wind_max", "gust_max", "vpd_max") for _, _, c in self.idx], device=dev)
+        self.is_log = torch.tensor([col_kind(f"w{k}_{c}") == "log" for _, k, c in self.idx], device=dev)
+        self.mean = torch.tensor([self.prep.stats[f"w{k}_{c}"][0] for _, k, c in self.idx], device=dev)
+        self.std = torch.tensor([self.prep.stats[f"w{k}_{c}"][1] for _, k, c in self.idx], device=dev)
+        self.pool, self.start, self.size = [], [], []
+        for k in range(1, H + 1):
+            parts, st, sz, off = [], [], [], 0
+            for gname in GROUPS:
+                pl = self.pools.get((k, gname), self.pools[(k, "all")])
+                parts.append(pl); st.append(off); sz.append(len(pl)); off += len(pl)
+            self.pool.append(torch.cat(parts))
+            self.start.append(torch.tensor(st, device=dev)); self.size.append(torch.tensor(sz, device=dev))
+        return self
+
+    def apply(self, xb, raw, grp):
+        """xb: prepared batch (copy is returned), raw: [b, columns] original values, grp: region group per row."""
+        n = xb.shape[0]
+        draws = torch.stack([self.pool[k][self.start[k][grp] + (torch.rand(n, device=xb.device) * self.size[k][grp]).long()]
+                             for k in range(H)], dim=1)                        # [b, H, errors]
+        v = raw + draws[:, self.kk, self.rc]
+        v = torch.where(self.is_rh, v.clamp(1, 100), v)
+        v = torch.where(self.is_pos, v.clamp(min=0), v)
+        v = torch.where(self.is_log, torch.log1p(v.clamp(min=0)), v)
+        new = (v - self.mean) / self.std
+        xb = xb.clone()
+        xb[:, self.pos] = torch.where(torch.isnan(raw), xb[:, self.pos], new)
+        return xb
+
+
+def pinball(q, y, w):
+    ok = ~torch.isnan(y)
+    yy = torch.nan_to_num(y)[..., None]
+    e = yy - q
+    loss = torch.maximum(QUANT.to(q.device) * e, (QUANT.to(q.device) - 1) * e).mean(-1)
+    return (loss * ok * w).sum() / ok.sum().clamp(min=1)
+
+
+def run_epochs(net, tensors, epochs, noise, wmask_cols, lr=4e-3, bs=8192, val=None, log=print, patience=2):
+    X, Hh, YC, YB, RAW, G = tensors
+    opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
+    steps = epochs * math.ceil(len(X) / bs)
+    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=steps, pct_start=0.15)
+    wcont = 1 / torch.nan_to_num(YC, nan=0).std(0).clamp(min=0.05)
+    bce = nn.BCEWithLogitsLoss(reduction="none")
+    best = (float("inf"), None, 0)
+    nf = X.shape[1] // 2
+    wm = wmask_cols[None, :nf].bool()
+    since_best = 0
+    for ep in range(epochs):
+        net.train()
+        perm = torch.randperm(len(X), device=X.device)
+        tot = 0.0
+        for i in range(0, len(X), bs):
+            b = perm[i:i + bs]
+            xb = noise.apply(X[b], RAW[b], G[b]) if noise else X[b].clone()
+            sel = (torch.rand(len(b), device=X.device) < WEATHER_DROP)[:, None] & wm   # hide all weather of these rows
+            xb[:, :nf] = xb[:, :nf].masked_fill(sel, 0)
+            xb[:, nf:] = torch.where(sel, torch.ones_like(xb[:, nf:]), xb[:, nf:])
+            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=X.is_cuda):
+                q, logit = net(xb, Hh[b])
+            q, logit = q.float(), logit.float()
+            yb = YB[b]
+            okb = ~torch.isnan(yb)
+            loss = pinball(q, YC[b], wcont) + 0.5 * (bce(logit, torch.nan_to_num(yb)) * okb).sum() / okb.sum().clamp(min=1)
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            opt.step(); sched.step()
+            tot += float(loss) * len(b)
+        msg = f"  epoch {ep + 1}/{epochs}: train loss {tot / len(X):.4f}"
+        if val is not None:
+            vl = evaluate_loss(net, val, wcont)
+            msg += f", check loss {vl:.4f}"
+            if vl < best[0] - 1e-4:
+                best, since_best = (vl, {k: v.detach().clone() for k, v in net.state_dict().items()}, ep + 1), 0
+            else:
+                since_best += 1
+        log(msg)
+        if val is not None and since_best >= patience:
+            log(f"  stopped: no gain on 2024 for {patience} epochs (best epoch {best[2]})")
+            break
+    if val is not None and best[1] is not None:
+        net.load_state_dict(best[1])
+    return best[2] if val is not None else epochs
+
+
+@torch.no_grad()
+def evaluate_loss(net, val, wcont, bs=8192):
+    net.eval()
+    X, Hh, YC, YB = val
+    bce = nn.BCEWithLogitsLoss(reduction="none")
+    tot = n = 0.0
+    for i in range(0, len(X), bs):
+        q, lg = net(X[i:i + bs], Hh[i:i + bs])
+        yb = YB[i:i + bs]; ok = ~torch.isnan(yb)
+        l = pinball(q, YC[i:i + bs], wcont) + 0.5 * (bce(lg, torch.nan_to_num(yb)) * ok).sum() / ok.sum().clamp(min=1)
+        tot += float(l) * len(q); n += len(q)
+    return tot / n
+
+
+def export_numpy(net, out):
+    """All weights as plain arrays, for seq_numpy.py (inference without PyTorch)."""
+    sd = {k: v.detach().cpu().numpy() for k, v in net.state_dict().items()}
+    np.savez_compressed(out / "weights.npz", **sd)
+
+
+class SeqModel:
+    """Trained network + preparation; predicts in the same format as the XGBoost models."""
+
+    def __init__(self, net, prep, device):
+        self.net, self.prep, self.device = net.to(device).eval(), prep, device
+
+    @classmethod
+    def load(cls, d=OUT, device=None):
+        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        prep = Prep.from_json(json.loads((d / "prep.json").read_text(encoding="utf-8")))
+        net = Net(len(prep.feats) * 2, len(DYN) + 2, n_bin=len(prep.bins))
+        net.load_state_dict(torch.load(d / "model.pt", map_location=device))
+        return cls(net, prep, device)
+
+    @torch.no_grad()
+    def predict_df(self, df, weather=True, history=None):
+        X, _ = self.prep.matrix(df.reindex(columns=list(dict.fromkeys(self.prep.feats + ["run", "fire_id", "day"]))))
+        if not weather:
+            nf = len(self.prep.feats)
+            for i, c in enumerate(self.prep.feats):
+                if c in self.prep.wcols:
+                    X[:, i] = 0; X[:, nf + i] = 1
+        Hh = history if history is not None else self.prep.history(df.reindex(columns=list(dict.fromkeys(DYN + ["run", "fire_id", "day"]))))
+        qs, ps = [], []
+        for i in range(0, len(X), 8192):
+            q, lg = self.net(torch.tensor(X[i:i + 8192], device=self.device), torch.tensor(Hh[i:i + 8192], device=self.device))
+            qs.append(q.cpu().numpy()); ps.append(torch.sigmoid(lg).cpu().numpy())
+        q, p = np.concatenate(qs), np.concatenate(ps)
+        P = {}
+        for ti, t in enumerate(CONT):
+            for k in range(1, H + 1):
+                P[f"{t}_{k}"] = inv_target(t, q[:, ti * H + (k - 1), :].astype("float64"))
+        for ti, t in enumerate(self.prep.bins):
+            for k in range(1, H + 1):
+                P[f"{t}_{k}"] = p[:, ti * H + (k - 1)].astype("float64")
+        return P
+
+
+def tensors_for(prep, df, device, noise_cols):
+    X, d = prep.matrix(df)
+    Hh = prep.history(df)
+    YC, YB = targets(df, prep.bins)
+    RAW = np.stack([d[f"w{k}_{c}"].to_numpy("float32") for (_, k, c) in noise_cols], axis=1) if noise_cols else np.zeros((len(df), 0), "float32")
+    G = df.region.map(lambda r: list(GROUPS).index(group_of(r))).to_numpy()
+    T = lambda a: torch.tensor(a, device=device)
+    return T(X), T(Hh), T(YC), T(YB), T(RAW), T(G)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--epochs", type=int, default=20, help="at most this many; stops earlier when 2024 stops improving")
+    ap.add_argument("--full", action="store_true", help="train on all years (production); epochs from the checked run")
+    ap.add_argument("--no-noise", action="store_true")
+    ap.add_argument("--out", default="models_seq", help="folder under data/prediction")
+    ap.add_argument("--table", default="fire_days.csv.gz", help="training table (fire_days_v3.csv.gz: fire chains)")
+    ap.add_argument("--bins", default="out,merge", help="binary outputs, e.g. out,merge,grow")
+    args = ap.parse_args()
+    out = DATA_DIR / "prediction" / args.out
+    t0 = time.time()
+    torch.manual_seed(0); np.random.seed(0)
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    df = add_history(pd.read_csv(DATA_DIR / "prediction" / args.table, low_memory=False))
+    bins = args.bins.split(",")
+    if "grow" in bins:
+        for k in range(1, H + 1):
+            df[f"grow_{k}"] = np.where(df[f"growth_{k}"].isna(), np.nan, (df[f"growth_{k}"] >= 0.1).astype(float))
+    feats = feature_columns(df, weather=True)
+    tr = df if args.full else df[df.split == "train"]
+    prep = Prep(feats, bins=bins).fit(tr)
+    noise = None if args.no_noise else Noise(prep, dev).build()
+    ncols = noise.idx if noise else []
+    print(f"{len(df):,} fire-days, {len(feats)} features, device {dev}, forecast noise {'on' if noise else 'off'}", flush=True)
+    T = tensors_for(prep, tr.reset_index(drop=True), dev, ncols)
+    wmask = torch.tensor([1.0 if c in prep.wcols else 0.0 for c in feats] * 2, device=dev)
+    net = Net(len(feats) * 2, len(DYN) + 2, n_bin=len(bins)).to(dev)
+    val = None
+    if not args.full:
+        va = df[df.split == "check"].reset_index(drop=True)
+        V = tensors_for(prep, va, dev, ncols)
+        val = (V[0], V[1], V[2], V[3])
+    best_ep = run_epochs(net, T, args.epochs, noise, wmask, val=val, log=lambda m: print(time.strftime("%H:%M:%S"), m, flush=True))
+    out.mkdir(parents=True, exist_ok=True)
+    torch.save(net.state_dict(), out / "model.pt")
+    export_numpy(net, out)
+    (out / "prep.json").write_text(json.dumps(prep.to_json()), encoding="utf-8")
+    card = {"rows_train": len(tr), "features": len(feats), "epochs": args.epochs, "best_epoch": best_ep, "full": args.full,
+            "forecast_noise": noise is not None, "weather_dropout": WEATHER_DROP, "seconds": round(time.time() - t0, 1)}
+    (out / "card.json").write_text(json.dumps(card, indent=1), encoding="utf-8")
+    print(json.dumps(card), flush=True)
+
+
+if __name__ == "__main__":
+    main()

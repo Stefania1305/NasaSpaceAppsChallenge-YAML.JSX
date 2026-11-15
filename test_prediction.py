@@ -50,6 +50,31 @@ def test_weather_features_line_up_by_day():
     assert not any(f.startswith("w") and f[1].isdigit() for f in feature_columns(X, weather=False))
 
 
+def test_forecast_input():
+    import json
+    import tempfile
+    from pathlib import Path
+    h = hours("x", "2025-07-01", 24 * 4, rain_at=[3])
+    rows = h.drop(columns=["weather_cell"]).assign(lat=10.26, lon=19.24).to_dict(orient="records")
+    rows += [dict(r, lat=10.24, lon=19.26, temperature_2m=32.0) for r in rows]   # second point in the same 0.25 cell
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "f.json"
+        p.write_text(json.dumps({"hourly": rows}), encoding="utf-8")
+        w = E.read_forecast(p)
+    assert {"latitude", "longitude", "time"} <= set(w.columns) and len(w) == 2 * 96
+    assert E.read_forecast(rows).shape == w.shape                                    # list of dicts works too
+    hrs, cells = E.forecast_cells(w, Path(d))
+    assert len(cells) == 1 and cells.weather_cell.iloc[0] == "41:77"                   # both points -> one cell
+    assert len(hrs) == 96 and abs(hrs.temperature_2m.iloc[0] - 31.0) < 1e-9          # averaged
+    assert hrs.hours_since_rain.iloc[5] == 2                                          # rain at hour 3
+    assert E.read_forecast(None).empty
+    try:
+        E.read_forecast([{"latitude": 1, "longitude": 2}])
+        raise AssertionError("missing time column should fail")
+    except SystemExit as e:
+        assert "time" in str(e)
+
+
 def test_transforms_invert():
     x = np.array([-50.0, -1.0, 0.0, 0.5, 3.0, 400.0])
     for name, (fwd, inv) in CONT.items():

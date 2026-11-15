@@ -62,9 +62,15 @@ def persistence(df, target, k):
         return (df.dy_l1.fillna(0) * k).to_numpy()
 
 
-def train_variant(df, variant, device, models_dir):
+def train_variant(df, variant, device, models_dir, full=False):
     feats = feature_columns(df, weather=(variant == "weather"))
-    tr, va, te = (df[df.split == s] for s in ("train", "check", "test"))
+    if full:
+        # all years: 5 % of the fires (random, whole fires) only decide when to stop; scores below are on them
+        fires = df[["run", "fire_id"]].drop_duplicates().sample(frac=0.05, random_state=0)
+        hold = df.set_index(["run", "fire_id"]).index.isin(fires.set_index(["run", "fire_id"]).index)
+        tr, va, te = df[~hold], df[hold], df[hold]
+    else:
+        tr, va, te = (df[df.split == s] for s in ("train", "check", "test"))
     card, preds = {"features": feats, "targets": {}}, {}
     for k in range(1, H + 1):
         for target, (fwd, inv) in CONT.items():
@@ -120,22 +126,32 @@ def train_variant(df, variant, device, models_dir):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
+    ap.add_argument("--full", action="store_true", help="train on all years (2016-2026); no unseen test years left")
+    ap.add_argument("--noise", action="store_true", help="train on forecast-like weather (real forecast errors added)")
+    ap.add_argument("--out", default="models", help="model folder under data/prediction")
     args = ap.parse_args()
     t0 = time.time()
     df = pd.read_csv(OUT / "fire_days.csv.gz", low_memory=False)
+    from prediction_data import add_history
+    df = add_history(df)
+    if args.noise:
+        from forecast_errors import forecast_like
+        # training rows get forecast-like weather; check and test rows keep soil moisture from day d only
+        df = forecast_like(df, rows=(df.split == "train").to_numpy() | args.full, seed=0)
     print(f"{len(df):,} fire-days: " + ", ".join(f"{k} {v:,}" for k, v in df.split.value_counts().items()), flush=True)
     card = {"rows": len(df), "split": {k: int(v) for k, v in df.split.value_counts().items()}, "horizon_days": H,
             "quantiles": QUANTILES, "variants": {}}
     for variant in ("weather", "no_weather"):
-        d = OUT / "models" / variant
+        d = OUT / args.out / variant
         d.mkdir(parents=True, exist_ok=True)
         t1 = time.time()
-        card["variants"][variant] = train_variant(df, variant, args.device, d)
+        card["variants"][variant] = train_variant(df, variant, args.device, d, full=args.full)
         card["variants"][variant]["seconds"] = round(time.time() - t1, 1)
         print(f"  {variant}: {len(card['variants'][variant]['targets'])} targets in {time.time() - t1:.0f} s", flush=True)
     card["seconds"] = round(time.time() - t0, 1)
     card["device"] = args.device
-    (OUT / "model_card.json").write_text(json.dumps(card, indent=1), encoding="utf-8")
+    card["full"] = args.full
+    (OUT / ("model_card.json" if args.out == "models" else f"model_card_{args.out}.json")).write_text(json.dumps(card, indent=1), encoding="utf-8")
     w, n = card["variants"]["weather"]["targets"], card["variants"]["no_weather"]["targets"]
     print("\nTest years 2025-2026 (likely value; persistence = keeps doing what it did today):")
     print(f"  {'output':<14} {'with weather':>13} {'no weather':>11} {'persistence':>12} {'inside low..high':>17}")

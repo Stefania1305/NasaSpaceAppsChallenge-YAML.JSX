@@ -1,87 +1,56 @@
 """Prediction engine, step B: predict how each active fire evolves over the next 3 days.
 
-Input: one pipeline run (its knowledge-graph files, fire part) and the weather forecast for the next 3 days.
+Input: one pipeline run (its knowledge-graph files, fire part) and, optionally, the weather forecast for the
+fires' area, provided by the caller (the frontend). The engine does not download any weather itself.
 For every fire seen on the run's last day it predicts, for day +1, +2, +3:
   expansion   new burned area and total footprint (km2), movement of the fire centre (km east / north),
               spread direction (degrees, 0 = north) and spread rate (km/day), centre and radius of the fire
   fire power  mean and peak FRP of a VIIRS pass (MW)
   merging     chance it merges with a separate neighbouring fire
   extinction  chance it is out
+  spread map  chance that each 1 km cell around the fire burns
 with low / likely / high values (10th / 50th / 90th percentile) for every number.
 
-Weather forecast for days d+1..d+3 (d = the run's last day), per fire's 0.25 degree cell:
-  live      the run ends today or yesterday: Open-Meteo forecast API (ECMWF IFS 0.25), next 4 days
-  archive   an older run (from March 2024): the forecasts that were issued 1, 2 and 3 days before each day
-            (Open-Meteo previous-runs API), so a past run is predicted with the forecast available back then;
-            day d itself and soil moisture come from ERA5 (observed)
-  observed  runs before March 2024: ERA5 weather that actually happened (labelled as such)
-  none      --no-weather, or no weather reachable: the no-weather models are used
+Weather forecast input (--weather file.json / .csv, or a DataFrame / list of dicts passed to predict()): hourly rows
+  latitude, longitude                 point of the forecast (degrees); matched to fires within 0.5 degree
+  time                                UTC hour, ISO 8601 (e.g. 2026-11-14T13:00)
+  temperature_2m                      degrees C
+  relative_humidity_2m                %
+  wind_speed_10m, wind_gusts_10m      km/h
+  wind_direction_10m                  degrees the wind comes FROM (meteorological convention)
+  precipitation                       mm in the hour
+  vapour_pressure_deficit             kPa
+  soil_moisture_0_to_7cm, soil_moisture_7_to_28cm, soil_moisture_28_to_100cm   m3/m3 (optional)
+  elevation                           m (optional)
+It should cover day d (the run's last day) through d+3; a few days before d let the engine count the hours since
+the last rain. Missing variables or hours are allowed (the models handle gaps). Without a forecast the no-weather
+models are used; fires with no forecast point within 0.5 degree keep empty weather features.
 
-Usage:  python prediction_engine.py --run data/runs/2026-11-01_1d_world [--no-weather] [--limit 500]
-Output: <run>/prediction/predictions.csv, predictions.json, summary.json
+Usage:  python prediction_engine.py --run data/runs/2026-11-01_1d_world [--weather forecast.json] [--limit 500]
+Output: <run>/prediction/predictions.csv, predictions.json, spread.csv, summary.json
 """
 
 import argparse
 import json
 import math
 import time
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import requests
 import xgboost as xgb
 
 from firms import DATA_DIR
-from prediction_data import H, KM_LAT, KM_LON, add_place_and_weather, daily_weather, feature_columns, fire_days, load_freq
+from prediction_data import H, KM_LAT, KM_LON, add_history, add_place_and_weather, daily_weather, feature_columns, fire_days, load_freq
 from prediction_train import CONT
-from weather_worker import RAIN_MM, THROTTLE, USER_AGENT, cell_latlon, weather_key
+from weather_worker import RAIN_MM, weather_key
 
-MODELS = DATA_DIR / "prediction" / "models"
-FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-PREVIOUS_RUNS_URL = "https://previous-runs-api.open-meteo.com/v1/forecast"
-ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+MODELS = DATA_DIR / "prediction" / "models"                # models trained locally (prediction_train.py)
+SHIPPED = Path(__file__).resolve().parent / "models" / "v2"  # models shipped with the repository (Git LFS), used when none are trained locally
 HOURLY = ["temperature_2m", "relative_humidity_2m", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m",
           "precipitation", "vapour_pressure_deficit", "soil_moisture_0_to_7cm", "soil_moisture_7_to_28cm", "soil_moisture_28_to_100cm"]
-FORECAST_FROM = "2024-03-01"
-LEAD_DAYS = 14
-BATCH = 50
-
-
-def get(url, params):
-    for attempt in range(6):
-        try:
-            r = requests.get(url, params=params, headers={"User-Agent": USER_AGENT}, timeout=180)
-            if r.status_code == 200:
-                d = r.json()
-                return d if isinstance(d, list) else [d]
-            if r.status_code not in (429, 500, 502, 503, 504):
-                raise SystemExit(f"Open-Meteo {r.status_code}: {r.text[:200]}")
-        except requests.exceptions.RequestException:
-            pass
-        time.sleep(10 * (attempt + 1))
-    raise SystemExit("Open-Meteo did not answer")
-
-
-def hourly_frames(url, cells, params, names, rename=None):
-    out, elev = [], {}
-    for k in range(0, len(cells), BATCH):
-        b = cells.iloc[k:k + BATCH]
-        THROTTLE.wait(len(b) * math.ceil(len(names) / 10))
-        res = get(url, {"latitude": ",".join(f"{x:.2f}" for x in b.lat), "longitude": ",".join(f"{x:.2f}" for x in b.lon),
-                        "hourly": ",".join(names), "timezone": "GMT", **params})
-        for cell, d in zip(b.weather_cell, res):
-            h = pd.DataFrame(d["hourly"])
-            h.insert(0, "weather_cell", cell)
-            out.append(h)
-            elev[cell] = d.get("elevation")
-    df = pd.concat(out, ignore_index=True) if out else pd.DataFrame()
-    if rename and len(df):
-        df = df.rename(columns=rename)
-    for c in df.columns.drop(["weather_cell", "time"], errors="ignore"):
-        df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df, elev
+REQUIRED = ["latitude", "longitude", "time"]
 
 
 def since_rain(h: pd.DataFrame) -> pd.DataFrame:
@@ -94,68 +63,151 @@ def since_rain(h: pd.DataFrame) -> pd.DataFrame:
     return h
 
 
-def forecast_weather(cells: pd.DataFrame, d: str, mode: str):
-    """Hourly weather for days d..d+3 at the cells, as the forecast would have given it on day d
-    (plus LEAD_DAYS before d, observed, so hours since rain is known)."""
-    start = (pd.Timestamp(d) - timedelta(days=LEAD_DAYS)).strftime("%Y-%m-%d")
-    end = (pd.Timestamp(d) + timedelta(days=H)).strftime("%Y-%m-%d")
-    if mode == "live":
-        h, elev = hourly_frames(FORECAST_URL, cells, {"models": "ecmwf_ifs025", "past_days": LEAD_DAYS, "forecast_days": H + 1}, HOURLY)
-        return (since_rain(h) if len(h) else h), elev
-    stop = end if mode == "observed" else d
-    obs, elev = hourly_frames(ARCHIVE_URL, cells, {"models": "era5", "start_date": start, "end_date": stop}, HOURLY)
-    if mode == "observed" or not len(obs):
-        return (since_rain(obs) if len(obs) else obs), elev
-    keep_soil = obs[obs.time.str[:10] == d].groupby("weather_cell")[HOURLY[-3:]].mean()
-    parts = [obs]
-    for k in range(1, H + 1):
-        dk = (pd.Timestamp(d) + timedelta(days=k)).strftime("%Y-%m-%d")
-        names = [f"{v}_previous_day{k}" for v in HOURLY[:-3]]
-        f, _ = hourly_frames(PREVIOUS_RUNS_URL, cells, {"models": "ecmwf_ifs025", "start_date": dk, "end_date": dk}, names,
-                             {f"{v}_previous_day{k}": v for v in HOURLY[:-3]})
-        if len(f):
-            parts.append(f.join(keep_soil, on="weather_cell"))   # soil moisture is not in the forecast archive: day d's value
-    return since_rain(pd.concat(parts, ignore_index=True)), elev
+def read_forecast(weather) -> pd.DataFrame:
+    """The caller's hourly forecast (path to .json / .csv, list of dicts or DataFrame) as a clean DataFrame."""
+    if weather is None:
+        return pd.DataFrame()
+    if isinstance(weather, (str, Path)):
+        p = Path(weather)
+        if p.suffix.lower() == ".csv":
+            w = pd.read_csv(p)
+        else:
+            d = json.loads(p.read_text(encoding="utf-8"))
+            w = pd.DataFrame(d.get("hourly", d) if isinstance(d, dict) else d)
+    elif isinstance(weather, pd.DataFrame):
+        w = weather.copy()
+    else:
+        w = pd.DataFrame(weather)
+    w = w.rename(columns={"lat": "latitude", "lon": "longitude", "lng": "longitude"})
+    missing = [c for c in REQUIRED if c not in w]
+    if missing:
+        raise SystemExit(f"Weather forecast is missing columns: {', '.join(missing)}")
+    for c in HOURLY + ["latitude", "longitude", "elevation"]:
+        if c in w:
+            w[c] = pd.to_numeric(w[c], errors="coerce")
+        elif c in HOURLY:
+            w[c] = np.nan
+    w["time"] = pd.to_datetime(w.time, utc=True).dt.strftime("%Y-%m-%dT%H:%M")
+    return w.dropna(subset=["latitude", "longitude"])
+
+
+def forecast_cells(w: pd.DataFrame, run_dir: Path):
+    """Hourly forecast per 0.25 degree weather cell (points in the same cell are averaged), with hours since rain,
+    and the cell table (centre, elevation from the forecast or from the run's weather cells)."""
+    w = w.copy()
+    w["weather_cell"] = weather_key(w.latitude, w.longitude).to_numpy()
+    hours = w.groupby(["weather_cell", "time"], as_index=False)[HOURLY].mean()
+    cells = w.groupby("weather_cell", as_index=False).agg(lat=("latitude", "mean"), lon=("longitude", "mean"))
+    if "elevation" in w and w.elevation.notna().any():
+        cells = cells.merge(w.groupby("weather_cell").elevation.mean().rename("elevation_m"), on="weather_cell", how="left")
+    else:
+        kgc = run_dir / "kg" / "nodes_WeatherCell.csv.gz"
+        if kgc.exists():
+            c = pd.read_csv(kgc)
+            c.columns = [x.split(":")[0] for x in c.columns]
+            cells = cells.merge(c[["weather_cell", "elevation_m"]], on="weather_cell", how="left")
+    return since_rain(hours), cells
+
+
+SPREAD = DATA_DIR / "prediction" / "models" / "spread.json"
+if not SPREAD.exists():
+    SPREAD = SHIPPED / "spread.json"
+SPREAD_MIN_P = 0.02
+
+
+def write_spread(run_dir: Path, P: pd.DataFrame, last: str, out_dir: Path) -> int:
+    """Burn chance per 1 km cell around each fire for days +1..+3 (prediction_spread.py), from today's pixels."""
+    if not SPREAD.exists():
+        return 0
+    from prediction_spread import spread_cells
+    coef = json.loads(SPREAD.read_text(encoding="utf-8"))["coef"]
+    kg = run_dir / "kg"
+    det = pd.read_csv(kg / "nodes_Detection.csv.gz", low_memory=False,
+                      usecols=["id:ID(Detection)", "latitude:double", "longitude:double", "acq_date:string", "frp_mw:double",
+                               "removed_by_interpreter:string"])
+    det.columns = ["id", "lat", "lon", "day", "frp", "removed"]
+    det = det[det.removed.isna() & (det.day == last)]
+    inc = pd.read_csv(kg / "rels_IN_CLUSTER.csv.gz")
+    inc.columns = ["det", "cl", "type"]
+    inc["fire"] = inc.cl.str.rsplit("|", n=1).str[-1].str.split(".").str[0].astype(int)
+    det = det.merge(inc[["det", "fire"]].drop_duplicates("det"), left_on="id", right_on="det")
+    by_fire = {f: g for f, g in det.groupby("fire")}
+    rows = []
+    for r in P.itertuples():
+        pix = by_fire.get(r.fire_id)
+        if pix is None or pix.empty:
+            continue
+        w = pix.frp.fillna(0).clip(lower=0) + 0.1
+        lat0, lon0 = float((pix.lat * w).sum() / w.sum()), float((pix.lon * w).sum() / w.sum())
+        rk = {"fp": r.footprint_likely_km2, "hi": max(r.footprint_high_km2, r.footprint_likely_km2), "dx": r.dx_likely,
+              "dy": r.dy_likely, "dir": r.direction_deg, "move": r.move_km, "out": r.p_out, "frp": r.frp_likely}
+        c = spread_cells(lat0, lon0, pix.lat.to_numpy(), pix.lon.to_numpy(), pix.frp.to_numpy(), r.footprint_now_km2,
+                         r.frp_now_mw if not pd.isna(r.frp_now_mw) else 0, rk, coef[str(r.day_ahead)])
+        c = c[c.p >= SPREAD_MIN_P]
+        rows.append(c.assign(fire_id=r.fire_id, day_ahead=r.day_ahead, date=r.date))
+    if not rows:
+        return 0
+    S = pd.concat(rows, ignore_index=True)[["fire_id", "day_ahead", "date", "lat", "lon", "p"]].round({"lat": 5, "lon": 5, "p": 4})
+    S.to_csv(out_dir / "spread.csv", index=False)
+    return len(S)
 
 
 def load_models(variant: str) -> dict:
-    d = MODELS / variant
+    """The trained models of one variant: local ones if present, else the v2 models shipped in models/v2."""
     models = {}
-    for p in d.glob("*.json"):
+    for p in (MODELS / variant).glob("*.json"):
         b = xgb.Booster()
         b.load_model(str(p))
         models[p.stem] = b
+    if not models:
+        import gzip
+        for p in (SHIPPED / variant).glob("*.ubj.gz"):
+            data = p.read_bytes()
+            if data.startswith(b"version https://git-lfs"):
+                raise SystemExit(f"{p} is a Git LFS pointer: run 'git lfs pull' to download the models")
+            raw = gzip.decompress(data)
+            b = xgb.Booster()
+            b.load_model(bytearray(raw))
+            models[p.name[:-len(".ubj.gz")]] = b
     return models
 
 
-def predict(run_dir: Path, use_weather: bool, limit: int) -> dict:
+def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = "") -> dict:
+    """weather: the caller's hourly forecast (path, list of dicts or DataFrame), or None for the no-weather models."""
     t0 = time.time()
     fd = fire_days(run_dir, with_targets=False)
     if fd.empty:
         raise SystemExit("No fires in this run.")
+    fd = add_history(fd)
     last = fd.day.max()
     active = fd[fd.day == last].copy()
     if limit:
         active = active.sort_values("fine_fp", ascending=False).head(limit)
-    # weather forecast for the active fires' cells
-    mode = "none"
-    wd = cells = None
-    if use_weather:
-        mode = "live" if last >= (date.today() - timedelta(days=1)).isoformat() else "archive" if last >= FORECAST_FROM else "observed"
-        ck = sorted(set(weather_key(active.lat0, active.lon0)))
-        cells = cell_latlon(pd.Series(ck))
-        hours, elev = forecast_weather(cells, last, mode)
-        if len(hours):
-            cells["elevation_m"] = cells.weather_cell.map(elev)
-            wd = daily_weather(hours)
-        else:
-            mode = "none"
+    # weather forecast provided by the caller
+    mode, wd, cells, coverage = "none", None, None, {}
+    w = read_forecast(weather)
+    if len(w):
+        hours, cells = forecast_cells(w, run_dir)
+        wd = daily_weather(hours)
+        mode = "provided"
+        days = [(pd.Timestamp(last) + timedelta(days=k)).strftime("%Y-%m-%d") for k in range(0, H + 1)]
+        coverage = {f"day+{k}": bool((wd.day == d).any()) for k, d in enumerate(days)}
     X = add_place_and_weather(active, run_dir, wd, cells, load_freq())
+    if mode == "provided":
+        # as in training for real use: days +1..+3 take day d's soil moisture
+        for k in range(1, H + 1):
+            for c in ("sm0", "sm1", "sm2"):
+                X[f"w{k}_{c}"] = X[f"w0_{c}"]
+        coverage["fires_with_forecast"] = int(X.w1_tmax.notna().sum())
     variant = "weather" if mode != "none" else "no_weather"
     models = load_models(variant)
     if not models:
         raise SystemExit(f"No trained models in {MODELS / variant}. Run prediction_train.py first.")
-    feats = feature_columns(X, weather=(variant == "weather"))
+    # each model knows the features it was trained on; older models simply ignore newer columns
+    feats = next(iter(models.values())).feature_names or feature_columns(X, weather=(variant == "weather"))
+    for c in feats:
+        if c not in X:
+            X[c] = np.nan
     M = xgb.DMatrix(X[feats].astype("float32"))
     out = []
     for k in range(1, H + 1):
@@ -199,12 +251,11 @@ def predict(run_dir: Path, use_weather: bool, limit: int) -> dict:
     out_dir = run_dir / "prediction"
     out_dir.mkdir(parents=True, exist_ok=True)
     P.to_csv(out_dir / "predictions.csv", index=False)
+    n_cells = write_spread(run_dir, P, last, out_dir)
     (out_dir / "predictions.json").write_text(P.to_json(orient="records"), encoding="utf-8")
-    summary = {"run": run_dir.name, "from_day": last, "active_fires": int(len(active)), "rows": len(P),
-               "weather": mode, "models": variant, "seconds": round(time.time() - t0, 1),
-               "note": {"live": "forecast issued now", "archive": "forecasts issued 1-3 days before each day (as available then)",
-                        "observed": "ERA5 weather that actually happened (no archived forecast before March 2024)",
-                        "none": "no weather: no-weather models"}[mode]}
+    summary = {"run": run_dir.name, "from_day": last, "active_fires": int(len(active)), "rows": len(P), "spread_cells": n_cells,
+               "weather": mode, "weather_coverage": coverage, "models": variant, "seconds": round(time.time() - t0, 1),
+               "note": weather_label or {"provided": "weather forecast provided by the caller", "none": "no forecast provided: no-weather models"}[mode]}
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     return {"predictions": P, "summary": summary, "out": out_dir}
 
@@ -212,10 +263,11 @@ def predict(run_dir: Path, use_weather: bool, limit: int) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--run", required=True)
-    ap.add_argument("--no-weather", action="store_true")
+    ap.add_argument("--weather", help="hourly weather forecast (.json or .csv), see the format above; omit for no-weather models")
     ap.add_argument("--limit", type=int, default=0, help="only the N largest active fires")
+    ap.add_argument("--weather-label", default="", help="where the forecast came from (shown in summary.json and on the map)")
     args = ap.parse_args()
-    res = predict(Path(args.run), not args.no_weather, args.limit)
+    res = predict(Path(args.run), args.weather, args.limit, args.weather_label)
     s, P = res["summary"], res["predictions"]
     print(json.dumps(s, indent=1))
     top = P[P.day_ahead == H].sort_values("footprint_likely_km2", ascending=False).head(8)

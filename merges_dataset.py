@@ -13,7 +13,16 @@
      weather            temperature, humidity, wind speed / direction / gusts, VPD, hours since rain at the merge
                         hour (the run's weather feed), and wind_alignment_deg: angle between where the wind blows
                         to and the direction from a to b (0 = the wind pushes a straight towards b)
-2. Merge outlook    ->  <run>/prediction/merge_outlook.csv  for every run with predictions
+   Also per merge: the merged fire just after it (pixels, burning area and fire power in the merge pass).
+2. Fires in each merge -> data/prediction/merge_members.csv.gz
+   One row per fire involved in each merge, sharing the merge's event_id, so a merge can be followed before and after:
+     role "individual"  every parent cluster just before the merge (its last satellite pass): pixels, burning area,
+                        fire power, centre, age, how it was born, its source fires and their epicenters, and its
+                        whole history up to the merge (detections, total fire power, first seen)
+     role "merged"      the cluster created by the merge, in the merge pass: the same fields, carrying the union of
+                        the source fires and epicenters, plus how long it lived and how it ended
+   with the merge's weather on every row.
+3. Merge outlook    ->  <run>/prediction/merge_outlook.csv  for every run with predictions
    For each predicted fire and day ahead: its nearest active neighbour, centre distance and the gap left
    between their predicted likely footprints, with the predicted chance of merging.
 
@@ -80,6 +89,9 @@ def observed(run_dir: str) -> pd.DataFrame:
     ev["parents"] = ev.clusters.astype(str).str.split(" -> ").str[0]
     ev["children"] = ev.clusters.astype(str).str.split(" -> ").str[1]
     need = set(p for s in ev.parents for p in s.split("+"))
+    kids = set(c for s in ev.children.dropna() for c in str(s).split("+"))
+    det["time"] = pd.to_datetime(det.time, utc=True)
+    det_kids = det[det.cluster_id.isin(kids)]
     det = det[det.cluster_id.isin(need)]
     by = {k: g for k, g in det.groupby("cluster_id")}
     stats = det.groupby("cluster_id").agg(n=("id", "size"), frp=("frp_mw", "sum"), area=("pixel_area_km2", "sum"),
@@ -119,7 +131,13 @@ def observed(run_dir: str) -> pd.DataFrame:
             "pixels_after": e.pixels, "child_max_pixels": cl.max_pixels.get(child) if child else np.nan})
     m = pd.DataFrame(rows)
     if m.empty:
-        return m
+        return m, pd.DataFrame()
+    members = merge_members(run_dir, ev, cl, det, det_kids)
+    if len(members):
+        mm = members[members.role == "merged"].groupby("event_id").agg(
+            merged_pixels=("pixels", "sum"), merged_area_km2=("area_km2", "sum"), merged_frp_mw=("frp_mw", "sum"),
+            merged_source_fires=("n_source_fires", "max"), merged_epicenters=("n_epicenters", "max"))
+        m = m.join(mm, on="event_id")
     # weather join: the merge's 0.25 degree cell (or nearest fetched within 0.5 degree), same UTC hour
     for c in WX.values():
         m[c] = np.nan
@@ -147,7 +165,75 @@ def observed(run_dir: str) -> pd.DataFrame:
         m.loc[np.array(hit), "weather_source"] = "ERA5 (run weather feed)"
     blow_to = (m.wind_from_deg + 180) % 360
     m["wind_alignment_deg"] = (np.abs((m.bearing_a_to_b_deg - blow_to + 180) % 360 - 180)).round(1)
-    return m
+    if len(members):
+        wx_cols = ["event_id", "separate_fires", "undone_within_2h", "gap_km", "wind_alignment_deg", "weather_source"] + list(WX.values())
+        members = members.merge(m[wx_cols], on="event_id", how="left")
+    return m, members
+
+
+def merge_members(run_dir: Path, ev: pd.DataFrame, cl: pd.DataFrame, det: pd.DataFrame, det_kids: pd.DataFrame) -> pd.DataFrame:
+    """One row per fire involved in each merge: every parent just before it and the merged cluster just after it."""
+    kg = run_dir / "kg"
+    epi = read(kg, "nodes_Epicenter", usecols=["id:ID(Epicenter)", "source_fire_id:long", "epicenter_no:long", "earliest_start:datetime",
+                                             "latest_start:datetime", "latitude:double", "longitude:double"])
+    epi_of = {}
+    if epi is not None:
+        for sf, g in epi.groupby("source_fire_id"):
+            epi_of[str(sf)] = g
+    pix_area = lambda g: float(g.pixel_area_km2.sum())
+
+    def sources_of(c):
+        return [x for x in str(cl.sources.get(c, "")).split("+") if x and x != "nan"]
+
+    def epicenters(srcs):
+        gs = [epi_of[s_] for s_ in srcs if s_ in epi_of]
+        if not gs:
+            return 0, "", None
+        e = pd.concat(gs)
+        first = pd.to_datetime(e.latest_start, utc=True).min()
+        return len(e), "+".join(str(i).rsplit("|", 2)[-2] + "." + str(n) for i, n in zip(e.id, e.epicenter_no)), first
+
+    by_c = {k: g for k, g in det.groupby("cluster_id")}
+    by_k = {k: g for k, g in det_kids.groupby("cluster_id")}
+    rows = []
+    for e in ev.itertuples():
+        t = e.time
+        parents = [p_ for p_ in e.parents.split("+") if p_]
+        kids = [k_ for k_ in str(e.children).split("+") if k_ and k_ != "nan"]
+        for role, cids in (("individual", parents), ("merged", kids)):
+            for c in cids:
+                g = by_c.get(c) if role == "individual" else by_k.get(c)
+                if g is None or g.empty:
+                    continue
+                if role == "individual":
+                    g = g[g.time <= t + pd.Timedelta(minutes=15)]
+                    if g.empty:
+                        continue
+                    snap = g[g.time >= g.time.max() - pd.Timedelta(minutes=15)]          # its last pass before the merge
+                else:
+                    snap = g[(g.time - t).abs() <= pd.Timedelta(minutes=15)]             # the merge pass
+                    if snap.empty:
+                        snap = g[g.time == g.time.min()]
+                w = snap.frp_mw.fillna(0).clip(lower=0) + 0.1
+                srcs = sources_of(c)
+                n_epi, epi_ids, first_start = epicenters(srcs)
+                born = pd.to_datetime(cl.born.get(c), utc=True) if c in cl.index else pd.NaT
+                rows.append({
+                    "run": run_dir.name, "event_id": e.id, "merge_time": t.strftime("%Y-%m-%dT%H:%MZ"), "event": e.event,
+                    "role": role, "cluster_id": c, "fire_id": int(str(c).split(".")[0]),
+                    "pixels": int(len(snap)), "area_km2": round(pix_area(snap), 3), "frp_mw": round(float(snap.frp_mw.fillna(0).sum()), 1),
+                    "lat": round(float((snap.latitude * w).sum() / w.sum()), 5), "lon": round(float((snap.longitude * w).sum() / w.sum()), 5),
+                    "snapshot_time": snap.time.max().strftime("%Y-%m-%dT%H:%MZ"),
+                    "age_h": round((t - born).total_seconds() / 3600, 2) if not pd.isna(born) else np.nan,
+                    "born_how": cl.born_how.get(c), "first_seen": g.time.min().strftime("%Y-%m-%dT%H:%MZ"),
+                    "detections_so_far": int(len(g)), "frp_total_so_far_mw": round(float(g.frp_mw.fillna(0).sum()), 1),
+                    "source_fires": "+".join(srcs), "n_source_fires": len(srcs),
+                    "epicenters": epi_ids, "n_epicenters": n_epi,
+                    "first_epicenter_start": first_start.strftime("%Y-%m-%dT%H:%MZ") if first_start is not None and not pd.isna(first_start) else None,
+                    "lived_h": round((pd.to_datetime(cl.end.get(c), utc=True) - born).total_seconds() / 3600, 2)
+                    if role == "merged" and c in cl.index and not pd.isna(born) and not pd.isna(cl.end.get(c)) else np.nan,
+                    "end_how": cl.end_how.get(c) if role == "merged" else None})
+    return pd.DataFrame(rows)
 
 
 def outlook(run_dir: Path):
@@ -188,17 +274,28 @@ def main() -> None:
     runs = [r for r in sorted((DATA_DIR / "runs").glob("*")) if (r / "kg" / "nodes_ExpansionEvent.csv.gz").exists()]
     if args.runs:
         runs = [r for r in runs if r.name in args.runs]
-    parts = []
+    parts, mparts = [], []
     with ProcessPoolExecutor(max_workers=8) as pool:
-        for r, m in zip(runs, pool.map(observed, map(str, runs))):
-            print(f"  {r.name}: {len(m):,} merges", flush=True)
+        for r, (m, mem) in zip(runs, pool.map(observed, map(str, runs))):
+            print(f"  {r.name}: {len(m):,} merges, {len(mem):,} fire rows", flush=True)
             parts.append(m)
+            mparts.append(mem)
     M = pd.concat([p for p in parts if len(p)], ignore_index=True)
+    MM = pd.concat([p for p in mparts if len(p)], ignore_index=True)
+    if args.runs and (OUT / "merges.csv.gz").exists():
+        # only some runs were redone: keep every other run's merges
+        old = pd.read_csv(OUT / "merges.csv.gz", low_memory=False)
+        M = pd.concat([old[~old.run.isin([r.name for r in runs])], M], ignore_index=True)
+        if (OUT / "merge_members.csv.gz").exists():
+            oldm = pd.read_csv(OUT / "merge_members.csv.gz", low_memory=False)
+            MM = pd.concat([oldm[~oldm.run.isin([r.name for r in runs])], MM], ignore_index=True)
     OUT.mkdir(parents=True, exist_ok=True)
     M.to_csv(OUT / "merges.csv.gz", index=False)
+    MM.to_csv(OUT / "merge_members.csv.gz", index=False)
     sep = M[M.separate_fires & ~M.undone_within_2h]
     summary = {
         "merges": len(M), "runs": int(M.run.nunique()),
+        "fire_rows": len(MM), "individual_rows": int((MM.role == "individual").sum()), "merged_rows": int((MM.role == "merged").sum()),
         "separate_fires_lasting": len(sep), "re_joins_of_same_fire": int((~M.separate_fires).sum()),
         "undone_within_2h": int(M.undone_within_2h.sum()),
         "with_weather": round(float(M.wind_kmh.notna().mean()), 3),

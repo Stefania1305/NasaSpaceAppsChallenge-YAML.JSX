@@ -786,7 +786,7 @@ These run offline, with no key. The accuracy tests need the training table and m
 
 ## Limitations
 
-- **Shape:** the engine predicts each fire's area, centre shift, direction and power, not its outline.
+- **Shape:** the engine predicts each fire's area, centre shift, direction and fire power, not its outline.
 - **Direction and fire power** are the weakest outputs (about 39% within 45° and 35–39% within ×2), though about twice as good as persistence.
 - **Merge alarms:** about half of them are right at the F1 threshold, fewer at the balanced threshold.
 - **Fire chains:** linking uses distance and timing only; two different fires that start close together a few days apart can be joined, and a fire that vanishes for more than 3 days is still split.

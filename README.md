@@ -66,6 +66,7 @@ The launch video walks through the real app on Paraguay (satellite data 10–14 
 - [Limitations](#limitations)
 - [Data sources and APIs](#data-sources-and-apis)
 - [Credits](#credits)
+- [Full technical documentation](docs/DOCUMENTATION.md)
 
 ## Requirements and installation
 
@@ -822,10 +823,17 @@ Libraries: [XGBoost](https://xgboost.readthedocs.io/), [PyTorch](https://pytorch
 
 We acknowledge the use of data from NASA's Fire Information for Resource Management System ([FIRMS](https://www.earthdata.nasa.gov/data/tools/firms)), part of NASA's Earth Science Data and Information System. Weather data by [Open-Meteo](https://open-meteo.com/) (CC BY 4.0), based on ECMWF IFS forecasts and Copernicus ERA5. Imagery © Esri; borders from Natural Earth. Terrain (v4): Copernicus DEM, © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA. Land cover (v4): © ESA WorldCover project 2021, contains modified Copernicus Sentinel data (2021) processed by the ESA WorldCover consortium.
 
-| Contributor | Area |
-|---|---|
-| [Diaco12](https://github.com/Diaco12) | Frontend (React app), app integration with the prediction engine, backtest, launch video |
-| [Adelin12378](https://github.com/Adelin12378) | Pipeline, knowledge graph and prediction models |
+**YAML.JSX** is a high-octane engineering crew from UNITBV encapsulating the full spectrum of tech evolution. We connect the fresh creativity of Bogdan Diaconiță (1st Yr CE) and sharp drive of Cezar Sava (2nd Yr CE) with the battle-tested development architecture of Ștefania Roman and Adelin Olteanu (3rd Yr CE). The matrix is anchored by Valentin Floricescu, an Applied Electronics alumnus and PhD researcher. From freshman spark to doctoral depth, we deliver flawless execution.
+
+| Contributor | Background | Area |
+|---|---|---|
+| Bogdan Diaconiță ([Diaco12](https://github.com/Diaco12)) | 1st year, Computer Engineering | Frontend: React app, app integration with the prediction engine, backtest, launch video |
+| Cezar Sava | 2nd year, Computer Engineering | Full stack |
+| Ștefania Roman ([Stefania1305](https://github.com/Stefania1305)) | 3rd year, Computer Engineering | Full stack, repository owner |
+| Adelin Olteanu ([Adelin12378](https://github.com/Adelin12378)) | 3rd year, Computer Engineering | Full stack: pipeline, knowledge graph and prediction models |
+| Valentin Floricescu | Computer Engineering and Applied Electronics engineer, PhD researcher | Full stack |
+
+Not every contributor pushed to this repository; the table lists the whole team.
 
 ## License
 

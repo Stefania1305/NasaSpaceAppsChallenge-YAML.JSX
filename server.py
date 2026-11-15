@@ -16,7 +16,7 @@ from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from comparison import clip_brightness, compare, overpass_slot
+from comparison import compare, overpass_slot
 from firms import BASE_DIR, MAP_KEY, PORT, SENSORS, fetch_availability, fetch_fires
 
 VIIRS_CHOICES = {"NOAA20": "NOAA-20", "NOAA21": "NOAA-21", "SNPP": "Suomi NPP"}
@@ -43,7 +43,7 @@ def learn_types(sensor: str, data: dict) -> None:
 HARMONISED_COLUMNS = [
     "source", "instrument", "satellite", "latitude", "longitude",
     "acq_date", "acq_time", "overpass_slot", "daynight", "confidence", "confidence_raw",
-    "bright_main_k", "bright_saturated", "bright_secondary_k", "frp_mw", "pixel_area_km2",
+    "bright_main_k", "bright_secondary_k", "frp_mw", "pixel_area_km2",
     "type",  # replaced by the full set of type columns in add_type_columns()
 ]
 
@@ -87,7 +87,9 @@ def harmonise_confidence(instrument: str, raw: str) -> str:
     return {"l": "low", "n": "nominal", "m": "nominal", "h": "high"}.get(raw.lower(), "")
 
 
-def harmonise_rows(sensor: str, data: dict) -> list:
+def harmonise_rows(sensor: str, data: dict, keep_scan_track: bool = False) -> list:
+    """Map one sensor's rows onto HARMONISED_COLUMNS. With keep_scan_track, scan_km and
+    track_km are added before `type` (for the pipeline workers; not shown on the page)."""
     out = []
     for values in data["rows"]:
         r = dict(zip(data["columns"], values))
@@ -99,7 +101,6 @@ def harmonise_rows(sensor: str, data: dict) -> list:
             instrument, b_main, b_sec = "OLI", "", ""
         landsat = instrument == "OLI"
         sat = r.get("satellite", "")
-        b_main, saturated = clip_brightness(b_main)  # common 367 K ceiling (VIIRS I4 limit)
         out.append([
             sensor, instrument, SATELLITE_NAMES.get(sat, sat),
             r.get("latitude", ""), r.get("longitude", ""),
@@ -107,14 +108,16 @@ def harmonise_rows(sensor: str, data: dict) -> list:
             overpass_slot(r.get("acq_time", ""), r.get("longitude", "")),
             r.get("daynight", ""),
             harmonise_confidence(instrument, r.get("confidence", "")), r.get("confidence", ""),
-            b_main, saturated, b_sec, r.get("frp", ""),
+            b_main, b_sec, r.get("frp", ""),
             "" if landsat else pixel_area(r.get("scan"), r.get("track")),
+            *(("" if landsat else r.get("scan", ""), "" if landsat else r.get("track", "")) if keep_scan_track else ()),
             r.get("type", ""),
         ])
     return out
 
 
-def fetch_harmonised(day: str, days: int, area: str, sensors: list = SENSORS) -> dict:
+def fetch_harmonised(day: str, days: int, area: str, sensors: list = SENSORS,
+                     keep_scan_track: bool = False) -> dict:
     start = date.fromisoformat(day)
     end = start + timedelta(days=days - 1)  # FIRMS ranges run forward from `date`
     try:
@@ -138,7 +141,7 @@ def fetch_harmonised(day: str, days: int, area: str, sensors: list = SENSORS) ->
             try:
                 data = fut.result()
                 learn_types(sensor, data)
-                results[sensor] = harmonise_rows(sensor, data)
+                results[sensor] = harmonise_rows(sensor, data, keep_scan_track)
             except Exception as exc:
                 sources.append({"sensor": sensor, "status": "error", "count": 0, "note": str(exc)[:200]})
 
@@ -165,7 +168,8 @@ def fetch_harmonised(day: str, days: int, area: str, sensors: list = SENSORS) ->
     rows.sort(key=lambda r: (r[date_idx], r[date_idx + 1]))
     order = {s: i for i, s in enumerate(SENSORS)}
     sources.sort(key=lambda s: (order.get(s["sensor"], 99), s["status"] != "ok"))
-    columns, rows = add_type_columns(TYPE_REF, HARMONISED_COLUMNS, rows)
+    base = HARMONISED_COLUMNS[:-1] + ["scan_km", "track_km", "type"] if keep_scan_track else HARMONISED_COLUMNS
+    columns, rows = add_type_columns(TYPE_REF, base, rows)
     return {"columns": columns, "rows": rows, "sources": sources,
             "range": [start.isoformat(), end.isoformat()], "type_reference": TYPE_REF.status()}
 

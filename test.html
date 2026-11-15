@@ -179,7 +179,7 @@ td.val { font-family: var(--f-mono); font-weight: 500; }
         <button class="btn" data-preset="modis">MODIS Terra</button>
         <button class="btn" data-preset="viirs">VIIRS NOAA-20</button>
         <button class="btn" data-preset="landsat">Landsat 8</button>
-        <button class="btn" data-preset="sat">Saturated MODIS</button>
+        <button class="btn" data-preset="sat">Hot MODIS (412.6 K)</button>
         <button class="btn" data-preset="b29">MODIS conf 29</button>
         <button class="btn" data-preset="b80">MODIS conf 80</button>
       </div>
@@ -228,475 +228,476 @@ td.val { font-family: var(--f-mono); font-weight: 500; }
   </section>
 </main>
 
-<script type="text/plain" id="sampleTsv">source	instrument	satellite	latitude	longitude	acq_date	acq_time	overpass_slot	daynight	confidence	confidence_raw	bright_main_k	bright_saturated	bright_secondary_k	frp_mw	pixel_area_km2	type	type_label	type_existed	type_confidence	type_basis
-MODIS_NRT	MODIS	Aqua	-8.44074	-44.17558	2026-10-13	0614	night	N	nominal	37	302.81	no	292.14	9.85	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.43782	-44.19287	2026-10-13	0614	night	N	nominal	78	309.85	no	292.56	22.79	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.43387	-44.18504	2026-10-13	0614	night	N	nominal	66	311.97	no	292.35	25.33	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.41556	-44.1465	2026-10-13	0614	night	N	nominal	47	302.91	no	292.83	12.13	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.40361	-44.14461	2026-10-13	0614	night	N	high	100	324.49	no	292.37	57.09	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.40077	-44.16186	2026-10-13	0614	night	N	high	100	356.75	no	296.3	208.02	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.38255	-44.12366	2026-10-13	0614	night	N	nominal	51	302.72	no	290.62	14.45	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37684	-44.15799	2026-10-13	0614	night	N	high	100	344.95	no	294.32	140.45	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37397	-44.17521	2026-10-13	0614	night	N	high	90	314.79	no	293.71	35.27	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37348	-44.10465	2026-10-13	0614	night	N	high	88	315.01	no	289.38	34.55	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37062	-44.12172	2026-10-13	0614	night	N	high	96	317.97	no	291.66	41.87	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.36775	-44.13885	2026-10-13	0614	night	N	high	96	317.81	no	291.9	40.62	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.36487	-44.15602	2026-10-13	0614	night	N	high	100	351.62	no	295.83	177.68	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.36444	-44.08564	2026-10-13	0614	night	N	nominal	57	314.94	no	289.74	33.27	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.36157	-44.10268	2026-10-13	0614	night	N	nominal	42	314.37	no	291.15	31.05	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.3587	-44.11975	2026-10-13	0614	night	N	high	100	331.35	no	292.97	79.82	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.35773	-44.07919	2026-10-13	0614	night	N	high	94	316.87	no	290.8	38.52	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.35581	-44.13687	2026-10-13	0614	night	N	nominal	65	311.55	no	291.97	27	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.35498	-44.09621	2026-10-13	0614	night	N	nominal	34	310.91	no	291.55	24.64	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.35254	-44.08374	2026-10-13	0614	night	N	low	20	310.63	no	291.7	24.16	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.35223	-44.11331	2026-10-13	0614	night	N	high	100	335.03	no	293.52	95.59	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.34966	-44.10072	2026-10-13	0614	night	N	nominal	59	317.74	no	291.7	37.8	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.34946	-44.13044	2026-10-13	0614	night	N	high	100	326.54	no	293.2	67.97	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.34677	-44.11778	2026-10-13	0614	night	N	nominal	38	313.7	no	291.63	30.06	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.34582	-44.0773	2026-10-13	0614	night	N	nominal	72	307.66	no	291.46	21.71	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.34307	-44.0943	2026-10-13	0614	night	N	high	91	315.23	no	291.43	36.18	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.48078	-44.20834	2026-10-13	1548	afternoon	D	high	h	367.00	yes	304.52	9.45	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4466	-44.20654	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.84	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44612	-44.20277	2026-10-13	1548	afternoon	D	nominal	n	350.2	no	308.57	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44468	-44.1916	2026-10-13	1548	afternoon	D	nominal	n	352.39	no	310.33	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4442	-44.18788	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.01	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44175	-44.20872	2026-10-13	1548	afternoon	D	nominal	n	350.76	no	307.89	13.72	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44151	-44.2109	2026-10-13	1548	afternoon	D	nominal	n	344.85	no	306.91	14.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44123	-44.20494	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.11	13.72	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44102	-44.2071	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.9	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44054	-44.20332	2026-10-13	1548	afternoon	D	nominal	n	342.68	no	307.99	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43922	-44.19015	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.4	27.69	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43872	-44.18646	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.91	23.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43864	-44.18852	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.28	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43822	-44.18276	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.98	23.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43816	-44.18482	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.42	21.47	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43769	-44.18112	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.44	21.47	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43669	-44.21312	2026-10-13	1548	afternoon	D	nominal	n	350.67	no	306.95	18.35	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43642	-44.21533	2026-10-13	1548	afternoon	D	nominal	n	349.19	no	307.18	14.98	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42837	-44.15243	2026-10-13	1548	afternoon	D	nominal	n	337.29	no	308.68	15.55	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42791	-44.14882	2026-10-13	1548	afternoon	D	nominal	n	334.31	no	308.02	9.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42264	-44.15108	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.07	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42235	-44.14942	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.32	9.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41846	-44.2038	2026-10-13	1548	afternoon	D	nominal	n	353.16	no	320.76	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41827	-44.20598	2026-10-13	1548	afternoon	D	low	l	207.38	no	314.46	101.36	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41797	-44.20012	2026-10-13	1548	afternoon	D	nominal	n	345.1	no	306.52	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4178	-44.20227	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.61	97.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4171	-44.15175	2026-10-13	1548	afternoon	D	nominal	n	351.01	no	308.46	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41681	-44.15011	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.1	15.26	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41661	-44.14811	2026-10-13	1548	afternoon	D	high	h	367.00	yes	306.21	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41489	-44.21937	2026-10-13	1548	afternoon	D	nominal	n	345.85	no	299.6	11.73	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41439	-44.21563	2026-10-13	1548	afternoon	D	high	h	367.00	yes	302.33	11.73	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41313	-44.16551	2026-10-13	1548	afternoon	D	nominal	n	340.82	no	309.1	6.78	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4129	-44.2045	2026-10-13	1548	afternoon	D	nominal	n	343.63	no	299.97	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41267	-44.16184	2026-10-13	1548	afternoon	D	nominal	n	343.87	no	310.43	6.78	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41241	-44.20083	2026-10-13	1548	afternoon	D	nominal	n	354.52	no	304.16	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41221	-44.15818	2026-10-13	1548	afternoon	D	nominal	n	341.8	no	309.02	14.86	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41192	-44.19716	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.33	36.14	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41143	-44.1935	2026-10-13	1548	afternoon	D	nominal	n	354.5	no	301.96	36.14	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41081	-44.14718	2026-10-13	1548	afternoon	D	nominal	n	339.06	no	307.63	15.26	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41035	-44.14353	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.96	16.38	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41009	-44.14153	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.91	37.43	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40988	-44.13989	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.92	16.38	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4096	-44.13789	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.31	22.19	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40942	-44.13625	2026-10-13	1548	afternoon	D	nominal	n	353.88	no	305.5	15.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4075	-44.16421	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.11	30.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40701	-44.16055	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.11	37.92	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40637	-44.19792	2026-10-13	1548	afternoon	D	nominal	n	346.21	no	301.4	11.5	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40359	-44.13503	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.2	22.19	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4031	-44.1314	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.53	15.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40262	-44.12777	2026-10-13	1548	afternoon	D	nominal	n	349.59	no	309.23	15.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40213	-44.12415	2026-10-13	1548	afternoon	D	nominal	n	351.18	no	307.68	10.35	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40197	-44.16496	2026-10-13	1548	afternoon	D	low	l	367.00	yes	359.9	1386.28	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40148	-44.1613	2026-10-13	1548	afternoon	D	low	l	367.00	yes	349.44	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40099	-44.15764	2026-10-13	1548	afternoon	D	low	l	367.00	yes	351.9	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4005	-44.15398	2026-10-13	1548	afternoon	D	high	h	367.00	yes	315.87	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40001	-44.15034	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.23	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3974	-44.17301	2026-10-13	1548	afternoon	D	nominal	n	349.48	no	298.99	22.47	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39661	-44.12492	2026-10-13	1548	afternoon	D	nominal	n	352.48	no	313.34	11.94	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39613	-44.1213	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.38	11.94	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39545	-44.15838	2026-10-13	1548	afternoon	D	low	l	367.00	yes	371.7	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39497	-44.15474	2026-10-13	1548	afternoon	D	high	h	367.00	yes	327.77	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39467	-44.11044	2026-10-13	1548	afternoon	D	high	h	367.00	yes	310.54	19.04	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.394	-44.14745	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.28	26.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38868	-44.10758	2026-10-13	1548	afternoon	D	nominal	n	350.43	no	315.71	19.04	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3882	-44.10398	2026-10-13	1548	afternoon	D	high	h	367.00	yes	316.36	29.44	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38772	-44.10038	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.94	29.44	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38557	-44.1264	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.82	30.53	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38534	-44.16713	2026-10-13	1548	afternoon	D	low	l	207.38	no	310.4	114.74	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38486	-44.16348	2026-10-13	1548	afternoon	D	low	l	367.00	yes	326.41	233.8	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38438	-44.15983	2026-10-13	1548	afternoon	D	low	l	367.00	yes	332.52	233.8	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38389	-44.15618	2026-10-13	1548	afternoon	D	high	h	367.00	yes	306.42	120.9	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38172	-44.09749	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.88	23.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38124	-44.09388	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.33	23.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38076	-44.09026	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.74	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38028	-44.08664	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.26	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37932	-44.16419	2026-10-13	1548	afternoon	D	high	h	367.00	yes	304.8	96.24	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37836	-44.1569	2026-10-13	1548	afternoon	D	low	l	367.00	yes	333.5	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37788	-44.15326	2026-10-13	1548	afternoon	D	low	l	367.00	yes	339.87	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37739	-44.14962	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.18	170.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37476	-44.08734	2026-10-13	1548	afternoon	D	nominal	n	353.87	no	314.15	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37428	-44.08372	2026-10-13	1548	afternoon	D	nominal	n	352.43	no	317.28	47.01	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3738	-44.0801	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.59	47.01	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37282	-44.15759	2026-10-13	1548	afternoon	D	nominal	n	351.64	no	308.07	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37234	-44.15395	2026-10-13	1548	afternoon	D	nominal	n	352.59	no	311.65	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37186	-44.15032	2026-10-13	1548	afternoon	D	low	l	367.00	yes	327.97	170.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37034	-44.22468	2026-10-13	1548	afternoon	D	high	h	367.00	yes	299.8	58.88	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36829	-44.0808	2026-10-13	1548	afternoon	D	nominal	n	355.39	no	313.67	32.63	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36781	-44.07719	2026-10-13	1548	afternoon	D	nominal	n	352.21	no	317.8	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36734	-44.0736	2026-10-13	1548	afternoon	D	high	h	367.00	yes	313.59	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36727	-44.15827	2026-10-13	1548	afternoon	D	nominal	n	347.51	no	307.64	14.3	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36525	-44.22903	2026-10-13	1548	afternoon	D	nominal	n	339.91	no	298.61	6.32	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36477	-44.22535	2026-10-13	1548	afternoon	D	nominal	n	332.26	no	298.46	6.28	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36183	-44.07432	2026-10-13	1548	afternoon	D	nominal	n	343.24	no	312.47	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36136	-44.07073	2026-10-13	1548	afternoon	D	high	h	367.00	yes	314.05	38.67	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35792	-44.12989	2026-10-13	1548	afternoon	D	nominal	n	348.75	no	309.96	12.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35745	-44.12625	2026-10-13	1548	afternoon	D	nominal	n	351.31	no	309.96	12.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35697	-44.12262	2026-10-13	1548	afternoon	D	nominal	n	351.97	no	310.3	13.14	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35649	-44.11899	2026-10-13	1548	afternoon	D	nominal	n	349.99	no	310.48	13.14	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35602	-44.11536	2026-10-13	1548	afternoon	D	nominal	n	347.71	no	310.34	20.83	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35412	-44.10091	2026-10-13	1548	afternoon	D	high	h	367.00	yes	307.82	19.58	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35286	-44.13419	2026-10-13	1548	afternoon	D	high	h	367.00	yes	302.78	43.38	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35239	-44.13056	2026-10-13	1548	afternoon	D	low	l	207.38	no	317.85	594.62	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35192	-44.12693	2026-10-13	1548	afternoon	D	low	l	367.00	yes	364.37	594.62	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35144	-44.12331	2026-10-13	1548	afternoon	D	low	l	367.00	yes	369.66	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35097	-44.11968	2026-10-13	1548	afternoon	D	low	l	367.00	yes	360.59	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3505	-44.11606	2026-10-13	1548	afternoon	D	low	l	367.00	yes	369.66	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35002	-44.11244	2026-10-13	1548	afternoon	D	low	l	367.00	yes	356.19	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34955	-44.10884	2026-10-13	1548	afternoon	D	high	h	367.00	yes	333.34	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34908	-44.10523	2026-10-13	1548	afternoon	D	high	h	367.00	yes	318.61	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34591	-44.12398	2026-10-13	1548	afternoon	D	nominal	n	349.47	no	300.6	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34544	-44.12036	2026-10-13	1548	afternoon	D	nominal	n	349.98	no	302.05	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34533	-44.07656	2026-10-13	1548	afternoon	D	nominal	n	353.91	no	312.7	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34497	-44.11674	2026-10-13	1548	afternoon	D	high	h	367.00	yes	303.12	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34486	-44.07299	2026-10-13	1548	afternoon	D	high	h	367.00	yes	312.12	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34439	-44.0694	2026-10-13	1548	afternoon	D	nominal	n	350.76	no	309.74	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34403	-44.10954	2026-10-13	1548	afternoon	D	low	l	367.00	yes	326.42	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34356	-44.10594	2026-10-13	1548	afternoon	D	high	h	367.00	yes	317.81	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34309	-44.10235	2026-10-13	1548	afternoon	D	high	h	367.00	yes	306.91	53.39	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34263	-44.09876	2026-10-13	1548	afternoon	D	nominal	n	353.96	no	309.3	53.39	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34216	-44.09518	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.72	23.02	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34169	-44.09159	2026-10-13	1548	afternoon	D	high	h	367.00	yes	311.33	23.02	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34123	-44.08802	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.67	24.52	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34076	-44.08445	2026-10-13	1548	afternoon	D	nominal	n	351.09	no	309.23	24.52	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34029	-44.08088	2026-10-13	1548	afternoon	D	high	h	367.00	yes	308.18	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33983	-44.0773	2026-10-13	1548	afternoon	D	nominal	n	348.15	no	310.13	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33936	-44.07372	2026-10-13	1548	afternoon	D	high	h	367.00	yes	309.24	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33889	-44.07014	2026-10-13	1548	afternoon	D	high	h	367.00	yes	305.44	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.47928	-44.20847	2026-10-13	1626	afternoon	D	nominal	n	348.09	no	311.83	18.01	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44497	-44.21146	2026-10-13	1626	afternoon	D	low	l	346.88	no	314.65	12.51	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4443	-44.20691	2026-10-13	1626	afternoon	D	low	l	350.44	no	315.76	20.63	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44166	-44.18884	2026-10-13	1626	afternoon	D	high	h	367.00	yes	321.33	26.45	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44055	-44.20743	2026-10-13	1626	afternoon	D	low	l	355.87	no	315.08	20.63	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.43725	-44.18487	2026-10-13	1626	afternoon	D	high	h	367.00	yes	320.02	26.45	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4366	-44.18036	2026-10-13	1626	afternoon	D	nominal	n	352.14	no	317.32	17.67	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4174	-44.20612	2026-10-13	1626	afternoon	D	low	l	367.00	yes	332.65	115.23	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41675	-44.20161	2026-10-13	1626	afternoon	D	nominal	n	354.76	no	316.78	43.26	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41301	-44.20216	2026-10-13	1626	afternoon	D	high	h	367.00	yes	309.19	133.14	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41187	-44.22076	2026-10-13	1626	afternoon	D	low	l	346.82	no	306.62	84.66	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40765	-44.13878	2026-10-13	1626	afternoon	D	nominal	n	355.91	no	318.44	45.62	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40716	-44.16172	2026-10-13	1626	afternoon	D	low	l	355.28	no	319.04	65.85	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40701	-44.13432	2026-10-13	1626	afternoon	D	high	h	367.00	yes	318.29	45.62	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40422	-44.19428	2026-10-13	1626	afternoon	D	high	h	367.00	yes	310.55	40.93	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40343	-44.16228	2026-10-13	1626	afternoon	D	low	l	367.00	yes	341.23	65.85	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40278	-44.1578	2026-10-13	1626	afternoon	D	low	l	352.15	no	332.07	82.71	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40263	-44.13042	2026-10-13	1626	afternoon	D	nominal	n	350.69	no	315.99	25.76	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39969	-44.16284	2026-10-13	1626	afternoon	D	high	h	367.00	yes	361	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39904	-44.15836	2026-10-13	1626	afternoon	D	low	l	367.00	yes	364.65	324.88	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3984	-44.15388	2026-10-13	1626	afternoon	D	low	l	367.00	yes	335.77	324.88	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39775	-44.1494	2026-10-13	1626	afternoon	D	low	l	355.1	no	310.83	23.74	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39762	-44.12207	2026-10-13	1626	afternoon	D	low	l	355.09	no	314.1	73.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39697	-44.11761	2026-10-13	1626	afternoon	D	low	l	367.00	yes	330.51	73.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3966	-44.16788	2026-10-13	1626	afternoon	D	high	h	367.00	yes	336.3	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39596	-44.16339	2026-10-13	1626	afternoon	D	low	l	367.00	yes	379.67	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39531	-44.15892	2026-10-13	1626	afternoon	D	low	l	367.00	yes	380.02	324.88	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39467	-44.15444	2026-10-13	1626	afternoon	D	low	l	367.00	yes	330.85	324.88	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39325	-44.11817	2026-10-13	1626	afternoon	D	low	l	356.89	no	320.62	48.61	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39261	-44.11372	2026-10-13	1626	afternoon	D	low	l	353.98	no	320.91	64.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39222	-44.16394	2026-10-13	1626	afternoon	D	low	l	314.58	no	321.01	354.24	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39196	-44.10927	2026-10-13	1626	afternoon	D	low	l	367.00	yes	328.72	64.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39158	-44.15947	2026-10-13	1626	afternoon	D	low	l	354.67	no	305.57	48.46	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39132	-44.10483	2026-10-13	1626	afternoon	D	nominal	n	354.57	no	320.57	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3876	-44.10538	2026-10-13	1626	afternoon	D	low	l	351.65	no	318.71	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38743	-44.21049	2026-10-13	1626	afternoon	D	low	l	348.05	no	302.7	3.86	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38696	-44.10094	2026-10-13	1626	afternoon	D	low	l	350.77	no	324.25	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38411	-44.16057	2026-10-13	1626	afternoon	D	low	l	367.00	yes	356.71	205.3	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38369	-44.21104	2026-10-13	1626	afternoon	D	low	l	343.28	no	302.05	4.69	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3826	-44.09705	2026-10-13	1626	afternoon	D	low	l	355.51	no	319.56	46.25	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38196	-44.09261	2026-10-13	1626	afternoon	D	low	l	354.98	no	324.02	46.25	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38058	-44.21608	2026-10-13	1626	afternoon	D	low	l	338.96	no	302.2	4.69	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38037	-44.16112	2026-10-13	1626	afternoon	D	low	l	353.74	no	311.06	205.3	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37973	-44.15664	2026-10-13	1626	afternoon	D	low	l	367.00	yes	344.63	205.3	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37909	-44.15217	2026-10-13	1626	afternoon	D	high	h	367.00	yes	345.75	232.99	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3776	-44.0887	2026-10-13	1626	afternoon	D	low	l	355.27	no	324.07	47.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37696	-44.08426	2026-10-13	1626	afternoon	D	low	l	353.49	no	322.87	47.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37536	-44.15272	2026-10-13	1626	afternoon	D	high	h	367.00	yes	339.24	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37472	-44.14824	2026-10-13	1626	afternoon	D	high	h	367.00	yes	340.99	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3726	-44.08036	2026-10-13	1626	afternoon	D	low	l	367.00	yes	331.45	205.3	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37189	-44.23573	2026-10-13	1626	afternoon	D	low	l	334.93	no	302.14	4.02	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37162	-44.15326	2026-10-13	1626	afternoon	D	nominal	n	355.57	no	315.63	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37062	-44.2267	2026-10-13	1626	afternoon	D	high	h	367.00	yes	306.55	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36998	-44.22219	2026-10-13	1626	afternoon	D	nominal	n	348.66	no	303.33	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3675	-44.23175	2026-10-13	1626	afternoon	D	nominal	n	335.65	no	301.96	4.02	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36687	-44.22724	2026-10-13	1626	afternoon	D	nominal	n	351.42	no	305.5	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36375	-44.2323	2026-10-13	1626	afternoon	D	low	l	330.09	no	302.63	2.89	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36312	-44.22778	2026-10-13	1626	afternoon	D	nominal	n	356.02	no	305.9	9.74	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36269	-44.23084	2026-10-13	1626	afternoon	D	nominal	n	340.78	no	303.76	4.73	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36248	-44.22327	2026-10-13	1626	afternoon	D	low	l	340	no	303.58	9.74	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36203	-44.22634	2026-10-13	1626	afternoon	D	nominal	n	355.93	no	305.94	14.36	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35654	-44.10085	2026-10-13	1626	afternoon	D	low	l	356.51	no	314.7	22.52	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35535	-44.11918	2026-10-13	1626	afternoon	D	low	l	353.21	no	319.74	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35289	-44.12864	2026-10-13	1626	afternoon	D	low	l	367.00	yes	354.44	171.42	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35226	-44.12418	2026-10-13	1626	afternoon	D	low	l	367.00	yes	366.79	171.42	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35219	-44.09695	2026-10-13	1626	afternoon	D	low	l	356.52	no	314.29	29.54	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35162	-44.11972	2026-10-13	1626	afternoon	D	low	l	367.00	yes	367.51	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35099	-44.11528	2026-10-13	1626	afternoon	D	low	l	350.69	no	339.4	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35036	-44.11083	2026-10-13	1626	afternoon	D	high	h	367.00	yes	326.05	24.18	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34973	-44.10638	2026-10-13	1626	afternoon	D	high	h	367.00	yes	324.71	24.18	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34916	-44.12918	2026-10-13	1626	afternoon	D	high	h	367.00	yes	342.18	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34853	-44.12472	2026-10-13	1626	afternoon	D	low	l	367.00	yes	378.56	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3479	-44.12027	2026-10-13	1626	afternoon	D	low	l	367.00	yes	378.24	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34748	-44.12793	2026-10-13	1626	afternoon	D	high	h	367.00	yes	352.09	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34727	-44.11582	2026-10-13	1626	afternoon	D	high	h	367.00	yes	361.71	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34683	-44.12348	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.51	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34664	-44.11137	2026-10-13	1626	afternoon	D	high	h	367.00	yes	357.87	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34617	-44.11904	2026-10-13	1626	afternoon	D	low	l	367.00	yes	375.9	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34601	-44.10693	2026-10-13	1626	afternoon	D	high	h	367.00	yes	357.41	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34551	-44.1146	2026-10-13	1626	afternoon	D	high	h	367.00	yes	354.55	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34486	-44.11016	2026-10-13	1626	afternoon	D	low	l	367.00	yes	366.78	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3448	-44.12526	2026-10-13	1626	afternoon	D	low	l	367.00	yes	368.12	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3442	-44.10573	2026-10-13	1626	afternoon	D	high	h	367.00	yes	360.24	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34417	-44.12081	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.24	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34355	-44.1013	2026-10-13	1626	afternoon	D	high	h	367.00	yes	322.42	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34354	-44.11636	2026-10-13	1626	afternoon	D	low	l	367.00	yes	372.27	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3431	-44.12402	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.36	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34291	-44.11192	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.24	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34289	-44.09687	2026-10-13	1626	afternoon	D	low	l	355.13	no	320.5	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34245	-44.11958	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.02	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34228	-44.10747	2026-10-13	1626	afternoon	D	low	l	367.00	yes	372.93	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34179	-44.11514	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.36	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3417	-44.13026	2026-10-13	1626	afternoon	D	nominal	n	355.42	no	303.62	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34166	-44.10304	2026-10-13	1626	afternoon	D	low	l	350.48	no	339.03	86.63	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34161	-44.07593	2026-10-13	1626	afternoon	D	low	l	367.00	yes	341.16	212.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34158	-44.08804	2026-10-13	1626	afternoon	D	nominal	n	354.91	no	316.97	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34114	-44.1107	2026-10-13	1626	afternoon	D	low	l	367.00	yes	384.78	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34107	-44.1258	2026-10-13	1626	afternoon	D	low	l	308.38	no	317.73	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34103	-44.0986	2026-10-13	1626	afternoon	D	low	l	352.31	no	335.38	86.63	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34093	-44.08362	2026-10-13	1626	afternoon	D	low	l	367.00	yes	331.78	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34048	-44.10627	2026-10-13	1626	afternoon	D	low	l	367.00	yes	380.03	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34045	-44.12136	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.89	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3404	-44.09417	2026-10-13	1626	afternoon	D	high	h	367.00	yes	324.56	58.97	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34028	-44.07921	2026-10-13	1626	afternoon	D	high	h	367.00	yes	346.84	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34003	-44.12901	2026-10-13	1626	afternoon	D	low	l	356.49	no	303.28	45.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33983	-44.10184	2026-10-13	1626	afternoon	D	high	h	367.00	yes	353.38	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33982	-44.11691	2026-10-13	1626	afternoon	D	low	l	367.00	yes	366.39	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33978	-44.08975	2026-10-13	1626	afternoon	D	low	l	367.00	yes	329.64	58.97	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33963	-44.07479	2026-10-13	1626	afternoon	D	low	l	367.00	yes	331.9	69.85	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33917	-44.09742	2026-10-13	1626	afternoon	D	high	h	367.00	yes	354.6	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33915	-44.08532	2026-10-13	1626	afternoon	D	low	l	367.00	yes	359.13	176.98	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33897	-44.07038	2026-10-13	1626	afternoon	D	nominal	n	350.67	no	315.56	69.85	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33852	-44.093	2026-10-13	1626	afternoon	D	high	h	367.00	yes	352.33	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33852	-44.0809	2026-10-13	1626	afternoon	D	high	h	367.00	yes	337.77	176.98	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33807	-44.11568	2026-10-13	1626	afternoon	D	low	l	367.00	yes	382.51	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33787	-44.08859	2026-10-13	1626	afternoon	D	low	l	367.00	yes	352.72	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33741	-44.11125	2026-10-13	1626	afternoon	D	low	l	367.00	yes	385.06	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33735	-44.12635	2026-10-13	1626	afternoon	D	high	h	367.00	yes	303.33	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33731	-44.09916	2026-10-13	1626	afternoon	D	low	l	367.00	yes	369.91	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33722	-44.08417	2026-10-13	1626	afternoon	D	high	h	367.00	yes	336.45	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33676	-44.10682	2026-10-13	1626	afternoon	D	low	l	367.00	yes	385.43	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33672	-44.12191	2026-10-13	1626	afternoon	D	high	h	367.00	yes	305.6	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33668	-44.09473	2026-10-13	1626	afternoon	D	high	h	367.00	yes	340.5	210.55	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33656	-44.07976	2026-10-13	1626	afternoon	D	nominal	n	347.09	no	309.17	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33611	-44.1024	2026-10-13	1626	afternoon	D	low	l	367.00	yes	374.95	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33606	-44.09031	2026-10-13	1626	afternoon	D	high	h	367.00	yes	338.47	210.55	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33565	-44.12511	2026-10-13	1626	afternoon	D	high	h	367.00	yes	302.47	45.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33547	-44.11302	2026-10-13	1626	afternoon	D	low	l	367.00	yes	360.58	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33545	-44.09797	2026-10-13	1626	afternoon	D	low	l	367.00	yes	326.85	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.335	-44.12068	2026-10-13	1626	afternoon	D	high	h	367.00	yes	302.98	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33484	-44.10858	2026-10-13	1626	afternoon	D	low	l	367.00	yes	373.09	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3348	-44.09355	2026-10-13	1626	afternoon	D	nominal	n	356.36	no	305.45	40	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33435	-44.11625	2026-10-13	1626	afternoon	D	nominal	n	356.95	no	304.34	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33422	-44.10415	2026-10-13	1626	afternoon	D	low	l	367.00	yes	357.63	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33359	-44.09972	2026-10-13	1626	afternoon	D	low	l	356.21	no	306.51	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33239	-44.10295	2026-10-13	1626	afternoon	D	low	l	355.69	no	303.73	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.48193	-44.20683	2026-10-13	1643	afternoon	D	low	l	339.68	no	312.61	24.76	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.47838	-44.20745	2026-10-13	1643	afternoon	D	low	l	340.55	no	314.24	24.76	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44523	-44.20506	2026-10-13	1643	afternoon	D	nominal	n	350.69	no	317.84	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44262	-44.18889	2026-10-13	1643	afternoon	D	nominal	n	351.69	no	321.36	26.54	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44169	-44.20565	2026-10-13	1643	afternoon	D	nominal	n	352.29	no	315.6	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43879	-44.21025	2026-10-13	1643	afternoon	D	nominal	n	354.62	no	318.27	35.11	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43842	-44.18542	2026-10-13	1643	afternoon	D	nominal	n	355.37	no	321.64	26.54	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43776	-44.18137	2026-10-13	1643	afternoon	D	low	l	352.1	no	324.02	45.39	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41974	-44.20507	2026-10-13	1643	afternoon	D	nominal	n	355.09	no	319.33	23.11	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41684	-44.20967	2026-10-13	1643	afternoon	D	high	h	367.00	yes	336.43	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41619	-44.20563	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.59	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41553	-44.20158	2026-10-13	1643	afternoon	D	low	l	367.00	yes	326.69	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41487	-44.19753	2026-10-13	1643	afternoon	D	low	l	356.05	no	316.45	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41405	-44.14767	2026-10-13	1643	afternoon	D	nominal	n	356.55	no	317.74	27.79	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41329	-44.21024	2026-10-13	1643	afternoon	D	high	h	367.00	yes	355.7	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41272	-44.13952	2026-10-13	1643	afternoon	D	high	h	367.00	yes	316.87	36.04	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41166	-44.21849	2026-10-13	1643	afternoon	D	nominal	n	348.99	no	303.47	20.64	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41131	-44.19809	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.36	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41102	-44.21445	2026-10-13	1643	afternoon	D	nominal	n	354.31	no	307.62	20.64	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.4104	-44.21485	2026-10-13	1643	afternoon	D	high	h	367.00	yes	306.22	29.35	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40849	-44.136	2026-10-13	1643	afternoon	D	nominal	n	354.37	no	321.13	24.21	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40783	-44.13192	2026-10-13	1643	afternoon	D	nominal	n	356.24	no	316.66	24.21	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.4071	-44.19459	2026-10-13	1643	afternoon	D	low	l	355.39	no	311.29	167.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40535	-44.16155	2026-10-13	1643	afternoon	D	low	l	367.00	yes	329.69	38.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40469	-44.15748	2026-10-13	1643	afternoon	D	nominal	n	354.63	no	325.71	38.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40332	-44.1657	2026-10-13	1643	afternoon	D	high	h	367.00	yes	334.02	104	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40268	-44.16163	2026-10-13	1643	afternoon	D	high	h	367.00	yes	340.82	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40245	-44.16618	2026-10-13	1643	afternoon	D	low	l	367.00	yes	327.86	88.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40204	-44.15756	2026-10-13	1643	afternoon	D	high	h	367.00	yes	342.27	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40179	-44.16211	2026-10-13	1643	afternoon	D	high	h	367.00	yes	341.84	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40112	-44.15805	2026-10-13	1643	afternoon	D	high	h	367.00	yes	346.97	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40046	-44.15397	2026-10-13	1643	afternoon	D	low	l	352.76	no	325.71	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39976	-44.16626	2026-10-13	1643	afternoon	D	high	h	367.00	yes	351.78	104	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39936	-44.12487	2026-10-13	1643	afternoon	D	low	l	351.28	no	321.51	36.56	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39912	-44.16219	2026-10-13	1643	afternoon	D	low	l	367.00	yes	370.88	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39889	-44.16674	2026-10-13	1643	afternoon	D	high	h	367.00	yes	339.1	88.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39869	-44.12078	2026-10-13	1643	afternoon	D	nominal	n	354.46	no	318.41	18.66	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39847	-44.15812	2026-10-13	1643	afternoon	D	low	l	367.00	yes	378	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39823	-44.16267	2026-10-13	1643	afternoon	D	low	l	367.00	yes	367.78	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39802	-44.11669	2026-10-13	1643	afternoon	D	nominal	n	353.53	no	319.25	18.66	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39783	-44.15405	2026-10-13	1643	afternoon	D	high	h	367.00	yes	349.27	163.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39756	-44.1586	2026-10-13	1643	afternoon	D	low	l	367.00	yes	371.14	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39735	-44.1126	2026-10-13	1643	afternoon	D	nominal	n	353.29	no	316.33	16.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39719	-44.14996	2026-10-13	1643	afternoon	D	nominal	n	355.89	no	318.07	163.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3969	-44.15454	2026-10-13	1643	afternoon	D	high	h	367.00	yes	357.19	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39623	-44.15046	2026-10-13	1643	afternoon	D	high	h	367.00	yes	317.06	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3962	-44.16683	2026-10-13	1643	afternoon	D	high	h	367.00	yes	355.64	414	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39558	-44.1167	2026-10-13	1643	afternoon	D	nominal	n	353.14	no	321.81	25.85	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39556	-44.16276	2026-10-13	1643	afternoon	D	low	l	367.00	yes	379.68	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39491	-44.15868	2026-10-13	1643	afternoon	D	low	l	367.00	yes	380.02	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39445	-44.11725	2026-10-13	1643	afternoon	D	nominal	n	350.48	no	319.18	21.29	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39429	-44.1085	2026-10-13	1643	afternoon	D	low	l	352.03	no	322.22	107.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39427	-44.15461	2026-10-13	1643	afternoon	D	low	l	367.00	yes	330.29	332.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39312	-44.10907	2026-10-13	1643	afternoon	D	nominal	n	354.02	no	322.46	88.86	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39244	-44.10497	2026-10-13	1643	afternoon	D	nominal	n	351.41	no	318.39	81.01	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39201	-44.11726	2026-10-13	1643	afternoon	D	nominal	n	351.7	no	320.93	25.85	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39135	-44.15925	2026-10-13	1643	afternoon	D	nominal	n	354.54	no	305.46	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39007	-44.10496	2026-10-13	1643	afternoon	D	low	l	352.16	no	323.7	73.91	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38844	-44.16389	2026-10-13	1643	afternoon	D	low	l	323.28	no	323.79	252.43	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38843	-44.20976	2026-10-13	1643	afternoon	D	nominal	n	345.99	no	304.08	6.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38778	-44.2057	2026-10-13	1643	afternoon	D	nominal	n	344.04	no	303.99	10.09	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38714	-44.20163	2026-10-13	1643	afternoon	D	nominal	n	350.88	no	307.65	10.09	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3852	-44.09732	2026-10-13	1643	afternoon	D	low	l	351.2	no	322.72	102.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38488	-44.21033	2026-10-13	1643	afternoon	D	nominal	n	340.62	no	303.73	6.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38423	-44.16038	2026-10-13	1643	afternoon	D	low	l	367.00	yes	362.68	252.43	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38358	-44.15631	2026-10-13	1643	afternoon	D	high	h	367.00	yes	336.66	195.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38262	-44.21902	2026-10-13	1643	afternoon	D	nominal	n	333.44	no	301.93	3.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38197	-44.21496	2026-10-13	1643	afternoon	D	nominal	n	346.84	no	303.63	7.5	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38132	-44.16502	2026-10-13	1643	afternoon	D	nominal	n	355.53	no	305.08	16.51	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38067	-44.16095	2026-10-13	1643	afternoon	D	high	h	367.00	yes	311.65	16.51	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38002	-44.15687	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.44	218.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37937	-44.15279	2026-10-13	1643	afternoon	D	low	l	367.00	yes	357.07	218.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37907	-44.21959	2026-10-13	1643	afternoon	D	nominal	n	343.29	no	303.09	3.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37516	-44.14928	2026-10-13	1643	afternoon	D	high	h	367.00	yes	348.25	261.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37326	-44.22885	2026-10-13	1643	afternoon	D	nominal	n	336.22	no	302.98	6.63	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37262	-44.2248	2026-10-13	1643	afternoon	D	nominal	n	355.2	no	306.53	9.71	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37197	-44.22074	2026-10-13	1643	afternoon	D	nominal	n	342.88	no	303.48	9.71	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36972	-44.22943	2026-10-13	1643	afternoon	D	nominal	n	348.83	no	305.87	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36907	-44.22538	2026-10-13	1643	afternoon	D	nominal	n	348.07	no	305.52	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36842	-44.22131	2026-10-13	1643	afternoon	D	nominal	n	344.52	no	304.12	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36617	-44.23	2026-10-13	1643	afternoon	D	nominal	n	347.22	no	304.45	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36552	-44.22594	2026-10-13	1643	afternoon	D	nominal	n	352.46	no	306.33	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36262	-44.23057	2026-10-13	1643	afternoon	D	nominal	n	341.67	no	305.08	4.31	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36197	-44.22652	2026-10-13	1643	afternoon	D	nominal	n	344.81	no	305.73	7.38	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35342	-44.12763	2026-10-13	1643	afternoon	D	high	h	367.00	yes	345.84	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35277	-44.12354	2026-10-13	1643	afternoon	D	high	h	367.00	yes	347.09	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35211	-44.11945	2026-10-13	1643	afternoon	D	high	h	367.00	yes	349.17	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35145	-44.11535	2026-10-13	1643	afternoon	D	low	l	354.09	no	334.2	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3508	-44.11126	2026-10-13	1643	afternoon	D	high	h	367.00	yes	327.04	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35014	-44.10716	2026-10-13	1643	afternoon	D	high	h	367.00	yes	323.51	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34986	-44.1282	2026-10-13	1643	afternoon	D	high	h	367.00	yes	334.98	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3492	-44.12412	2026-10-13	1643	afternoon	D	low	l	367.00	yes	351.96	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34854	-44.12002	2026-10-13	1643	afternoon	D	high	h	367.00	yes	352.18	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34789	-44.11593	2026-10-13	1643	afternoon	D	low	l	367.00	yes	339.82	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34723	-44.11183	2026-10-13	1643	afternoon	D	low	l	367.00	yes	339.84	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34657	-44.10773	2026-10-13	1643	afternoon	D	high	h	367.00	yes	342.84	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34629	-44.12878	2026-10-13	1643	afternoon	D	nominal	n	351.36	no	309.2	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34563	-44.12469	2026-10-13	1643	afternoon	D	high	h	367.00	yes	341.96	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34553	-44.07837	2026-10-13	1643	afternoon	D	high	h	367.00	yes	321.24	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34497	-44.1206	2026-10-13	1643	afternoon	D	high	h	367.00	yes	341.2	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34487	-44.07425	2026-10-13	1643	afternoon	D	low	l	356.03	no	322.7	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34432	-44.1165	2026-10-13	1643	afternoon	D	low	l	367.00	yes	335.62	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34366	-44.1124	2026-10-13	1643	afternoon	D	low	l	367.00	yes	337.37	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.343	-44.1083	2026-10-13	1643	afternoon	D	high	h	367.00	yes	345.98	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34272	-44.12936	2026-10-13	1643	afternoon	D	nominal	n	352.13	no	305.51	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34261	-44.08306	2026-10-13	1643	afternoon	D	high	h	367.00	yes	324.09	28.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34234	-44.10419	2026-10-13	1643	afternoon	D	low	l	355.09	no	331.19	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34206	-44.12527	2026-10-13	1643	afternoon	D	low	l	367.00	yes	330.46	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34195	-44.07894	2026-10-13	1643	afternoon	D	low	l	354.55	no	331.97	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34168	-44.10009	2026-10-13	1643	afternoon	D	low	l	355.79	no	328.82	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34141	-44.12117	2026-10-13	1643	afternoon	D	low	l	367.00	yes	364.48	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34129	-44.07482	2026-10-13	1643	afternoon	D	low	l	367.00	yes	339.49	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34102	-44.09598	2026-10-13	1643	afternoon	D	low	l	356.26	no	325.49	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34075	-44.11707	2026-10-13	1643	afternoon	D	high	h	367.00	yes	361.26	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34063	-44.0707	2026-10-13	1643	afternoon	D	high	h	367.00	yes	361.79	175.53	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34036	-44.09186	2026-10-13	1643	afternoon	D	high	h	367.00	yes	318.97	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34009	-44.11297	2026-10-13	1643	afternoon	D	high	h	367.00	yes	351.35	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33943	-44.10887	2026-10-13	1643	afternoon	D	high	h	367.00	yes	350.37	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33916	-44.12994	2026-10-13	1643	afternoon	D	nominal	n	354.02	no	304.36	77.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33904	-44.08362	2026-10-13	1643	afternoon	D	low	l	367.00	yes	336.19	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33877	-44.10476	2026-10-13	1643	afternoon	D	low	l	367.00	yes	340.34	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33837	-44.0795	2026-10-13	1643	afternoon	D	high	h	367.00	yes	358.64	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33811	-44.10065	2026-10-13	1643	afternoon	D	high	h	367.00	yes	342.19	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33784	-44.12174	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33771	-44.07539	2026-10-13	1643	afternoon	D	low	l	367.00	yes	376.05	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33745	-44.09654	2026-10-13	1643	afternoon	D	high	h	367.00	yes	346.46	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33718	-44.11764	2026-10-13	1643	afternoon	D	low	l	367.00	yes	369.98	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33705	-44.07126	2026-10-13	1643	afternoon	D	high	h	367.00	yes	359.36	421.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33678	-44.09243	2026-10-13	1643	afternoon	D	high	h	367.00	yes	345.42	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33652	-44.11354	2026-10-13	1643	afternoon	D	high	h	367.00	yes	356.55	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33612	-44.08831	2026-10-13	1643	afternoon	D	high	h	367.00	yes	361.88	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33586	-44.10943	2026-10-13	1643	afternoon	D	low	l	367.00	yes	365.55	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33546	-44.08419	2026-10-13	1643	afternoon	D	low	l	367.00	yes	373.68	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33519	-44.10532	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33493	-44.1264	2026-10-13	1643	afternoon	D	nominal	n	354.43	no	303.6	77.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33479	-44.08007	2026-10-13	1643	afternoon	D	low	l	367.00	yes	373.93	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33453	-44.10121	2026-10-13	1643	afternoon	D	low	l	367.00	yes	374.13	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33427	-44.1223	2026-10-13	1643	afternoon	D	high	h	367.00	yes	340.98	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33413	-44.07595	2026-10-13	1643	afternoon	D	low	l	367.00	yes	371.52	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33387	-44.0971	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3336	-44.1182	2026-10-13	1643	afternoon	D	high	h	367.00	yes	335.06	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33321	-44.09299	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.76	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33294	-44.11409	2026-10-13	1643	afternoon	D	high	h	367.00	yes	353.64	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33254	-44.08887	2026-10-13	1643	afternoon	D	low	l	367.00	yes	375.35	329.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33228	-44.10999	2026-10-13	1643	afternoon	D	low	l	367.00	yes	369.7	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33162	-44.10588	2026-10-13	1643	afternoon	D	high	h	367.00	yes	354.31	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33055	-44.07651	2026-10-13	1643	afternoon	D	nominal	n	355.96	no	303.28	74.84	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33029	-44.09766	2026-10-13	1643	afternoon	D	low	l	367.00	yes	369.95	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33003	-44.11874	2026-10-13	1643	afternoon	D	high	h	367.00	yes	297.68	33.1	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32963	-44.09355	2026-10-13	1643	afternoon	D	low	l	317.52	no	322.38	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32937	-44.11464	2026-10-13	1643	afternoon	D	low	l	356.02	no	304.29	83.84	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32897	-44.08943	2026-10-13	1643	afternoon	D	high	h	367.00	yes	300.69	329.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32804	-44.10641	2026-10-13	1643	afternoon	D	high	h	367.00	yes	304.34	41.05	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32671	-44.09818	2026-10-13	1643	afternoon	D	low	l	355.08	no	300.78	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32605	-44.09407	2026-10-13	1643	afternoon	D	high	h	367.00	yes	293.4	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32246	-44.09457	2026-10-13	1643	afternoon	D	low	l	356.01	no	284.49	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.41663	-44.20275	2026-10-13	1826	afternoon	D	nominal	79	340.69	no	306.4	59.5	2.0664	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.40875	-44.14553	2026-10-13	1826	afternoon	D	nominal	63	330.75	no	300.28	24.11	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.40561	-44.20433	2026-10-13	1826	afternoon	D	nominal	67	337.67	no	304.2	52.6	2.0664	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.40169	-44.17569	2026-10-13	1826	afternoon	D	high	84	341.65	no	306.91	58.83	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.39974	-44.1614	2026-10-13	1826	afternoon	D	high	100	367.00	yes	321.63	621.06	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.39779	-44.14716	2026-10-13	1826	afternoon	D	high	92	356.7	no	298.3	118.59	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.39198	-44.10468	2026-10-13	1826	afternoon	D	high	99	358.1	no	310.65	129.12	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.3907	-44.17728	2026-10-13	1826	afternoon	D	high	100	367.00	yes	308.5	278.64	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.39005	-44.09059	2026-10-13	1826	afternoon	D	high	97	355.28	no	308.08	116.9	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.38876	-44.16299	2026-10-13	1826	afternoon	D	high	100	367.00	yes	326.93	1798.05	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.38682	-44.14875	2026-10-13	1826	afternoon	D	high	94	367.00	yes	307.06	238.88	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37913	-44.09216	2026-10-13	1826	afternoon	D	high	88	341.34	no	296.01	58.28	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37778	-44.16455	2026-10-13	1826	afternoon	D	high	94	367.00	yes	302.64	184.56	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37721	-44.07806	2026-10-13	1826	afternoon	D	nominal	56	329.37	no	299.82	25.94	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.37585	-44.15031	2026-10-13	1826	afternoon	D	high	94	367.00	yes	311.01	446.81	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.3663	-44.07961	2026-10-13	1826	afternoon	D	nominal	74	338.33	no	307.63	49.94	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.34084	-44.07447	2026-10-13	1826	afternoon	D	nominal	53	335.34	no	309.19	44.52	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.33582	-44.11807	2026-10-13	1826	afternoon	D	high	83	339.39	no	302.74	55.68	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.33386	-44.10402	2026-10-13	1826	afternoon	D	high	95	352.24	no	301.92	104.93	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.3319	-44.09002	2026-10-13	1826	afternoon	D	high	100	367.00	yes	312.62	268.26	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.32995	-44.07605	2026-10-13	1826	afternoon	D	high	92	346.95	no	306.53	85.14	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.32491	-44.11979	2026-10-13	1826	afternoon	D	nominal	54	329.63	no	304.59	31.47	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
-MODIS_NRT	MODIS	Aqua	-8.32298	-44.10584	2026-10-13	1826	afternoon	D	high	88	341.23	no	304.1	66.01	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class</script>
+<script type="text/plain" id="sampleTsv">source	instrument	satellite	latitude	longitude	acq_date	acq_time	overpass_slot	daynight	confidence	confidence_raw	bright_main_k	bright_secondary_k	frp_mw	pixel_area_km2	type	type_label	type_existed	type_confidence	type_basis
+MODIS_NRT	MODIS	Aqua	-8.44074	-44.17558	2026-10-13	0614	night	N	nominal	37	302.81	292.14	9.85	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.43782	-44.19287	2026-10-13	0614	night	N	nominal	78	309.85	292.56	22.79	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.43387	-44.18504	2026-10-13	0614	night	N	nominal	66	311.97	292.35	25.33	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.41556	-44.1465	2026-10-13	0614	night	N	nominal	47	302.91	292.83	12.13	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40361	-44.14461	2026-10-13	0614	night	N	high	100	324.49	292.37	57.09	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40077	-44.16186	2026-10-13	0614	night	N	high	100	356.75	296.3	208.02	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.38255	-44.12366	2026-10-13	0614	night	N	nominal	51	302.72	290.62	14.45	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37684	-44.15799	2026-10-13	0614	night	N	high	100	344.95	294.32	140.45	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37397	-44.17521	2026-10-13	0614	night	N	high	90	314.79	293.71	35.27	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37348	-44.10465	2026-10-13	0614	night	N	high	88	315.01	289.38	34.55	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37062	-44.12172	2026-10-13	0614	night	N	high	96	317.97	291.66	41.87	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36775	-44.13885	2026-10-13	0614	night	N	high	96	317.81	291.9	40.62	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36487	-44.15602	2026-10-13	0614	night	N	high	100	351.62	295.83	177.68	2.7126	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36444	-44.08564	2026-10-13	0614	night	N	nominal	57	314.94	289.74	33.27	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.36157	-44.10268	2026-10-13	0614	night	N	nominal	42	314.37	291.15	31.05	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3587	-44.11975	2026-10-13	0614	night	N	high	100	331.35	292.97	79.82	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35773	-44.07919	2026-10-13	0614	night	N	high	94	316.87	290.8	38.52	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35581	-44.13687	2026-10-13	0614	night	N	nominal	65	311.55	291.97	27	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35498	-44.09621	2026-10-13	0614	night	N	nominal	34	310.91	291.55	24.64	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35254	-44.08374	2026-10-13	0614	night	N	low	20	310.63	291.7	24.16	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.35223	-44.11331	2026-10-13	0614	night	N	high	100	335.03	293.52	95.59	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34966	-44.10072	2026-10-13	0614	night	N	nominal	59	317.74	291.7	37.8	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34946	-44.13044	2026-10-13	0614	night	N	high	100	326.54	293.2	67.97	2.6989	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34677	-44.11778	2026-10-13	0614	night	N	nominal	38	313.7	291.63	30.06	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34582	-44.0773	2026-10-13	0614	night	N	nominal	72	307.66	291.46	21.71	2.6520	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34307	-44.0943	2026-10-13	0614	night	N	high	91	315.23	291.43	36.18	2.6852	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.48078	-44.20834	2026-10-13	1548	afternoon	D	high	h	367	304.52	9.45	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4466	-44.20654	2026-10-13	1548	afternoon	D	high	h	367	307.84	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44612	-44.20277	2026-10-13	1548	afternoon	D	nominal	n	350.2	308.57	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44468	-44.1916	2026-10-13	1548	afternoon	D	nominal	n	352.39	310.33	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4442	-44.18788	2026-10-13	1548	afternoon	D	high	h	367	313.01	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44175	-44.20872	2026-10-13	1548	afternoon	D	nominal	n	350.76	307.89	13.72	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44151	-44.2109	2026-10-13	1548	afternoon	D	nominal	n	344.85	306.91	14.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44123	-44.20494	2026-10-13	1548	afternoon	D	high	h	367	308.11	13.72	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44102	-44.2071	2026-10-13	1548	afternoon	D	high	h	367	307.9	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.44054	-44.20332	2026-10-13	1548	afternoon	D	nominal	n	342.68	307.99	10.6	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43922	-44.19015	2026-10-13	1548	afternoon	D	high	h	367	310.4	27.69	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43872	-44.18646	2026-10-13	1548	afternoon	D	high	h	367	309.91	23.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43864	-44.18852	2026-10-13	1548	afternoon	D	high	h	367	311.28	15.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43822	-44.18276	2026-10-13	1548	afternoon	D	high	h	367	310.98	23.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43816	-44.18482	2026-10-13	1548	afternoon	D	high	h	367	310.42	21.47	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43769	-44.18112	2026-10-13	1548	afternoon	D	high	h	367	308.44	21.47	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43669	-44.21312	2026-10-13	1548	afternoon	D	nominal	n	350.67	306.95	18.35	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.43642	-44.21533	2026-10-13	1548	afternoon	D	nominal	n	349.19	307.18	14.98	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42837	-44.15243	2026-10-13	1548	afternoon	D	nominal	n	337.29	308.68	15.55	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42791	-44.14882	2026-10-13	1548	afternoon	D	nominal	n	334.31	308.02	9.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42264	-44.15108	2026-10-13	1548	afternoon	D	high	h	367	310.07	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.42235	-44.14942	2026-10-13	1548	afternoon	D	high	h	367	309.32	9.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41846	-44.2038	2026-10-13	1548	afternoon	D	nominal	n	353.16	320.76	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41827	-44.20598	2026-10-13	1548	afternoon	D	low	l	207.38	314.46	101.36	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41797	-44.20012	2026-10-13	1548	afternoon	D	nominal	n	345.1	306.52	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4178	-44.20227	2026-10-13	1548	afternoon	D	high	h	367	314.61	97.54	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4171	-44.15175	2026-10-13	1548	afternoon	D	nominal	n	351.01	308.46	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41681	-44.15011	2026-10-13	1548	afternoon	D	high	h	367	310.1	15.26	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41661	-44.14811	2026-10-13	1548	afternoon	D	high	h	367	306.21	12.51	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41489	-44.21937	2026-10-13	1548	afternoon	D	nominal	n	345.85	299.6	11.73	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41439	-44.21563	2026-10-13	1548	afternoon	D	high	h	367	302.33	11.73	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41313	-44.16551	2026-10-13	1548	afternoon	D	nominal	n	340.82	309.1	6.78	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4129	-44.2045	2026-10-13	1548	afternoon	D	nominal	n	343.63	299.97	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41267	-44.16184	2026-10-13	1548	afternoon	D	nominal	n	343.87	310.43	6.78	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41241	-44.20083	2026-10-13	1548	afternoon	D	nominal	n	354.52	304.16	42.79	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41221	-44.15818	2026-10-13	1548	afternoon	D	nominal	n	341.8	309.02	14.86	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41192	-44.19716	2026-10-13	1548	afternoon	D	high	h	367	309.33	36.14	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41143	-44.1935	2026-10-13	1548	afternoon	D	nominal	n	354.5	301.96	36.14	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41081	-44.14718	2026-10-13	1548	afternoon	D	nominal	n	339.06	307.63	15.26	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41035	-44.14353	2026-10-13	1548	afternoon	D	high	h	367	307.96	16.38	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.41009	-44.14153	2026-10-13	1548	afternoon	D	high	h	367	308.91	37.43	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40988	-44.13989	2026-10-13	1548	afternoon	D	high	h	367	308.92	16.38	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4096	-44.13789	2026-10-13	1548	afternoon	D	high	h	367	308.31	22.19	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40942	-44.13625	2026-10-13	1548	afternoon	D	nominal	n	353.88	305.5	15.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4075	-44.16421	2026-10-13	1548	afternoon	D	high	h	367	313.11	30.77	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40701	-44.16055	2026-10-13	1548	afternoon	D	high	h	367	312.11	37.92	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40637	-44.19792	2026-10-13	1548	afternoon	D	nominal	n	346.21	301.4	11.5	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40359	-44.13503	2026-10-13	1548	afternoon	D	high	h	367	312.2	22.19	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4031	-44.1314	2026-10-13	1548	afternoon	D	high	h	367	311.53	15.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40262	-44.12777	2026-10-13	1548	afternoon	D	nominal	n	349.59	309.23	15.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40213	-44.12415	2026-10-13	1548	afternoon	D	nominal	n	351.18	307.68	10.35	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40197	-44.16496	2026-10-13	1548	afternoon	D	low	l	367	359.9	1386.28	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40148	-44.1613	2026-10-13	1548	afternoon	D	low	l	367	349.44	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40099	-44.15764	2026-10-13	1548	afternoon	D	low	l	367	351.9	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.4005	-44.15398	2026-10-13	1548	afternoon	D	high	h	367	315.87	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.40001	-44.15034	2026-10-13	1548	afternoon	D	high	h	367	310.23	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3974	-44.17301	2026-10-13	1548	afternoon	D	nominal	n	349.48	298.99	22.47	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39661	-44.12492	2026-10-13	1548	afternoon	D	nominal	n	352.48	313.34	11.94	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39613	-44.1213	2026-10-13	1548	afternoon	D	high	h	367	311.38	11.94	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39545	-44.15838	2026-10-13	1548	afternoon	D	low	l	367	371.7	0	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39497	-44.15474	2026-10-13	1548	afternoon	D	high	h	367	327.77	227.36	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.39467	-44.11044	2026-10-13	1548	afternoon	D	high	h	367	310.54	19.04	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.394	-44.14745	2026-10-13	1548	afternoon	D	high	h	367	307.28	26.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38868	-44.10758	2026-10-13	1548	afternoon	D	nominal	n	350.43	315.71	19.04	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3882	-44.10398	2026-10-13	1548	afternoon	D	high	h	367	316.36	29.44	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38772	-44.10038	2026-10-13	1548	afternoon	D	high	h	367	312.94	29.44	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38557	-44.1264	2026-10-13	1548	afternoon	D	high	h	367	313.82	30.53	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38534	-44.16713	2026-10-13	1548	afternoon	D	low	l	207.38	310.4	114.74	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38486	-44.16348	2026-10-13	1548	afternoon	D	low	l	367	326.41	233.8	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38438	-44.15983	2026-10-13	1548	afternoon	D	low	l	367	332.52	233.8	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38389	-44.15618	2026-10-13	1548	afternoon	D	high	h	367	306.42	120.9	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38172	-44.09749	2026-10-13	1548	afternoon	D	high	h	367	314.88	23.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38124	-44.09388	2026-10-13	1548	afternoon	D	high	h	367	314.33	23.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38076	-44.09026	2026-10-13	1548	afternoon	D	high	h	367	312.74	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.38028	-44.08664	2026-10-13	1548	afternoon	D	high	h	367	309.26	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37932	-44.16419	2026-10-13	1548	afternoon	D	high	h	367	304.8	96.24	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37836	-44.1569	2026-10-13	1548	afternoon	D	low	l	367	333.5	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37788	-44.15326	2026-10-13	1548	afternoon	D	low	l	367	339.87	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37739	-44.14962	2026-10-13	1548	afternoon	D	high	h	367	314.18	170.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37476	-44.08734	2026-10-13	1548	afternoon	D	nominal	n	353.87	314.15	26.71	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37428	-44.08372	2026-10-13	1548	afternoon	D	nominal	n	352.43	317.28	47.01	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3738	-44.0801	2026-10-13	1548	afternoon	D	high	h	367	314.59	47.01	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37282	-44.15759	2026-10-13	1548	afternoon	D	nominal	n	351.64	308.07	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37234	-44.15395	2026-10-13	1548	afternoon	D	nominal	n	352.59	311.65	143.95	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37186	-44.15032	2026-10-13	1548	afternoon	D	low	l	367	327.97	170.69	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.37034	-44.22468	2026-10-13	1548	afternoon	D	high	h	367	299.8	58.88	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36829	-44.0808	2026-10-13	1548	afternoon	D	nominal	n	355.39	313.67	32.63	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36781	-44.07719	2026-10-13	1548	afternoon	D	nominal	n	352.21	317.8	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36734	-44.0736	2026-10-13	1548	afternoon	D	high	h	367	313.59	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36727	-44.15827	2026-10-13	1548	afternoon	D	nominal	n	347.51	307.64	14.3	0.2460	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36525	-44.22903	2026-10-13	1548	afternoon	D	nominal	n	339.91	298.61	6.32	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36477	-44.22535	2026-10-13	1548	afternoon	D	nominal	n	332.26	298.46	6.28	0.2501	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36183	-44.07432	2026-10-13	1548	afternoon	D	nominal	n	343.24	312.47	31.46	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.36136	-44.07073	2026-10-13	1548	afternoon	D	high	h	367	314.05	38.67	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35792	-44.12989	2026-10-13	1548	afternoon	D	nominal	n	348.75	309.96	12.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35745	-44.12625	2026-10-13	1548	afternoon	D	nominal	n	351.31	309.96	12.74	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35697	-44.12262	2026-10-13	1548	afternoon	D	nominal	n	351.97	310.3	13.14	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35649	-44.11899	2026-10-13	1548	afternoon	D	nominal	n	349.99	310.48	13.14	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35602	-44.11536	2026-10-13	1548	afternoon	D	nominal	n	347.71	310.34	20.83	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35412	-44.10091	2026-10-13	1548	afternoon	D	high	h	367	307.82	19.58	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35286	-44.13419	2026-10-13	1548	afternoon	D	high	h	367	302.78	43.38	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35239	-44.13056	2026-10-13	1548	afternoon	D	low	l	207.38	317.85	594.62	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35192	-44.12693	2026-10-13	1548	afternoon	D	low	l	367	364.37	594.62	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35144	-44.12331	2026-10-13	1548	afternoon	D	low	l	367	369.66	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35097	-44.11968	2026-10-13	1548	afternoon	D	low	l	367	360.59	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.3505	-44.11606	2026-10-13	1548	afternoon	D	low	l	367	369.66	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.35002	-44.11244	2026-10-13	1548	afternoon	D	low	l	367	356.19	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34955	-44.10884	2026-10-13	1548	afternoon	D	high	h	367	333.34	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34908	-44.10523	2026-10-13	1548	afternoon	D	high	h	367	318.61	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34591	-44.12398	2026-10-13	1548	afternoon	D	nominal	n	349.47	300.6	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34544	-44.12036	2026-10-13	1548	afternoon	D	nominal	n	349.98	302.05	491.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34533	-44.07656	2026-10-13	1548	afternoon	D	nominal	n	353.91	312.7	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34497	-44.11674	2026-10-13	1548	afternoon	D	high	h	367	303.12	471.4	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34486	-44.07299	2026-10-13	1548	afternoon	D	high	h	367	312.12	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34439	-44.0694	2026-10-13	1548	afternoon	D	nominal	n	350.76	309.74	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34403	-44.10954	2026-10-13	1548	afternoon	D	low	l	367	326.42	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34356	-44.10594	2026-10-13	1548	afternoon	D	high	h	367	317.81	230.88	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34309	-44.10235	2026-10-13	1548	afternoon	D	high	h	367	306.91	53.39	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34263	-44.09876	2026-10-13	1548	afternoon	D	nominal	n	353.96	309.3	53.39	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34216	-44.09518	2026-10-13	1548	afternoon	D	high	h	367	311.72	23.02	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34169	-44.09159	2026-10-13	1548	afternoon	D	high	h	367	311.33	23.02	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34123	-44.08802	2026-10-13	1548	afternoon	D	high	h	367	308.67	24.52	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34076	-44.08445	2026-10-13	1548	afternoon	D	nominal	n	351.09	309.23	24.52	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.34029	-44.08088	2026-10-13	1548	afternoon	D	high	h	367	308.18	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33983	-44.0773	2026-10-13	1548	afternoon	D	nominal	n	348.15	310.13	45.82	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33936	-44.07372	2026-10-13	1548	afternoon	D	high	h	367	309.24	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA21_NRT	VIIRS	NOAA-21	-8.33889	-44.07014	2026-10-13	1548	afternoon	D	high	h	367	305.44	24.15	0.2400	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.47928	-44.20847	2026-10-13	1626	afternoon	D	nominal	n	348.09	311.83	18.01	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44497	-44.21146	2026-10-13	1626	afternoon	D	low	l	346.88	314.65	12.51	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4443	-44.20691	2026-10-13	1626	afternoon	D	low	l	350.44	315.76	20.63	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44166	-44.18884	2026-10-13	1626	afternoon	D	high	h	367	321.33	26.45	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.44055	-44.20743	2026-10-13	1626	afternoon	D	low	l	355.87	315.08	20.63	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.43725	-44.18487	2026-10-13	1626	afternoon	D	high	h	367	320.02	26.45	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4366	-44.18036	2026-10-13	1626	afternoon	D	nominal	n	352.14	317.32	17.67	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.4174	-44.20612	2026-10-13	1626	afternoon	D	low	l	367	332.65	115.23	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41675	-44.20161	2026-10-13	1626	afternoon	D	nominal	n	354.76	316.78	43.26	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41301	-44.20216	2026-10-13	1626	afternoon	D	high	h	367	309.19	133.14	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.41187	-44.22076	2026-10-13	1626	afternoon	D	low	l	346.82	306.62	84.66	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40765	-44.13878	2026-10-13	1626	afternoon	D	nominal	n	355.91	318.44	45.62	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40716	-44.16172	2026-10-13	1626	afternoon	D	low	l	355.28	319.04	65.85	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40701	-44.13432	2026-10-13	1626	afternoon	D	high	h	367	318.29	45.62	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40422	-44.19428	2026-10-13	1626	afternoon	D	high	h	367	310.55	40.93	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40343	-44.16228	2026-10-13	1626	afternoon	D	low	l	367	341.23	65.85	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40278	-44.1578	2026-10-13	1626	afternoon	D	low	l	352.15	332.07	82.71	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.40263	-44.13042	2026-10-13	1626	afternoon	D	nominal	n	350.69	315.99	25.76	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39969	-44.16284	2026-10-13	1626	afternoon	D	high	h	367	361	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39904	-44.15836	2026-10-13	1626	afternoon	D	low	l	367	364.65	324.88	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3984	-44.15388	2026-10-13	1626	afternoon	D	low	l	367	335.77	324.88	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39775	-44.1494	2026-10-13	1626	afternoon	D	low	l	355.1	310.83	23.74	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39762	-44.12207	2026-10-13	1626	afternoon	D	low	l	355.09	314.1	73.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39697	-44.11761	2026-10-13	1626	afternoon	D	low	l	367	330.51	73.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3966	-44.16788	2026-10-13	1626	afternoon	D	high	h	367	336.3	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39596	-44.16339	2026-10-13	1626	afternoon	D	low	l	367	379.67	393.12	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39531	-44.15892	2026-10-13	1626	afternoon	D	low	l	367	380.02	324.88	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39467	-44.15444	2026-10-13	1626	afternoon	D	low	l	367	330.85	324.88	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39325	-44.11817	2026-10-13	1626	afternoon	D	low	l	356.89	320.62	48.61	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39261	-44.11372	2026-10-13	1626	afternoon	D	low	l	353.98	320.91	64.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39222	-44.16394	2026-10-13	1626	afternoon	D	low	l	314.58	321.01	354.24	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39196	-44.10927	2026-10-13	1626	afternoon	D	low	l	367	328.72	64.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39158	-44.15947	2026-10-13	1626	afternoon	D	low	l	354.67	305.57	48.46	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.39132	-44.10483	2026-10-13	1626	afternoon	D	nominal	n	354.57	320.57	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3876	-44.10538	2026-10-13	1626	afternoon	D	low	l	351.65	318.71	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38743	-44.21049	2026-10-13	1626	afternoon	D	low	l	348.05	302.7	3.86	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38696	-44.10094	2026-10-13	1626	afternoon	D	low	l	350.77	324.25	42.09	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38411	-44.16057	2026-10-13	1626	afternoon	D	low	l	367	356.71	205.3	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38369	-44.21104	2026-10-13	1626	afternoon	D	low	l	343.28	302.05	4.69	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3826	-44.09705	2026-10-13	1626	afternoon	D	low	l	355.51	319.56	46.25	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38196	-44.09261	2026-10-13	1626	afternoon	D	low	l	354.98	324.02	46.25	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38058	-44.21608	2026-10-13	1626	afternoon	D	low	l	338.96	302.2	4.69	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.38037	-44.16112	2026-10-13	1626	afternoon	D	low	l	353.74	311.06	205.3	0.2009	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37973	-44.15664	2026-10-13	1626	afternoon	D	low	l	367	344.63	205.3	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37909	-44.15217	2026-10-13	1626	afternoon	D	high	h	367	345.75	232.99	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3776	-44.0887	2026-10-13	1626	afternoon	D	low	l	355.27	324.07	47.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37696	-44.08426	2026-10-13	1626	afternoon	D	low	l	353.49	322.87	47.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37536	-44.15272	2026-10-13	1626	afternoon	D	high	h	367	339.24	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37472	-44.14824	2026-10-13	1626	afternoon	D	high	h	367	340.99	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3726	-44.08036	2026-10-13	1626	afternoon	D	low	l	367	331.45	205.3	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37189	-44.23573	2026-10-13	1626	afternoon	D	low	l	334.93	302.14	4.02	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37162	-44.15326	2026-10-13	1626	afternoon	D	nominal	n	355.57	315.63	121.87	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.37062	-44.2267	2026-10-13	1626	afternoon	D	high	h	367	306.55	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36998	-44.22219	2026-10-13	1626	afternoon	D	nominal	n	348.66	303.33	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3675	-44.23175	2026-10-13	1626	afternoon	D	nominal	n	335.65	301.96	4.02	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36687	-44.22724	2026-10-13	1626	afternoon	D	nominal	n	351.42	305.5	12.48	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36375	-44.2323	2026-10-13	1626	afternoon	D	low	l	330.09	302.63	2.89	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36312	-44.22778	2026-10-13	1626	afternoon	D	nominal	n	356.02	305.9	9.74	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36269	-44.23084	2026-10-13	1626	afternoon	D	nominal	n	340.78	303.76	4.73	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36248	-44.22327	2026-10-13	1626	afternoon	D	low	l	340	303.58	9.74	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.36203	-44.22634	2026-10-13	1626	afternoon	D	nominal	n	355.93	305.94	14.36	0.2050	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35654	-44.10085	2026-10-13	1626	afternoon	D	low	l	356.51	314.7	22.52	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35535	-44.11918	2026-10-13	1626	afternoon	D	low	l	353.21	319.74	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35289	-44.12864	2026-10-13	1626	afternoon	D	low	l	367	354.44	171.42	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35226	-44.12418	2026-10-13	1626	afternoon	D	low	l	367	366.79	171.42	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35219	-44.09695	2026-10-13	1626	afternoon	D	low	l	356.52	314.29	29.54	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35162	-44.11972	2026-10-13	1626	afternoon	D	low	l	367	367.51	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35099	-44.11528	2026-10-13	1626	afternoon	D	low	l	350.69	339.4	95.02	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.35036	-44.11083	2026-10-13	1626	afternoon	D	high	h	367	326.05	24.18	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34973	-44.10638	2026-10-13	1626	afternoon	D	high	h	367	324.71	24.18	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34916	-44.12918	2026-10-13	1626	afternoon	D	high	h	367	342.18	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34853	-44.12472	2026-10-13	1626	afternoon	D	low	l	367	378.56	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3479	-44.12027	2026-10-13	1626	afternoon	D	low	l	367	378.24	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34748	-44.12793	2026-10-13	1626	afternoon	D	high	h	367	352.09	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34727	-44.11582	2026-10-13	1626	afternoon	D	high	h	367	361.71	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34683	-44.12348	2026-10-13	1626	afternoon	D	low	l	367	374.51	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34664	-44.11137	2026-10-13	1626	afternoon	D	high	h	367	357.87	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34617	-44.11904	2026-10-13	1626	afternoon	D	low	l	367	375.9	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34601	-44.10693	2026-10-13	1626	afternoon	D	high	h	367	357.41	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34551	-44.1146	2026-10-13	1626	afternoon	D	high	h	367	354.55	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34486	-44.11016	2026-10-13	1626	afternoon	D	low	l	367	366.78	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3448	-44.12526	2026-10-13	1626	afternoon	D	low	l	367	368.12	391.65	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3442	-44.10573	2026-10-13	1626	afternoon	D	high	h	367	360.24	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34417	-44.12081	2026-10-13	1626	afternoon	D	low	l	367	374.24	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34355	-44.1013	2026-10-13	1626	afternoon	D	high	h	367	322.42	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34354	-44.11636	2026-10-13	1626	afternoon	D	low	l	367	372.27	361.36	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3431	-44.12402	2026-10-13	1626	afternoon	D	low	l	367	384.36	475.92	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34291	-44.11192	2026-10-13	1626	afternoon	D	low	l	367	374.24	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34289	-44.09687	2026-10-13	1626	afternoon	D	low	l	355.13	320.5	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34245	-44.11958	2026-10-13	1626	afternoon	D	low	l	367	384.02	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34228	-44.10747	2026-10-13	1626	afternoon	D	low	l	367	372.93	239.69	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34179	-44.11514	2026-10-13	1626	afternoon	D	low	l	367	384.36	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3417	-44.13026	2026-10-13	1626	afternoon	D	nominal	n	355.42	303.62	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34166	-44.10304	2026-10-13	1626	afternoon	D	low	l	350.48	339.03	86.63	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34161	-44.07593	2026-10-13	1626	afternoon	D	low	l	367	341.16	212.11	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34158	-44.08804	2026-10-13	1626	afternoon	D	nominal	n	354.91	316.97	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34114	-44.1107	2026-10-13	1626	afternoon	D	low	l	367	384.78	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34107	-44.1258	2026-10-13	1626	afternoon	D	low	l	308.38	317.73	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34103	-44.0986	2026-10-13	1626	afternoon	D	low	l	352.31	335.38	86.63	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34093	-44.08362	2026-10-13	1626	afternoon	D	low	l	367	331.78	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34048	-44.10627	2026-10-13	1626	afternoon	D	low	l	367	380.03	334.29	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34045	-44.12136	2026-10-13	1626	afternoon	D	low	l	367	374.89	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3404	-44.09417	2026-10-13	1626	afternoon	D	high	h	367	324.56	58.97	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34028	-44.07921	2026-10-13	1626	afternoon	D	high	h	367	346.84	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.34003	-44.12901	2026-10-13	1626	afternoon	D	low	l	356.49	303.28	45.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33983	-44.10184	2026-10-13	1626	afternoon	D	high	h	367	353.38	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33982	-44.11691	2026-10-13	1626	afternoon	D	low	l	367	366.39	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33978	-44.08975	2026-10-13	1626	afternoon	D	low	l	367	329.64	58.97	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33963	-44.07479	2026-10-13	1626	afternoon	D	low	l	367	331.9	69.85	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33917	-44.09742	2026-10-13	1626	afternoon	D	high	h	367	354.6	72.9	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33915	-44.08532	2026-10-13	1626	afternoon	D	low	l	367	359.13	176.98	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33897	-44.07038	2026-10-13	1626	afternoon	D	nominal	n	350.67	315.56	69.85	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33852	-44.093	2026-10-13	1626	afternoon	D	high	h	367	352.33	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33852	-44.0809	2026-10-13	1626	afternoon	D	high	h	367	337.77	176.98	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33807	-44.11568	2026-10-13	1626	afternoon	D	low	l	367	382.51	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33787	-44.08859	2026-10-13	1626	afternoon	D	low	l	367	352.72	160.58	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33741	-44.11125	2026-10-13	1626	afternoon	D	low	l	367	385.06	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33735	-44.12635	2026-10-13	1626	afternoon	D	high	h	367	303.33	90.01	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33731	-44.09916	2026-10-13	1626	afternoon	D	low	l	367	369.91	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33722	-44.08417	2026-10-13	1626	afternoon	D	high	h	367	336.45	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33676	-44.10682	2026-10-13	1626	afternoon	D	low	l	367	385.43	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33672	-44.12191	2026-10-13	1626	afternoon	D	high	h	367	305.6	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33668	-44.09473	2026-10-13	1626	afternoon	D	high	h	367	340.5	210.55	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33656	-44.07976	2026-10-13	1626	afternoon	D	nominal	n	347.09	309.17	92.34	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33611	-44.1024	2026-10-13	1626	afternoon	D	low	l	367	374.95	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33606	-44.09031	2026-10-13	1626	afternoon	D	high	h	367	338.47	210.55	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33565	-44.12511	2026-10-13	1626	afternoon	D	high	h	367	302.47	45.71	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33547	-44.11302	2026-10-13	1626	afternoon	D	low	l	367	360.58	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33545	-44.09797	2026-10-13	1626	afternoon	D	low	l	367	326.85	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.335	-44.12068	2026-10-13	1626	afternoon	D	high	h	367	302.98	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33484	-44.10858	2026-10-13	1626	afternoon	D	low	l	367	373.09	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.3348	-44.09355	2026-10-13	1626	afternoon	D	nominal	n	356.36	305.45	40	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33435	-44.11625	2026-10-13	1626	afternoon	D	nominal	n	356.95	304.34	0	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33422	-44.10415	2026-10-13	1626	afternoon	D	low	l	367	357.63	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33359	-44.09972	2026-10-13	1626	afternoon	D	low	l	356.21	306.51	495.95	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_SNPP_NRT	VIIRS	Suomi NPP	-8.33239	-44.10295	2026-10-13	1626	afternoon	D	low	l	355.69	303.73	264.47	0.1960	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.48193	-44.20683	2026-10-13	1643	afternoon	D	low	l	339.68	312.61	24.76	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.47838	-44.20745	2026-10-13	1643	afternoon	D	low	l	340.55	314.24	24.76	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44523	-44.20506	2026-10-13	1643	afternoon	D	nominal	n	350.69	317.84	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44262	-44.18889	2026-10-13	1643	afternoon	D	nominal	n	351.69	321.36	26.54	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.44169	-44.20565	2026-10-13	1643	afternoon	D	nominal	n	352.29	315.6	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43879	-44.21025	2026-10-13	1643	afternoon	D	nominal	n	354.62	318.27	35.11	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43842	-44.18542	2026-10-13	1643	afternoon	D	nominal	n	355.37	321.64	26.54	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.43776	-44.18137	2026-10-13	1643	afternoon	D	low	l	352.1	324.02	45.39	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41974	-44.20507	2026-10-13	1643	afternoon	D	nominal	n	355.09	319.33	23.11	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41684	-44.20967	2026-10-13	1643	afternoon	D	high	h	367	336.43	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41619	-44.20563	2026-10-13	1643	afternoon	D	high	h	367	335.59	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41553	-44.20158	2026-10-13	1643	afternoon	D	low	l	367	326.69	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41487	-44.19753	2026-10-13	1643	afternoon	D	low	l	356.05	316.45	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41405	-44.14767	2026-10-13	1643	afternoon	D	nominal	n	356.55	317.74	27.79	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41329	-44.21024	2026-10-13	1643	afternoon	D	high	h	367	355.7	146.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41272	-44.13952	2026-10-13	1643	afternoon	D	high	h	367	316.87	36.04	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41166	-44.21849	2026-10-13	1643	afternoon	D	nominal	n	348.99	303.47	20.64	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41131	-44.19809	2026-10-13	1643	afternoon	D	high	h	367	335.36	81.72	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.41102	-44.21445	2026-10-13	1643	afternoon	D	nominal	n	354.31	307.62	20.64	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.4104	-44.21485	2026-10-13	1643	afternoon	D	high	h	367	306.22	29.35	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40849	-44.136	2026-10-13	1643	afternoon	D	nominal	n	354.37	321.13	24.21	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40783	-44.13192	2026-10-13	1643	afternoon	D	nominal	n	356.24	316.66	24.21	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.4071	-44.19459	2026-10-13	1643	afternoon	D	low	l	355.39	311.29	167.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40535	-44.16155	2026-10-13	1643	afternoon	D	low	l	367	329.69	38.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40469	-44.15748	2026-10-13	1643	afternoon	D	nominal	n	354.63	325.71	38.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40332	-44.1657	2026-10-13	1643	afternoon	D	high	h	367	334.02	104	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40268	-44.16163	2026-10-13	1643	afternoon	D	high	h	367	340.82	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40245	-44.16618	2026-10-13	1643	afternoon	D	low	l	367	327.86	88.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40204	-44.15756	2026-10-13	1643	afternoon	D	high	h	367	342.27	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40179	-44.16211	2026-10-13	1643	afternoon	D	high	h	367	341.84	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40112	-44.15805	2026-10-13	1643	afternoon	D	high	h	367	346.97	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.40046	-44.15397	2026-10-13	1643	afternoon	D	low	l	352.76	325.71	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39976	-44.16626	2026-10-13	1643	afternoon	D	high	h	367	351.78	104	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39936	-44.12487	2026-10-13	1643	afternoon	D	low	l	351.28	321.51	36.56	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39912	-44.16219	2026-10-13	1643	afternoon	D	low	l	367	370.88	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39889	-44.16674	2026-10-13	1643	afternoon	D	high	h	367	339.1	88.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39869	-44.12078	2026-10-13	1643	afternoon	D	nominal	n	354.46	318.41	18.66	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39847	-44.15812	2026-10-13	1643	afternoon	D	low	l	367	378	172.67	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39823	-44.16267	2026-10-13	1643	afternoon	D	low	l	367	367.78	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39802	-44.11669	2026-10-13	1643	afternoon	D	nominal	n	353.53	319.25	18.66	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39783	-44.15405	2026-10-13	1643	afternoon	D	high	h	367	349.27	163.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39756	-44.1586	2026-10-13	1643	afternoon	D	low	l	367	371.14	217.26	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39735	-44.1126	2026-10-13	1643	afternoon	D	nominal	n	353.29	316.33	16.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39719	-44.14996	2026-10-13	1643	afternoon	D	nominal	n	355.89	318.07	163.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3969	-44.15454	2026-10-13	1643	afternoon	D	high	h	367	357.19	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39623	-44.15046	2026-10-13	1643	afternoon	D	high	h	367	317.06	216.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3962	-44.16683	2026-10-13	1643	afternoon	D	high	h	367	355.64	414	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39558	-44.1167	2026-10-13	1643	afternoon	D	nominal	n	353.14	321.81	25.85	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39556	-44.16276	2026-10-13	1643	afternoon	D	low	l	367	379.68	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39491	-44.15868	2026-10-13	1643	afternoon	D	low	l	367	380.02	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39445	-44.11725	2026-10-13	1643	afternoon	D	nominal	n	350.48	319.18	21.29	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39429	-44.1085	2026-10-13	1643	afternoon	D	low	l	352.03	322.22	107.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39427	-44.15461	2026-10-13	1643	afternoon	D	low	l	367	330.29	332.68	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39312	-44.10907	2026-10-13	1643	afternoon	D	nominal	n	354.02	322.46	88.86	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39244	-44.10497	2026-10-13	1643	afternoon	D	nominal	n	351.41	318.39	81.01	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39201	-44.11726	2026-10-13	1643	afternoon	D	nominal	n	351.7	320.93	25.85	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39135	-44.15925	2026-10-13	1643	afternoon	D	nominal	n	354.54	305.46	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.39007	-44.10496	2026-10-13	1643	afternoon	D	low	l	352.16	323.7	73.91	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38844	-44.16389	2026-10-13	1643	afternoon	D	low	l	323.28	323.79	252.43	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38843	-44.20976	2026-10-13	1643	afternoon	D	nominal	n	345.99	304.08	6.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38778	-44.2057	2026-10-13	1643	afternoon	D	nominal	n	344.04	303.99	10.09	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38714	-44.20163	2026-10-13	1643	afternoon	D	nominal	n	350.88	307.65	10.09	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3852	-44.09732	2026-10-13	1643	afternoon	D	low	l	351.2	322.72	102.25	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38488	-44.21033	2026-10-13	1643	afternoon	D	nominal	n	340.62	303.73	6.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38423	-44.16038	2026-10-13	1643	afternoon	D	low	l	367	362.68	252.43	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38358	-44.15631	2026-10-13	1643	afternoon	D	high	h	367	336.66	195.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38262	-44.21902	2026-10-13	1643	afternoon	D	nominal	n	333.44	301.93	3.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38197	-44.21496	2026-10-13	1643	afternoon	D	nominal	n	346.84	303.63	7.5	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38132	-44.16502	2026-10-13	1643	afternoon	D	nominal	n	355.53	305.08	16.51	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38067	-44.16095	2026-10-13	1643	afternoon	D	high	h	367	311.65	16.51	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.38002	-44.15687	2026-10-13	1643	afternoon	D	high	h	367	335.44	218.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37937	-44.15279	2026-10-13	1643	afternoon	D	low	l	367	357.07	218.94	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37907	-44.21959	2026-10-13	1643	afternoon	D	nominal	n	343.29	303.09	3.59	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37516	-44.14928	2026-10-13	1643	afternoon	D	high	h	367	348.25	261.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37326	-44.22885	2026-10-13	1643	afternoon	D	nominal	n	336.22	302.98	6.63	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37262	-44.2248	2026-10-13	1643	afternoon	D	nominal	n	355.2	306.53	9.71	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.37197	-44.22074	2026-10-13	1643	afternoon	D	nominal	n	342.88	303.48	9.71	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36972	-44.22943	2026-10-13	1643	afternoon	D	nominal	n	348.83	305.87	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36907	-44.22538	2026-10-13	1643	afternoon	D	nominal	n	348.07	305.52	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36842	-44.22131	2026-10-13	1643	afternoon	D	nominal	n	344.52	304.12	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36617	-44.23	2026-10-13	1643	afternoon	D	nominal	n	347.22	304.45	14.34	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36552	-44.22594	2026-10-13	1643	afternoon	D	nominal	n	352.46	306.33	6.61	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36262	-44.23057	2026-10-13	1643	afternoon	D	nominal	n	341.67	305.08	4.31	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.36197	-44.22652	2026-10-13	1643	afternoon	D	nominal	n	344.81	305.73	7.38	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35342	-44.12763	2026-10-13	1643	afternoon	D	high	h	367	345.84	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35277	-44.12354	2026-10-13	1643	afternoon	D	high	h	367	347.09	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35211	-44.11945	2026-10-13	1643	afternoon	D	high	h	367	349.17	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35145	-44.11535	2026-10-13	1643	afternoon	D	low	l	354.09	334.2	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3508	-44.11126	2026-10-13	1643	afternoon	D	high	h	367	327.04	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.35014	-44.10716	2026-10-13	1643	afternoon	D	high	h	367	323.51	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34986	-44.1282	2026-10-13	1643	afternoon	D	high	h	367	334.98	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3492	-44.12412	2026-10-13	1643	afternoon	D	low	l	367	351.96	114.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34854	-44.12002	2026-10-13	1643	afternoon	D	high	h	367	352.18	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34789	-44.11593	2026-10-13	1643	afternoon	D	low	l	367	339.82	89.33	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34723	-44.11183	2026-10-13	1643	afternoon	D	low	l	367	339.84	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34657	-44.10773	2026-10-13	1643	afternoon	D	high	h	367	342.84	35.9	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34629	-44.12878	2026-10-13	1643	afternoon	D	nominal	n	351.36	309.2	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34563	-44.12469	2026-10-13	1643	afternoon	D	high	h	367	341.96	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34553	-44.07837	2026-10-13	1643	afternoon	D	high	h	367	321.24	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34497	-44.1206	2026-10-13	1643	afternoon	D	high	h	367	341.2	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34487	-44.07425	2026-10-13	1643	afternoon	D	low	l	356.03	322.7	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34432	-44.1165	2026-10-13	1643	afternoon	D	low	l	367	335.62	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34366	-44.1124	2026-10-13	1643	afternoon	D	low	l	367	337.37	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.343	-44.1083	2026-10-13	1643	afternoon	D	high	h	367	345.98	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34272	-44.12936	2026-10-13	1643	afternoon	D	nominal	n	352.13	305.51	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34261	-44.08306	2026-10-13	1643	afternoon	D	high	h	367	324.09	28.45	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34234	-44.10419	2026-10-13	1643	afternoon	D	low	l	355.09	331.19	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34206	-44.12527	2026-10-13	1643	afternoon	D	low	l	367	330.46	57.2	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34195	-44.07894	2026-10-13	1643	afternoon	D	low	l	354.55	331.97	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34168	-44.10009	2026-10-13	1643	afternoon	D	low	l	355.79	328.82	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34141	-44.12117	2026-10-13	1643	afternoon	D	low	l	367	364.48	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34129	-44.07482	2026-10-13	1643	afternoon	D	low	l	367	339.49	21.62	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34102	-44.09598	2026-10-13	1643	afternoon	D	low	l	356.26	325.49	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34075	-44.11707	2026-10-13	1643	afternoon	D	high	h	367	361.26	148.82	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34063	-44.0707	2026-10-13	1643	afternoon	D	high	h	367	361.79	175.53	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34036	-44.09186	2026-10-13	1643	afternoon	D	high	h	367	318.97	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.34009	-44.11297	2026-10-13	1643	afternoon	D	high	h	367	351.35	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33943	-44.10887	2026-10-13	1643	afternoon	D	high	h	367	350.37	87.93	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33916	-44.12994	2026-10-13	1643	afternoon	D	nominal	n	354.02	304.36	77.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33904	-44.08362	2026-10-13	1643	afternoon	D	low	l	367	336.19	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33877	-44.10476	2026-10-13	1643	afternoon	D	low	l	367	340.34	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33837	-44.0795	2026-10-13	1643	afternoon	D	high	h	367	358.64	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33811	-44.10065	2026-10-13	1643	afternoon	D	high	h	367	342.19	45.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33784	-44.12174	2026-10-13	1643	afternoon	D	low	l	367	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33771	-44.07539	2026-10-13	1643	afternoon	D	low	l	367	376.05	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33745	-44.09654	2026-10-13	1643	afternoon	D	high	h	367	346.46	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33718	-44.11764	2026-10-13	1643	afternoon	D	low	l	367	369.98	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33705	-44.07126	2026-10-13	1643	afternoon	D	high	h	367	359.36	421.8	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33678	-44.09243	2026-10-13	1643	afternoon	D	high	h	367	345.42	55.28	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33652	-44.11354	2026-10-13	1643	afternoon	D	high	h	367	356.55	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33612	-44.08831	2026-10-13	1643	afternoon	D	high	h	367	361.88	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33586	-44.10943	2026-10-13	1643	afternoon	D	low	l	367	365.55	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33546	-44.08419	2026-10-13	1643	afternoon	D	low	l	367	373.68	242.95	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33519	-44.10532	2026-10-13	1643	afternoon	D	low	l	367	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33493	-44.1264	2026-10-13	1643	afternoon	D	nominal	n	354.43	303.6	77.32	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33479	-44.08007	2026-10-13	1643	afternoon	D	low	l	367	373.93	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33453	-44.10121	2026-10-13	1643	afternoon	D	low	l	367	374.13	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33427	-44.1223	2026-10-13	1643	afternoon	D	high	h	367	340.98	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33413	-44.07595	2026-10-13	1643	afternoon	D	low	l	367	371.52	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33387	-44.0971	2026-10-13	1643	afternoon	D	low	l	367	375.49	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.3336	-44.1182	2026-10-13	1643	afternoon	D	high	h	367	335.06	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33321	-44.09299	2026-10-13	1643	afternoon	D	low	l	367	375.76	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33294	-44.11409	2026-10-13	1643	afternoon	D	high	h	367	353.64	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33254	-44.08887	2026-10-13	1643	afternoon	D	low	l	367	375.35	329.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33228	-44.10999	2026-10-13	1643	afternoon	D	low	l	367	369.7	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33162	-44.10588	2026-10-13	1643	afternoon	D	high	h	367	354.31	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33055	-44.07651	2026-10-13	1643	afternoon	D	nominal	n	355.96	303.28	74.84	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33029	-44.09766	2026-10-13	1643	afternoon	D	low	l	367	369.95	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.33003	-44.11874	2026-10-13	1643	afternoon	D	high	h	367	297.68	33.1	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32963	-44.09355	2026-10-13	1643	afternoon	D	low	l	317.52	322.38	0	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32937	-44.11464	2026-10-13	1643	afternoon	D	low	l	356.02	304.29	83.84	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32897	-44.08943	2026-10-13	1643	afternoon	D	high	h	367	300.69	329.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32804	-44.10641	2026-10-13	1643	afternoon	D	high	h	367	304.34	41.05	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32671	-44.09818	2026-10-13	1643	afternoon	D	low	l	355.08	300.78	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32605	-44.09407	2026-10-13	1643	afternoon	D	high	h	367	293.4	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+VIIRS_NOAA20_NRT	VIIRS	NOAA-20	-8.32246	-44.09457	2026-10-13	1643	afternoon	D	low	l	356.01	284.49	10.58	0.1755	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.41663	-44.20275	2026-10-13	1826	afternoon	D	nominal	79	340.69	306.4	59.5	2.0664	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40875	-44.14553	2026-10-13	1826	afternoon	D	nominal	63	330.75	300.28	24.11	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40561	-44.20433	2026-10-13	1826	afternoon	D	nominal	67	337.67	304.2	52.6	2.0664	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.40169	-44.17569	2026-10-13	1826	afternoon	D	high	84	341.65	306.91	58.83	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39974	-44.1614	2026-10-13	1826	afternoon	D	high	100	410.63	321.63	621.06	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39779	-44.14716	2026-10-13	1826	afternoon	D	high	92	356.7	298.3	118.59	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39198	-44.10468	2026-10-13	1826	afternoon	D	high	99	358.1	310.65	129.12	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3907	-44.17728	2026-10-13	1826	afternoon	D	high	100	379.23	308.5	278.64	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.39005	-44.09059	2026-10-13	1826	afternoon	D	high	97	355.28	308.08	116.9	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.38876	-44.16299	2026-10-13	1826	afternoon	D	high	100	463.18	326.93	1798.05	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.38682	-44.14875	2026-10-13	1826	afternoon	D	high	94	375.73	307.06	238.88	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37913	-44.09216	2026-10-13	1826	afternoon	D	high	88	341.34	296.01	58.28	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37778	-44.16455	2026-10-13	1826	afternoon	D	high	94	367.1	302.64	184.56	2.0538	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37721	-44.07806	2026-10-13	1826	afternoon	D	nominal	56	329.37	299.82	25.94	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.37585	-44.15031	2026-10-13	1826	afternoon	D	high	94	397.35	311.01	446.81	2.0250	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3663	-44.07961	2026-10-13	1826	afternoon	D	nominal	74	338.33	307.63	49.94	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.34084	-44.07447	2026-10-13	1826	afternoon	D	nominal	53	335.34	309.19	44.52	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.33582	-44.11807	2026-10-13	1826	afternoon	D	high	83	339.39	302.74	55.68	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.33386	-44.10402	2026-10-13	1826	afternoon	D	high	95	352.24	301.92	104.93	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.3319	-44.09002	2026-10-13	1826	afternoon	D	high	100	378.72	312.62	268.26	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.32995	-44.07605	2026-10-13	1826	afternoon	D	high	92	346.95	306.53	85.14	2.0000	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.32491	-44.11979	2026-10-13	1826	afternoon	D	nominal	54	329.63	304.59	31.47	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+MODIS_NRT	MODIS	Aqua	-8.32298	-44.10584	2026-10-13	1826	afternoon	D	high	88	341.23	304.1	66.01	2.0125	0	presumed vegetation fire	no	0.909	no labelled detections nearby; default to dominant class
+</script>
 <script>
 (() => {
 const $ = id => document.getElementById(id);
@@ -724,9 +725,9 @@ const T = [
   { id: 'A4', g: 'A', title: 'VIIRS and Landsat confidence letters',
     steps: ['Same table as A3. Check VIIRS rows with l, n, h and Landsat rows with L, M, H.'],
     expect: 'l / L → low, n / M → nominal, h / H → high. No VIIRS or Landsat row has an empty <code>confidence</code>.' },
-  { id: 'A5', g: 'A', title: 'Brightness capped at 367 K',
-    steps: ['Same table. Sort <code>bright_main_k</code> descending.', 'Load the Saturated MODIS preset in the Pixel calculator.'],
-    expect: 'The highest value is <b>367.00</b>. Every 367.00 row has <code>bright_saturated</code> = yes; every lower MODIS/VIIRS row has no.' },
+  { id: 'A5', g: 'A', title: 'Brightness kept at full precision',
+    steps: ['Same table. Sort <code>bright_main_k</code> descending.', 'Load the Hot MODIS preset in the Pixel calculator.'],
+    expect: 'The top rows are MODIS values above 367 K (up to about 500 K), unchanged from the raw file. VIIRS values stop at 367 K (its sensor limit). There is no <code>bright_saturated</code> column; the preset shows 412.6.' },
   { id: 'A6', g: 'A', title: 'Landsat rows have no brightness, FRP or area',
     steps: ['Same table. Sort by <code>source</code> and look at LANDSAT_NRT rows.'],
     expect: '<code>instrument</code> = OLI; <code>bright_main_k</code>, <code>bright_secondary_k</code>, <code>frp_mw</code> and <code>pixel_area_km2</code> are empty.' },
@@ -761,7 +762,7 @@ const T = [
   // C
   { id: 'C1', g: 'C', title: 'Known answer for test area A',
     steps: ['Compare MODIS vs VIIRS for test area A: NOAA-20, grid 0.05°, no max pass gap.'],
-    expect: 'Raw pixels <b>49 / 156</b>; raw FRP <b>6,286 / 12,258</b> MW; fire cells <b>15 / 10</b>; agreement both <b>8</b>, MODIS only <b>7</b>, VIIRS only <b>2</b>; minimum fire size 10 MW (fixed fallback); 7 Aqua pixels capped. Top day cell −8.3750, −44.1750: MODIS 5 px / 3329.12 MW, VIIRS 21 px / 3486.85 MW, pass gap 103 min.' },
+    expect: 'Raw pixels <b>49 / 156</b>; raw FRP <b>6,286 / 12,258</b> MW; fire cells <b>15 / 10</b>; agreement both <b>8</b>, MODIS only <b>7</b>, VIIRS only <b>2</b>; minimum fire size 10 MW (fixed fallback); Top day cell −8.3750, −44.1750: MODIS 5 px / 3329.12 MW, VIIRS 21 px / 3486.85 MW, pass gap 103 min.' },
   { id: 'C2', g: 'C', title: 'Cell sums match an independent recomputation',
     steps: ['Harmonise all sensors for test area A and click Copy all rows.', 'Paste into the Cell aggregator (NOAA-20, 0.05°, 10 MW) and click Recompute.', 'Compare with the C1 table.'],
     expect: 'Every cell has the same pixel counts, FRP sums and <code>detected_by</code>; totals and ratios match the app summary.' },
@@ -780,9 +781,9 @@ const T = [
   { id: 'C7', g: 'C', title: 'Max pass gap filter',
     steps: ['Compare, world, 2026-10-13, 1 day, max pass gap 120.', 'Comparable filter, sort <code>overpass_gap_min</code> descending.'],
     expect: 'No comparable row is above 120. Removed list shows cells with passes too far apart (about 1,326).' },
-  { id: 'C8', g: 'C', title: 'No brightness above the common ceiling',
+  { id: 'C8', g: 'C', title: 'Cell brightness is uncapped',
     steps: ['Any Compare table: sort <code>modis_bt_max_k</code> and <code>viirs_bt_max_k</code> descending.'],
-    expect: 'Nothing above 367.00; capped cells show "(sat)".' },
+    expect: 'MODIS cells go above 367 K; no value carries a "(sat)" mark.' },
   { id: 'C9', g: 'C', title: 'Summary adds up',
     steps: ['Any Compare result: read the agreement line under the summary.'],
     expect: 'Comparable MODIS cells = both + MODIS only. Comparable VIIRS cells = both + VIIRS only. (World, 13 Oct: 1,401 + 724 = 2,125 and 1,401 + 2,577 = 3,978.)' },
@@ -924,11 +925,7 @@ function renderPixel() {
   const p = Object.fromEntries(PF.map(k => [k, $('p_' + k).value]));
   const landsat = p.inst === 'LANDSAT';
   const instName = landsat ? 'OLI' : p.inst;
-  let bt = '', satd = '';
-  if (!landsat && p.bt.trim() !== '') {
-    const v = parseFloat(p.bt);
-    if (!isNaN(v)) { if (v >= 367) { bt = '367.00'; satd = 'yes'; } else { bt = p.bt.trim(); satd = 'no'; } }
-  }
+  const bt = landsat || isNaN(parseFloat(p.bt)) ? '' : p.bt.trim();
   const area = landsat ? '' : (() => { const s = parseFloat(p.scan), t = parseFloat(p.track); return isNaN(s) || isNaN(t) ? '' : (s * t).toFixed(4); })();
   const sl = slot(p.time, p.lon);
   const rows = [
@@ -938,8 +935,7 @@ function renderPixel() {
     ['overpass_slot', sl.v, `UTC time + longitude ÷ 15 = local solar ${hhmm(sl.local)}. 06–12 morning, 12–18 afternoon, 18–24 evening, 00–06 night.`],
     ['confidence', confidence(p.inst, p.conf), p.inst === 'MODIS' ? 'MODIS: below 30 low, 30–79 nominal, 80 and up high.' : 'Letters: l/L low, n/M nominal, h/H high.'],
     ['confidence_raw', String(p.conf).trim(), 'Original value, unchanged.'],
-    ['bright_main_k', bt, landsat ? 'Landsat has no brightness.' : 'MODIS brightness or VIIRS bright_ti4, capped at 367.00 K (the VIIRS I4 saturation level).'],
-    ['bright_saturated', satd, 'yes when the original value was 367 K or more.'],
+    ['bright_main_k', bt, landsat ? 'Landsat has no brightness.' : 'MODIS brightness or VIIRS bright_ti4, unchanged (full precision, no cap).'],
     ['bright_secondary_k', landsat ? '' : p.bt2.trim(), 'MODIS bright_t31 or VIIRS bright_ti5, unchanged.'],
     ['frp_mw', landsat ? '' : p.frp.trim(), 'Unchanged per pixel (summed per cell only in the comparison).'],
     ['pixel_area_km2', area, landsat ? 'Empty: Landsat scan/track are not pixel sizes in km.' : `scan × track = ${p.scan} × ${p.track}, 4 decimals.`],

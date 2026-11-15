@@ -168,7 +168,7 @@ function renderCompare(d) {
       <li><b>VIIRS 4–6× more detections:</b> fires counted as grid cells, not pixels.</li>
       <li><b>Detection limit:</b> common minimum fire size of <b>${s.min_frp_mw} MW</b> applied to both sensors: ${esc(s.min_frp_basis)}.</li>
       <li><b>Confidence scales:</b> both mapped to low / nominal / high (MODIS &lt;30 / 30–79 / ≥80).</li>
-      <li><b>Saturation (500 K vs 367 K):</b> brightness capped at ${s.bt_ceiling_k} K for both; "(sat)" marks capped cells.</li>
+      <li><b>Saturation (500 K vs 367 K):</b> brightness kept at full precision, not capped; VIIRS values stop at its 367 K sensor limit, MODIS values can reach about 500 K.</li>
       <li><b>Overpass times:</b> Terra (morning/evening) excluded; ${esc(s.modis_satellite)} compared with one VIIRS satellite, day with day and night with night.
         Median time between the two passes: <b>${s.median_overpass_gap_min ?? '?'} min</b>${s.max_gap_min != null ? `; cells over ${s.max_gap_min} min excluded` : ''}.</li>
       <li><b>MODIS swath gaps:</b> each satellite's ground tracks reconstructed from its own detections; fires seen by one sensor where the other did not look are excluded.</li>

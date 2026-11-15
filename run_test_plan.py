@@ -123,22 +123,23 @@ def _():
     return ", ".join(f"{i} {k}: {v:,}" for (i, k), v in sorted(letters.items()))
 
 
-@test("A5", "Brightness capped at 367 K")
+@test("A5", "Brightness kept at full precision (no cap, no saturation flag)")
 def _():
-    rows = [r for r in rows_as_dicts(world_harmonised()) if r["bright_main_k"]]
-    top = max(float(r["bright_main_k"]) for r in rows)
-    assert top <= 367.0, f"max brightness {top}"
-    for r in rows:
-        sat = float(r["bright_main_k"]) >= 367.0
-        assert (r["bright_saturated"] == "yes") == sat, f"flag mismatch: {r['bright_main_k']} {r['bright_saturated']}"
-    # raw MODIS values above the ceiling become 367.00 / yes
+    d = world_harmonised()
+    assert "bright_saturated" not in d["columns"], "bright_saturated column still present"
+    rows = [r for r in rows_as_dicts(d) if r["bright_main_k"]]
+    top = {i: max(float(r["bright_main_k"]) for r in rows if r["instrument"] == i) for i in ("MODIS", "VIIRS")}
+    assert top["MODIS"] > 367.0, f"MODIS max {top['MODIS']} - still capped?"
+    # every raw brightness value comes through unchanged, including those above 367 K
     raw = fetch_fires("MODIS_NRT", DAY, 1, AREA_A)
     rc = {c: i for i, c in enumerate(raw["columns"])}
-    hot = {(r[rc["latitude"]], r[rc["longitude"]]) for r in raw["rows"] if float(r[rc["brightness"]]) >= 367}
-    h = {(r["latitude"], r["longitude"]): r for r in rows_as_dicts(ok("harmonise", date=DAY, days=1, area=AREA_A)) if r["instrument"] == "MODIS"}
-    for k in hot:
-        assert h[k]["bright_main_k"] == "367.00" and h[k]["bright_saturated"] == "yes"
-    return f"max {top:.2f} K; {sum(r['bright_saturated'] == 'yes' for r in rows):,} capped; {len(hot)} raw MODIS ≥367 K verified"
+    h = {(r["latitude"], r["longitude"], r["acq_time"]): r for r in rows_as_dicts(ok("harmonise", date=DAY, days=1, area=AREA_A)) if r["instrument"] == "MODIS"}
+    hot = 0
+    for r in raw["rows"]:
+        k = (r[rc["latitude"]], r[rc["longitude"]], r[rc["acq_time"]].zfill(4))
+        assert h[k]["bright_main_k"] == r[rc["brightness"]], f"{k}: {h[k]['bright_main_k']} != {r[rc['brightness']]}"
+        hot += float(r[rc["brightness"]]) >= 367
+    return f"max MODIS {top['MODIS']:.2f} K, VIIRS {top['VIIRS']:.2f} K; {len(raw['rows'])} raw values identical ({hot} above 367 K)"
 
 
 @test("A6", "Landsat rows have no brightness, FRP or area")
@@ -253,7 +254,7 @@ def _():
         assert s[k] == v, f"{k}: {s[k]} != {v}"
     assert d["agreement"] == {"both": 8, "MODIS only": 7, "VIIRS only": 2}, d["agreement"]
     assert d["settings"]["min_frp_mw"] == 10.0
-    assert d["removed"]["Aqua MODIS pixels capped at 367 K"] == 7
+    assert not any("capped" in k for k in d["removed"]), d["removed"]
     top = dict(zip(d["columns"], next(r for r in d["rows"] if r[0] == "-8.3750" and r[1] == "-44.1750" and r[3] == "D")))
     assert (top["modis_pixels"], top["modis_frp_mw"], top["viirs_pixels"], top["viirs_frp_mw"], top["overpass_gap_min"]) == \
         ("5", "3329.12", "21", "3486.85", "103"), top
@@ -340,13 +341,16 @@ def _():
     return f"{removed:,} cells removed"
 
 
-@test("C8", "No brightness above the common ceiling")
+@test("C8", "Cell brightness is uncapped")
 def _():
+    top = {"modis_bt_max_k": 0.0, "viirs_bt_max_k": 0.0}
     for r in rows_as_dicts(world_compare()):
-        for k in ("modis_bt_max_k", "viirs_bt_max_k"):
+        for k in top:
             if r[k]:
-                assert float(r[k].replace(" (sat)", "")) <= 367.0, r[k]
-                assert r[k].endswith("(sat)") == r[k].startswith("367.00"), r[k]
+                assert "(sat)" not in r[k], r[k]
+                top[k] = max(top[k], float(r[k]))
+    assert top["modis_bt_max_k"] > 367.0, f"MODIS cell max {top['modis_bt_max_k']} - still capped?"
+    return f"highest cell brightness: MODIS {top['modis_bt_max_k']:.2f} K, VIIRS {top['viirs_bt_max_k']:.2f} K"
 
 
 @test("C9", "Summary adds up")

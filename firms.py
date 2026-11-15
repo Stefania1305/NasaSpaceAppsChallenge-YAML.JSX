@@ -37,6 +37,7 @@ def load_env(path: Path) -> None:
 
 
 load_env(BASE_DIR / ".env")
+
 MAP_KEY = os.environ.get("FIRMS_MAP_KEY", "")
 PORT = int(os.environ.get("PORT", "8000"))
 

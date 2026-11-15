@@ -185,6 +185,80 @@ class SwathModel:
                 best = (dist, t)
         return best
 
+    def last_look_before(self, day: str, lat, lon, before_min, margin_km: float = 50.0):
+        """Vectorised: for each point, the latest pass on `day` (minutes UTC from that day's
+        00:00, either day or night branch) that had the point inside its swath (with
+        `margin_km` to spare) and came before `before_min`. NaN where there is none or
+        the day is unfitted. Assumes daytime passes are ascending (Aqua, VIIRS), not Terra."""
+        import numpy as np
+        lat, lon, before = np.asarray(lat, float), np.asarray(lon, float), np.asarray(before_min, float)
+        best = np.full(lat.shape, np.nan)
+        fit = self.fits.get(day)
+        if fit is None:
+            return best
+        phase, C, _ = fit
+        x = np.sin(np.radians(lat)) / self.sin_i
+        ok = np.abs(x) <= 1
+        u_asc = np.degrees(np.arcsin(np.clip(x, -1, 1)))
+
+        def offset(u):
+            ur = np.radians(u)
+            return np.degrees(np.arctan2(self.cos_i * np.sin(ur), np.cos(ur))) - EARTH_DEG_PER_MIN * u / 360.0 * self.P
+
+        for u in (u_asc, 180.0 - u_asc):                       # day (ascending) and night branches
+            du = 0.01
+            dlon = ((offset(u + du) - offset(u - du) + 180) % 360 - 180) * np.cos(np.radians(lat))
+            dlat = np.degrees(np.arcsin(self.sin_i * np.sin(np.radians(u + du)))) - \
+                np.degrees(np.arcsin(self.sin_i * np.sin(np.radians(u - du))))
+            ef = np.abs(np.cos(np.arctan2(dlon, dlat)))
+            ef[ef == 0] = 1e-6
+            off = offset(u)
+            k0 = math.floor((-90 - phase) / self.P)
+            for k in range(k0, k0 + int(1620 / self.P) + 2):
+                tn = phase + k * self.P
+                t = tn + u / 360.0 * self.P
+                track_lon = C - EARTH_DEG_PER_MIN * tn + off
+                dist = np.abs((lon - track_lon + 180) % 360 - 180) * KM_PER_DEG * np.cos(np.radians(lat)) * ef
+                hit = ok & (dist <= self.half - margin_km) & (t < before) & (t >= -90) & (t <= 1530)
+                best = np.where(hit & ~(best >= t), t, best)
+        return best
+
+    def next_look_after(self, day: str, lat, lon, after_min, margin_km: float = 50.0):
+        """Vectorised mirror of last_look_before: the earliest pass on `day` after `after_min`
+        (minutes UTC from that day's 00:00) that had the point inside its swath. NaN if none."""
+        import numpy as np
+        lat, lon, after = np.asarray(lat, float), np.asarray(lon, float), np.asarray(after_min, float)
+        best = np.full(lat.shape, np.nan)
+        fit = self.fits.get(day)
+        if fit is None:
+            return best
+        phase, C, _ = fit
+        x = np.sin(np.radians(lat)) / self.sin_i
+        ok = np.abs(x) <= 1
+        u_asc = np.degrees(np.arcsin(np.clip(x, -1, 1)))
+
+        def offset(u):
+            ur = np.radians(u)
+            return np.degrees(np.arctan2(self.cos_i * np.sin(ur), np.cos(ur))) - EARTH_DEG_PER_MIN * u / 360.0 * self.P
+
+        for u in (u_asc, 180.0 - u_asc):
+            du = 0.01
+            dlon = ((offset(u + du) - offset(u - du) + 180) % 360 - 180) * np.cos(np.radians(lat))
+            dlat = np.degrees(np.arcsin(self.sin_i * np.sin(np.radians(u + du)))) - \
+                np.degrees(np.arcsin(self.sin_i * np.sin(np.radians(u - du))))
+            ef = np.abs(np.cos(np.arctan2(dlon, dlat)))
+            ef[ef == 0] = 1e-6
+            off = offset(u)
+            k0 = math.floor((-90 - phase) / self.P)
+            for k in range(k0, k0 + int(1620 / self.P) + 2):
+                tn = phase + k * self.P
+                t = tn + u / 360.0 * self.P
+                track_lon = C - EARTH_DEG_PER_MIN * tn + off
+                dist = np.abs((lon - track_lon + 180) % 360 - 180) * KM_PER_DEG * np.cos(np.radians(lat)) * ef
+                hit = ok & (dist <= self.half - margin_km) & (t > after) & (t >= -90) & (t <= 1530)
+                best = np.where(hit & ~(best <= t), t, best)
+        return best
+
     def covers(self, day: str, lat: float, lon: float, daynight: str):
         """True / False, or None when the model could not be fitted for that day."""
         p = self.nearest_pass(day, lat, lon, daynight)

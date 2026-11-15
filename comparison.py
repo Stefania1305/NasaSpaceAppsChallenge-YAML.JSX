@@ -15,8 +15,10 @@ Each known sensor difference is resolved as follows:
    cells whose FRP is below it are left out for BOTH sensors.
 5. Confidence (MODIS 0-100, VIIRS l/n/h) -> both on low / nominal / high
    (MODIS <30 low, 30-79 nominal, >=80 high, per the FIRMS documentation).
-6. Saturation (MODIS ~500 K, VIIRS I4 clips at 367 K) -> brightness is capped at
-   367 K for both sensors and flagged with bright_saturated.
+6. Saturation (MODIS ~500 K, VIIRS I4 clips at 367 K) -> brightness is kept at
+   full precision for both sensors (no common cap), so hot MODIS pixels keep
+   their measured value. Brightness is reported per cell but not used to decide
+   comparability.
 7. Overpass times (Terra ~10:30/22:30 has no VIIRS equivalent) -> only Aqua is
    compared with a single VIIRS satellite on a similar afternoon/night schedule,
    matched day with day and night with night. The remaining time between the two
@@ -31,7 +33,6 @@ from collections import Counter, defaultdict
 
 from swath import SwathModel
 
-COMMON_BT_MAX_K = 367.0          # VIIRS I4 saturation; MODIS values are capped to it
 FALLBACK_MIN_FRP_MW = 10.0
 COMPARE_SATELLITE_MODIS = "Aqua"
 CONF_RANK = {"": 0, "low": 1, "nominal": 2, "high": 3}
@@ -58,16 +59,6 @@ def overpass_slot(acq_time: str, lon: str) -> str:
     return "night"
 
 
-def clip_brightness(value: str) -> tuple[str, str]:
-    """Cap brightness at the common 367 K ceiling. Returns (value, saturated yes/no)."""
-    try:
-        v = float(value)
-    except (TypeError, ValueError):
-        return "", ""
-    if v >= COMMON_BT_MAX_K:
-        return f"{COMMON_BT_MAX_K:.2f}", "yes"
-    return value, "no"
-
 
 def _minutes(acq_time: str) -> int:
     t = acq_time.zfill(4)
@@ -79,7 +70,7 @@ def _minutes(acq_time: str) -> int:
 # ---------------------------------------------------------------------------
 
 def _new_cell():
-    return {"pixels": 0, "frp": 0.0, "frp_max": 0.0, "bt": 0.0, "sat": False,
+    return {"pixels": 0, "frp": 0.0, "frp_max": 0.0, "bt": 0.0,
             "conf": "", "types": Counter(), "area": 0.0, "tsum": 0}
 
 
@@ -153,10 +144,6 @@ def compare(columns: list, rows: list, cell_deg: float, viirs_label: str,
             cell["bt"] = max(cell["bt"], float(r[c["bright_main_k"]]))
         except ValueError:
             pass
-        if r[c["bright_saturated"]] == "yes":
-            cell["sat"] = True
-            if inst == "MODIS":
-                removed["modis_clipped"] += 1
         if CONF_RANK.get(r[c["confidence"]], 0) > CONF_RANK[cell["conf"]]:
             cell["conf"] = r[c["confidence"]]
         cell["types"][r[c["type"]]] += 1
@@ -224,8 +211,7 @@ def compare(columns: list, rows: list, cell_deg: float, viirs_label: str,
             str(m["pixels"]), str(v["pixels"]),
             fmt(m["frp"], has_m), fmt(v["frp"], has_v),
             fmt(m["frp_max"], has_m), fmt(v["frp_max"], has_v),
-            (fmt(m["bt"], has_m) + (" (sat)" if m["sat"] else "")) if has_m else "",
-            (fmt(v["bt"], has_v) + (" (sat)" if v["sat"] else "")) if has_v else "",
+            fmt(m["bt"], has_m), fmt(v["bt"], has_v),
             m["conf"], v["conf"],
             f"{m['area']:.3f}" if has_m else "", f"{v['area']:.3f}" if has_v else "",
             types.most_common(1)[0][0] if types else "",
@@ -256,14 +242,13 @@ def compare(columns: list, rows: list, cell_deg: float, viirs_label: str,
         "agreement": {"both": agree["both"], "MODIS only": agree["MODIS only"], "VIIRS only": agree["VIIRS only"]},
         "settings": {
             "cell_deg": cell_deg, "min_frp_mw": min_frp, "min_frp_basis": threshold_note,
-            "bt_ceiling_k": COMMON_BT_MAX_K, "modis_satellite": COMPARE_SATELLITE_MODIS,
+            "modis_satellite": COMPARE_SATELLITE_MODIS,
             "viirs": viirs_label, "max_gap_min": max_gap_min,
             "median_overpass_gap_min": round(gaps[len(gaps) // 2]) if gaps else None,
             "swath_fits": fits,
         },
         "removed": {
             "Terra MODIS pixels (no matching VIIRS overpass)": removed["terra"],
-            "Aqua MODIS pixels capped at 367 K": removed["modis_clipped"],
             "VIIRS-only cells outside the Aqua swath": removed["modis_gap"],
             "MODIS-only cells outside the VIIRS swath": removed["viirs_gap"],
             "Cells below the common detection limit (VIIRS only / MODIS only / both)":

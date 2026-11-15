@@ -161,18 +161,21 @@ await test("A4", "VIIRS and Landsat confidence letters", async () => ev(`
     seen[r.confidence_raw] = r.confidence; }
   return Object.entries(seen).map(([k, v]) => k + '→' + v).join(', ');`));
 
-await test("A5", "Brightness capped at 367 K (table + Saturated preset)", async () => {
+await test("A5", "Brightness kept at full precision (table + Hot MODIS preset)", async () => {
   const r = await ev(`
     await T.sort('bright_main_k', true);
-    const top = T.col('bright_main_k')[0];
-    let capped = 0;
-    for (const r of T.rows) if (r.bright_main_k) { const sat = r.bright_main_k === '367.00'; T.assert((r.bright_saturated === 'yes') === sat, 'flag ' + r.bright_main_k + ' ' + r.bright_saturated); T.assert(+r.bright_main_k <= 367, 'above cap ' + r.bright_main_k); capped += sat; }
-    return [top, capped];`);
-  if (r[0] !== "367.00") throw new Error("top of descending sort is " + r[0]);
+    T.assert(!T.heads().includes('bright_saturated'), 'bright_saturated column still shown');
+    const b = T.col('bright_main_k').map(Number);
+    T.assert(b.every((v, i) => !i || v <= b[i - 1]), 'descending sort out of order');
+    const viirsMax = Math.max(...T.rows.filter(r => r.instrument === 'VIIRS').map(r => +r.bright_main_k));
+    const above = T.rows.filter(r => +r.bright_main_k > 367);
+    T.assert(above.every(r => r.instrument === 'MODIS'), 'non-MODIS row above 367 K');
+    return [b[0], above.length, viirsMax];`);
+  if (!(r[0] > 367)) throw new Error("top of descending sort is " + r[0] + " - still capped?");
   await nav("file:///" + BENCH.replace(/\\/g, "/") + "#pixel");
   const p = await ev(`document.querySelector('[data-preset="sat"]').click(); return Object.fromEntries([...document.querySelectorAll('#pixelOut tr')].map(tr => [tr.children[0].textContent, tr.children[1].textContent]));`);
-  if (p.bright_main_k !== "367.00" || p.bright_saturated !== "yes") throw new Error(`preset gave ${p.bright_main_k} / ${p.bright_saturated}`);
-  return `top of sorted column 367.00; ${r[1].toLocaleString()} capped rows all flagged yes; Saturated preset 412.6 K → 367.00, yes`;
+  if (p.bright_main_k !== "412.6" || "bright_saturated" in p) throw new Error(`preset gave ${p.bright_main_k} / ${p.bright_saturated}`);
+  return `top of sorted column ${r[0]} K; ${r[1].toLocaleString()} MODIS rows above 367 K kept; VIIRS max ${r[2]} K; Hot preset shows 412.6`;
 });
 
 await app(); await q("harm", base()); await ev("await T.copy();");
@@ -293,13 +296,13 @@ await test("C1", "Known answer for test area A", async () => {
   for (const [k, v] of Object.entries(want)) if (c.sum[k]?.[0] !== v[0] || c.sum[k]?.[1] !== v[1]) throw new Error(`${k}: ${c.sum[k]}`);
   if (c.agree.join() !== "8,7,2") throw new Error("agreement " + c.agree);
   if (c.minFrp !== "10") throw new Error("min FRP " + c.minFrp);
-  if (!/capped at 367 K: 7/.test(c.removed)) throw new Error(c.removed);
+  if (/capped/.test(c.removed)) throw new Error("cap still listed: " + c.removed);
   await chip("All cells");
   c1cells = await ev("return await T.copy();");
   const top = c1cells.find(r => r.cell_lat === "-8.3750" && r.cell_lon === "-44.1750" && r.daynight === "D");
   const got = [top.modis_pixels, top.modis_frp_mw, top.viirs_pixels, top.viirs_frp_mw, top.overpass_gap_min].join(" ");
   if (got !== "5 3329.12 21 3486.85 103") throw new Error("top cell " + got);
-  return "summary, agreement 8/7/2, 10 MW, 7 capped and top cell all match on screen";
+  return "summary, agreement 8/7/2, 10 MW and top cell match on screen; no cap listed";
 });
 
 await test("C2", "Cell aggregator matches the app (Copy all rows → paste → Recompute)", async () => {
@@ -375,12 +378,13 @@ await test("C6", "Swath exclusions are plausible", async () => ev(`
   T.assert(inBand / sw.length > 0.9, 'only ' + inBand + ' of ' + sw.length + ' within ±35°');
   return sw.length.toLocaleString() + ' rows, all MODIS 0 / VIIRS > 0, ' + (100 * inBand / sw.length).toFixed(1) + '% within ±35°';`));
 
-await test("C8", "No brightness above the common ceiling (sorted view)", async () => ev(`
+await test("C8", "Cell brightness is uncapped (sorted view)", async () => ev(`
   [...document.querySelectorAll('#chips .chip')].find(b => b.dataset.s === 'All cells').click(); await T.sleep(50);
   const out = [];
   for (const c of ['modis_bt_max_k', 'viirs_bt_max_k']) {
-    await T.sort(c, true); const top = T.col(c)[0]; T.assert(parseFloat(top) <= 367, c + ' top ' + top); out.push(c + ' top ' + top);
-    for (const r of T.rows) if (r[c]) T.assert(r[c].endsWith('(sat)') === r[c].startsWith('367.00') && parseFloat(r[c]) <= 367, r[c]);
+    await T.sort(c, true); const top = T.col(c)[0]; out.push(c + ' top ' + top);
+    for (const r of T.rows) if (r[c]) T.assert(!r[c].includes('(sat)'), r[c]);
+    if (c === 'modis_bt_max_k') T.assert(+top > 367, 'MODIS top ' + top + ' - still capped?');
   }
   return out.join(', ');`));
 
@@ -495,10 +499,10 @@ await test("E2", "Bench: filters, copy results, reset (two clicks)", async () =>
 await test("E3", "Bench: all six calculator presets", async () => {
   await nav(benchUrl + "#pixel", "true");
   const want = {
-    modis: { satellite: "Terra", acq_time: "0033", confidence: "high", bright_main_k: "325.3", bright_saturated: "no", pixel_area_km2: "1.3986" },
+    modis: { satellite: "Terra", acq_time: "0033", confidence: "high", bright_main_k: "325.3", pixel_area_km2: "1.3986" },
     viirs: { satellite: "NOAA-20", acq_time: "0128", confidence: "nominal", pixel_area_km2: "0.1978" },
     landsat: { instrument: "OLI", satellite: "Landsat 8", confidence: "nominal", bright_main_k: "", frp_mw: "", pixel_area_km2: "" },
-    sat: { bright_main_k: "367.00", bright_saturated: "yes", confidence: "high", pixel_area_km2: "3.6250" },
+    sat: { bright_main_k: "412.6", confidence: "high", pixel_area_km2: "3.6250" },
     b29: { confidence: "low" }, b80: { confidence: "high" },
   };
   const out = [];

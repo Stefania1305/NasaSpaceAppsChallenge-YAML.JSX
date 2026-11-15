@@ -64,9 +64,45 @@ def load():
     return df
 
 
+class SeqWrap:
+    """The sequence model (numpy) behind the same interface as a set of XGBoost models."""
+
+    def __init__(self, folder, weather):
+        from seq_numpy import NumpySeq
+        self.m, self.weather = NumpySeq.load(folder), weather
+
+    def predict(self, X):
+        return self.m.predict_df(X, weather=self.weather)
+
+
+class BlendWrap:
+    """Average of XGBoost and the sequence model: quantiles averaged then sorted, chances averaged."""
+
+    def __init__(self, xgb_models, seq):
+        self.x, self.s = xgb_models, seq
+
+    def predict(self, X):
+        a, b = predict(self.x, X, None), self.s.predict(X)
+        out = {}
+        for k in a:
+            v = (a[k] + b[k]) / 2
+            out[k] = np.sort(v, axis=1) if v.ndim == 2 else v
+        return out
+
+
 def boosters(variant):
+    blend = os.environ.get("PRED_BLEND")                    # e.g. "models_v2,models_seq"
+    if blend:
+        xd, sd = blend.split(",")
+        return BlendWrap(boosters_in(DATA_DIR / "prediction" / xd, variant), SeqWrap(DATA_DIR / "prediction" / sd, variant == "weather"))
+    if (MODELS / "weights.npz").exists():
+        return SeqWrap(MODELS, variant == "weather")
+    return boosters_in(MODELS, variant)
+
+
+def boosters_in(models_dir, variant):
     out = {}
-    for p in (MODELS / variant).glob("*.json"):
+    for p in (models_dir / variant).glob("*.json"):
         b = xgb.Booster()
         b.load_model(str(p))
         b.set_param({"device": "cuda"})
@@ -75,6 +111,8 @@ def boosters(variant):
 
 
 def predict(models, X, feats):
+    if hasattr(models, "predict"):
+        return models.predict(X)
     feats = next(iter(models.values())).feature_names or feats
     M = xgb.DMatrix(X.reindex(columns=feats).astype("float32"))
     P = {}
@@ -463,7 +501,7 @@ def forecast(df):
 # ---------------------------------------------------------------------------
 def save(name, res):
     OUT.mkdir(parents=True, exist_ok=True)
-    tag = os.environ.get("PRED_MODELS", "models")
+    tag = "blend" if os.environ.get("PRED_BLEND") else os.environ.get("PRED_MODELS", "models")
     name = name if tag == "models" else f"{name}_{tag}"
     (OUT / f"{name}.json").write_text(json.dumps(res, indent=1, default=str), encoding="utf-8")
 

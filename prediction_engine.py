@@ -11,6 +11,10 @@ For every fire seen on the run's last day it predicts, for day +1, +2, +3:
   spread map  chance that each 1 km cell around the fire burns
 with low / likely / high values (10th / 50th / 90th percentile) for every number.
 
+Models: XGBoost (prediction_train.py) blended with the sequence network (prediction_seq.py, run here with numpy):
+the two are averaged for growth, fire power, movement and merging; the chance a fire is out comes from XGBoost
+alone (better calibrated). Without a sequence model, XGBoost alone is used.
+
 Weather forecast input (--weather file.json / .csv, or a DataFrame / list of dicts passed to predict()): hourly rows
   latitude, longitude                 point of the forecast (degrees); matched to fires within 0.5 degree
   time                                UTC hour, ISO 8601 (e.g. 2026-11-14T13:00)
@@ -48,6 +52,20 @@ from weather_worker import RAIN_MM, weather_key
 
 MODELS = DATA_DIR / "prediction" / "models"                # models trained locally (prediction_train.py)
 SHIPPED = Path(__file__).resolve().parent / "models" / "v2"  # models shipped with the repository (Git LFS), used when none are trained locally
+SEQ_LOCAL = DATA_DIR / "prediction" / "models_seq_full"      # sequence network trained locally on all years
+BLEND_SKIP = {"out"}                                         # outputs taken from XGBoost alone
+
+
+def load_seq():
+    """The sequence network (numpy), local if trained, else shipped in models/v2/seq; None if neither exists."""
+    from seq_numpy import NumpySeq
+    for d in (SEQ_LOCAL, SHIPPED / "seq"):
+        if (d / "weights.npz").exists() and (d / "prep.json").exists():
+            head = (d / "weights.npz").read_bytes()[:40]
+            if head.startswith(b"version https://git-lfs"):
+                raise SystemExit(f"{d / 'weights.npz'} is a Git LFS pointer: run 'git lfs pull' to download the models")
+            return NumpySeq.load(d)
+    return None
 HOURLY = ["temperature_2m", "relative_humidity_2m", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m",
           "precipitation", "vapour_pressure_deficit", "soil_moisture_0_to_7cm", "soil_moisture_7_to_28cm", "soil_moisture_28_to_100cm"]
 REQUIRED = ["latitude", "longitude", "time"]
@@ -181,8 +199,10 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
     fd = add_history(fd)
     last = fd.day.max()
     active = fd[fd.day == last].copy()
+    act_pos = np.flatnonzero((fd.day == last).to_numpy())
     if limit:
-        active = active.sort_values("fine_fp", ascending=False).head(limit)
+        keep = np.argsort(-active.fine_fp.to_numpy(), kind="stable")[:limit]
+        active, act_pos = active.iloc[keep], act_pos[keep]
     # weather forecast provided by the caller
     mode, wd, cells, coverage = "none", None, None, {}
     w = read_forecast(weather)
@@ -209,6 +229,13 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
         if c not in X:
             X[c] = np.nan
     M = xgb.DMatrix(X[feats].astype("float32"))
+    seq = load_seq()
+    S = None
+    if seq is not None:
+        # the network reads each fire's previous fire-days, so its history comes from the whole run
+        cols = list(dict.fromkeys(seq.prep.feats + ["run", "fire_id", "day"]))
+        hist = seq.prep.history(fd.reindex(columns=list(dict.fromkeys(["run", "fire_id", "day"] + __import__("seq_numpy").DYN))))[act_pos]
+        S = seq.predict_df(X.reindex(columns=cols), weather=(variant == "weather"), history=hist)
     out = []
     for k in range(1, H + 1):
         r = X[["run", "fire_id", "day", "lat0", "lon0", "clat", "clon", "fine_fp", "frp"]].copy()
@@ -219,11 +246,16 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
             if m is None:
                 continue
             q = inv(np.sort(m.predict(M), axis=1).astype("float64"))
+            if S is not None and target not in BLEND_SKIP:
+                q = np.sort((q + S[f"{target}_{k}"]) / 2, axis=1)
             for j, name in enumerate(("low", "likely", "high")):
                 r[f"{target}_{name}"] = q[:, j]
         for target in ("out", "merge"):
             m = models.get(f"{target}_{k}")
-            r[f"p_{target}"] = m.predict(M).astype("float64") if m is not None else np.nan
+            pr = m.predict(M).astype("float64") if m is not None else np.full(len(X), np.nan)
+            if S is not None and target not in BLEND_SKIP:
+                pr = (pr + S[f"{target}_{k}"]) / 2
+            r[f"p_{target}"] = pr
         out.append(r)
     P = pd.concat(out, ignore_index=True).sort_values(["fire_id", "day_ahead"], ignore_index=True)
     # consistency: growth >= 0 and never shrinking over the days; chances never falling over the days
@@ -254,7 +286,7 @@ def predict(run_dir: Path, weather=None, limit: int = 0, weather_label: str = ""
     n_cells = write_spread(run_dir, P, last, out_dir)
     (out_dir / "predictions.json").write_text(P.to_json(orient="records"), encoding="utf-8")
     summary = {"run": run_dir.name, "from_day": last, "active_fires": int(len(active)), "rows": len(P), "spread_cells": n_cells,
-               "weather": mode, "weather_coverage": coverage, "models": variant, "seconds": round(time.time() - t0, 1),
+               "weather": mode, "weather_coverage": coverage, "models": variant + (" + sequence network" if S is not None else ""), "seconds": round(time.time() - t0, 1),
                "note": weather_label or {"provided": "weather forecast provided by the caller", "none": "no forecast provided: no-weather models"}[mode]}
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     return {"predictions": P, "summary": summary, "out": out_dir}

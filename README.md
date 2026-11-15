@@ -113,6 +113,7 @@ python weather_fires.py
 python prediction_data.py
 python forecast_errors.py
 python prediction_train.py --device cuda --full --noise
+python prediction_seq.py --full --epochs 16 --out models_seq_full
 python prediction_spread.py fit
 ```
 
@@ -124,6 +125,7 @@ python prediction_spread.py fit
 | `prediction_data.py` | Builds the training table `data/prediction/fire_days.csv.gz`: one row per fire per day, with the targets for days +1 to +3 |
 | `forecast_errors.py` | Measures how wrong real weather forecasts were (forecast minus observed) at about 200 weather cells, using archived forecasts from Open-Meteo. Writes a pool of 4,590 error vectors used in training. Option: `--cells` |
 | `prediction_train.py` | Trains the models with and without weather (118 and 55 features, 42 models) and writes `data/prediction/model_card.json`. `--noise` trains on forecast-like weather, `--full` uses all years (production), `--out` picks the model folder. About 25 minutes on the GPU |
+| `prediction_seq.py` | Trains the sequence network with PyTorch on the GPU (about 1 minute) and saves it also as plain arrays for numpy. Without `--full` it trains on 2016–2023 and stops when 2024 stops improving |
 | `prediction_spread.py fit` | Calibrates the 1 km burn-chance map on 2024 and checks it on 2025–2026 (`data/prediction/models/spread.json`) |
 
 ### Predict
@@ -217,7 +219,14 @@ For every fire seen on the run's last day, the engine predicts days +1, +2 and +
 | Chance it merges with a separate neighbouring fire | 0 to 1 | probability |
 | Burn chance of each 1 km cell around the fire | 0 to 1 | spread map |
 
-The models are XGBoost gradient-boosted trees on the GPU. One quantile model per output gives all three percentiles. The 118 features cover:
+Two models are combined:
+
+| Model | What it is | Used for |
+|---|---|---|
+| XGBoost | Gradient-boosted trees on the GPU, one quantile model per output and day ahead (42 models) | Every output |
+| Sequence network | A GRU that reads the fire's previous 4 fire-days, followed by dense layers; predicts all outputs and days at once. Trained with PyTorch, run with numpy (`seq_numpy.py`), so the engine needs no PyTorch | Averaged with XGBoost for growth, fire power, movement and merging. The chance a fire is out comes from XGBoost alone, because averaging made it less well calibrated |
+
+Both use the same 118 features:
 
 | Group | Features |
 |---|---|
@@ -241,6 +250,7 @@ Measured on the 2025–2026 test years, which training never saw: 49,378 fire-da
 | Accuracy %, day +1 / +2 / +3 | With weather | No weather | Persistence |
 |---|---|---|---|
 | **Overall** (mean of the five rows below it) | **65.4 / 65.6 / 65.4** | 64.7 / 64.1 / 64.1 | 34.1 / 30.7 / 28.9 |
+| *(this table: XGBoost alone; the blend is compared below)* | | | |
 | Growth class right (none / small / large) | 79 / 82 / 84 | 78 / 79 / 81 | 26 / 23 / 20 |
 | Right about extinction | 83 / 84 / 85 | 81 / 81 / 82 | 42 / 33 / 26 |
 | Merge, balanced accuracy | 87 / 87 / 87 | 87 / 87 / 86 | 50 |
@@ -252,6 +262,19 @@ Measured on the 2025–2026 test years, which training never saw: 49,378 fire-da
 - **Calibrated chances:** predicted chances are within 0.6–0.9 percentage points of how often things happened.
 - **Weak:** spread direction and fire power, though both are about twice as good as persistence.
 - **Merges:** caught 86–90% of the time, but only 22–34% of merge alarms are right.
+
+### XGBoost, sequence network and the blend
+
+Same test years, with weather:
+
+| Overall accuracy %, day +1 / +2 / +3 | |
+|---|---|
+| XGBoost | 65.4 / 65.6 / 65.4 |
+| Sequence network | 64.9 / 65.4 / 65.6 |
+| Blend, averaging both | **65.8 / 65.8 / 65.8** |
+| **Blend with extinction from XGBoost (production)** | **about 65.9 / 65.9 / 65.8** |
+
+The network is slightly better than XGBoost on growth, fire power and merges and worse at extinction (AUC 0.87–0.89 against 0.91–0.92). The blend beats both. The production row is worked out from the per-output results of the two rows above it. The blend passes 10 of 11 behaviour checks, including turning the spread when the wind turns.
 
 ### With real forecasts
 
@@ -299,6 +322,7 @@ data/
     models/weather/        21 models trained with weather (production)
     models/no_weather/     21 models trained without weather (production)
     models/spread.json     spread map calibration
+    models_seq_full/       sequence network trained on all years (weights.npz for numpy, model.pt for PyTorch)
     models_split/          earlier models trained on 2016-2023, kept for comparison
     forecast_residuals.csv.gz  real forecast errors used in training
     model_card.json        training scores
@@ -307,7 +331,7 @@ data/
   weather_cache/           cached Open-Meteo responses
 ```
 
-The repository ships the production models in `models/v2/` (`weather/` and `no_weather/`, 21 compressed XGBoost models each, plus `spread.json` and `model_card.json`). The engine uses `data/prediction/models/` when you have trained models locally, and `models/v2/` otherwise.
+The repository ships the production models in `models/v2/`: `weather/` and `no_weather/` (21 compressed XGBoost models each), `seq/` (the sequence network as numpy arrays), `spread.json` and `model_card.json`. The engine uses `data/prediction/models/` when you have trained models locally, and `models/v2/` otherwise.
 
 `data/` is git-ignored: it holds about 1 GB of models and tables plus the raw archive. Rebuild it with the commands in [Usage](#usage).
 
@@ -352,7 +376,7 @@ python test_prediction_accuracy.py forecast
 - **First day:** a fire seen for the first time has no history, so its predictions are less reliable.
 - **Soil moisture:** days +1 to +3 use day d's value, because the forecast archive has none.
 - **Spread map:** satellites only see actively burning pixels at overpass time, so only 3–5% of nearby cells register as burning on a given day. That limits how sharp the burn-chance map can be.
-- **No neural network:** a PyTorch sequence model was planned, but Windows Application Control blocks PyTorch on the development machine, so fire history is given to XGBoost as features instead. `prediction_seq.py` holds the unused PyTorch version.
+- **Training the network needs PyTorch** with CUDA (`pip install torch --index-url https://download.pytorch.org/whl/cu128`); running predictions does not.
 - **Short runs:** runs shorter than 4 days produce no training rows for the 3-day horizon.
 
 ## Data sources
